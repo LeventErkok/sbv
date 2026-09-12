@@ -42,9 +42,9 @@
 -- Quantifiers, special solver relations, uninterpreted sorts,
 -- regular-expression language operations, soft constraints, and general
 -- extensional array equality require solver semantics and are rejected with
--- focused diagnostics. Recursive functions containing persistent arrays,
--- recursive algebraic datatypes, or local tables, nested lambdas, and
--- higher-order function values are retained for later compiler stages.
+-- focused diagnostics. Recursive functions containing persistent arrays or
+-- recursive algebraic datatypes, nested lambdas, and higher-order function
+-- values are retained for later compiler stages.
 --
 -- Import "Data.SBV.Compilers.C.Legacy" to retain the previous compiler while
 -- migrating code that encounters one of these boundaries.

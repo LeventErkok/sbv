@@ -1852,6 +1852,11 @@ recursiveDefinedSBVFunctions = withSystemTempDirectory "sbv-recursive-defined-fu
             implicationChain = smtFunctionNoTermination "C recursive implication" $ \value ->
                                  value ./= 0 .=> implicationChain (value - 1)
 
+            tableCount :: SWord8 -> SWord8
+            tableCount = smtFunctionNoTermination "C recursive local table" $ \value ->
+                           ite (value .== 0) 0
+                               (select [value, value + 1] 3 (ite (value .== 1) 1 0 :: SWord8) + tableCount (value - 1))
+
             countdownList :: SWord8 -> SList Word8
             countdownList = smtFunctionNoTermination "C recursive list" $ \value ->
                               ite (value .== 0)
@@ -1869,6 +1874,7 @@ recursiveDefinedSBVFunctions = withSystemTempDirectory "sbv-recursive-defined-fu
         cgOutput "even"        (isEven input)
         cgOutput "odd"         (isOdd input)
         cgOutput "implication" (implicationChain input)
+        cgOutput "tableCount"  (tableCount input)
         cgOutput "factorial"   (factorial 5)
         cgOutput "mcCarthy91"  (mcCarthy91 87)
         cgReturn (countdownList input)
@@ -1882,6 +1888,7 @@ recursiveDefinedSBVFunctions = withSystemTempDirectory "sbv-recursive-defined-fu
     , "even = 0"
     , "odd = 1"
     , "implication = 1"
+    , "tableCount = 16"
     , "factorial =120"
     , "mcCarthy91 =91"
     ]
@@ -1913,8 +1920,8 @@ recursiveDefinedSBVFunctionLibrary = withSystemTempDirectory "sbv-recursive-defi
     , "secondRecursive() = 0x001eU"
     ]
 
--- | Keep recursive arrays and lambda-local tables behind focused diagnostics
--- until their automatic-storage lifetimes can be reconstructed safely.
+-- | Keep recursive arrays and recursive ADTs behind focused diagnostics until
+-- their automatic-storage lifetimes can be reconstructed safely.
 recursiveDefinedSBVFunctionDiagnostics :: Assertion
 recursiveDefinedSBVFunctionDiagnostics = do
   arrayResult <- try (do
@@ -1929,19 +1936,6 @@ recursiveDefinedSBVFunctionDiagnostics = do
     Left exception -> assertBool ("Expected a recursive-array diagnostic, received:\n" ++ displayException exception)
                                  ("Arrays in recursive defined function" `isInfixOf` displayException exception)
     Right _        -> assertBool "Expected C generation to reject an array-valued recursive function" False
-
-  tableResult <- try (do
-    (_, _, bundle) <- compileToC' "recursiveTableFunction" $ do
-      input <- cgInput "input" :: SBVCodeGen SWord8
-      let count :: SWord8 -> SWord8
-          count = smtFunctionNoTermination "C recursive table" $ \value ->
-                    ite (value .== 0) 0 (select [1, 2] 3 value + count (value - 1))
-      cgReturn (count input)
-    evaluate (length (show bundle))) :: IO (Either ErrorCall Int)
-  case tableResult of
-    Left exception -> assertBool ("Expected a recursive-table diagnostic, received:\n" ++ displayException exception)
-                                 ("Tables in recursive defined function" `isInfixOf` displayException exception)
-    Right _        -> assertBool "Expected C generation to reject a table-backed recursive function" False
 
   adtResult <- try (do
     (_, _, bundle) <- compileToC' "recursiveADTFunction" $ do

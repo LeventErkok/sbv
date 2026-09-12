@@ -22,7 +22,7 @@ import qualified Data.Foldable         as F (toList)
 import qualified Data.Graph            as DG
 import Data.List                       (intercalate, intersperse, nub, nubBy)
 import Data.Maybe                      (fromJust, fromMaybe, isJust)
-import qualified Data.Set              as Set (Set, empty, fromList, insert, intersection, map, member, null, singleton, toList, union, unions)
+import qualified Data.Set              as Set (Set, empty, fromList, insert, intersection, map, member, notMember, null, singleton, toList, union, unions)
 import qualified Data.Text             as T
 import qualified Data.Text.Encoding    as TE
 import Numeric                         (showOct)
@@ -1747,8 +1747,6 @@ ppDefinedFunction cfg adts functionNames isRecursive originalName declaredResult
   = die $ "Output-kind mismatch in defined function " ++ show originalName
   | not (null nestedLambdas)
   = tbd $ "Nested lambdas in defined function " ++ show originalName
-  | isRecursive && not (null tables)
-  = tbd $ "Tables in recursive defined function " ++ show originalName
   | isRecursive && any isArray expandedFunctionKinds
   = tbd $ "Arrays in recursive defined function " ++ show originalName
   | isRecursive && any recursiveADTKind expandedFunctionKinds
@@ -1887,13 +1885,13 @@ ppDefinedFunction cfg adts functionNames isRecursive originalName declaredResult
          | True
          = visited
 
-       schedule resultValue = let (_, docs, needed) = emit initialValues resultValue
+       schedule resultValue = let (_, docs, needed) = emit initialAvailability resultValue
                               in (docs, needed)
 
-       initialValues = Set.fromList (map fst functionConsts ++ map snd parameters)
+       initialAvailability = (Set.fromList (map fst functionConsts ++ map snd parameters), Set.empty)
 
-       emit available sv
-         | sv `Set.member` available
+       emit available@(availableValues, _) sv
+         | sv `Set.member` availableValues
          = (available, empty, Set.empty)
          | Just expression@(SBVApp op arguments) <- lookup sv assignments
          = case (op, arguments) of
@@ -1910,11 +1908,12 @@ ppDefinedFunction cfg adts functionNames isRecursive originalName declaredResult
                -> conditional available sv left right trueSV
              _ -> let (withArguments, argumentDocs, argumentRequirements) = emitMany available
                                                                                             (operationDependencies op arguments)
+                      (withTable, tableDocs) = emitTable withArguments op
                       (assignmentDoc, assignmentRequirements) = ppExpr cfg adts functionNames functionConsts
                                                                        expression sv (text (show sv))
                                                                        (declSVNoConst typeWidth sv) False
-                  in ( Set.insert sv withArguments
-                     , argumentDocs $$ assignmentDoc
+                  in ( insertAvailableValue sv withTable
+                     , argumentDocs $$ tableDocs $$ assignmentDoc
                      , Set.union argumentRequirements assignmentRequirements
                      )
          | True
@@ -1925,6 +1924,15 @@ ppDefinedFunction cfg adts functionNames isRecursive originalName declaredResult
          let (withValue, valueDocs, valueRequirements) = emit available sv
              (withRest, restDocs, restRequirements) = emitMany withValue svs
          in (withRest, valueDocs $$ restDocs, Set.union valueRequirements restRequirements)
+
+       emitTable available@(_, availableTables) op
+         | LkUp (tableIndex, _, _, _) _ _ <- op
+         , tableIndex `Set.notMember` availableTables
+         = case [table | table@((candidateIndex, _, _), _) <- tables, candidateIndex == tableIndex] of
+             [table] -> (insertAvailableTable tableIndex available, snd (ppTable cfg False functionConsts table))
+             _       -> die $ "Missing table while lowering recursive defined function " ++ show originalName
+         | True
+         = (available, empty)
 
        conditional available result condition trueValue falseValue =
          let (withCondition, conditionDocs, conditionRequirements) = emit available condition
@@ -1940,12 +1948,25 @@ ppDefinedFunction cfg adts functionNames isRecursive originalName declaredResult
                  $$ branch "" trueDocs trueValue
                  $$ branch "else" falseDocs falseValue
              needed = Set.unions [conditionRequirements, trueRequirements, falseRequirements]
-         in (Set.insert result (Set.intersection withTrue withFalse), docs, needed)
+             -- Values are declared outside the branches, but branch-local C
+             -- table declarations do not remain in scope after the join.
+             availableAfter = ( Set.intersection (fst withTrue) (fst withFalse)
+                              , snd withCondition
+                              )
+         in (insertAvailableValue result availableAfter, docs, needed)
 
        operationDependencies op arguments = arguments ++ case op of
-         LkUp _ index defaultValue  -> [index, defaultValue]
+         LkUp (tableIndex, _, _, _) index defaultValue
+           -> index : defaultValue : [value | ((candidateIndex, _, _), values) <- tables
+                                            , candidateIndex == tableIndex
+                                            , value <- values
+                                     ]
          IEEEFP (FP_Cast _ _ rmSV) -> [rmSV]
          _                           -> []
+
+       insertAvailableValue value (values, availableTables) = (Set.insert value values, availableTables)
+
+       insertAvailableTable tableIndex (values, availableTables) = (values, Set.insert tableIndex availableTables)
 
        functionResult
          | isArray resultKind
