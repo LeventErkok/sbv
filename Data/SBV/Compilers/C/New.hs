@@ -1744,7 +1744,8 @@ definedFunctionSignature originalName resultKind parameters
 -- DAG. Recursive definitions use demand-driven control flow so calls protected
 -- by conditionals and short-circuiting Boolean operations remain protected in
 -- C. Closed nested array lambdas are lambda-lifted into private callbacks;
--- higher-order function values are handled by a later stage.
+-- SBV's firstified higher-order specializations arrive through the same
+-- first-order representation.
 ppDefinedFunction :: CgConfig
                   -> [Kind]
                   -> [(T.Text, String)]

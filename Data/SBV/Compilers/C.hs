@@ -26,9 +26,11 @@
 --   algebraic datatypes, including recursive datatypes.
 -- * Finite lookup tables and persistent arrays created from constants,
 --   writes, retained lambdas, or caller-provided lookup callbacks.
--- * First-order @smtFunction@ definitions, including recursive and mutually
---   recursive groups, hard constraints as executable preconditions, scalar
---   and grouped results, and multi-function static libraries.
+-- * First-order @smtFunction@ definitions and SBV's firstified
+--   @smtHOFunction@ specializations, including recursive and mutually
+--   recursive groups, closed nested array lambdas, explicit closure
+--   environments, hard constraints as executable preconditions, scalar and
+--   grouped results, and multi-function static libraries.
 --
 -- Numeric lowering includes exact-width arithmetic, comparisons, shifts,
 -- rotations, joins and extractions, overflow predicates, conversions,
@@ -42,8 +44,8 @@
 -- Quantifiers, special solver relations, uninterpreted sorts,
 -- regular-expression language operations, soft constraints, and general
 -- extensional array equality require solver semantics and are rejected with
--- focused diagnostics. Higher-order function values are retained for a later
--- compiler stage.
+-- focused diagnostics. The C backend compiles higher-order uses after SBV has
+-- firstified them; it does not expose symbolic functions as runtime C values.
 --
 -- Import "Data.SBV.Compilers.C.Legacy" to retain the previous compiler while
 -- migrating code that encounters one of these boundaries.

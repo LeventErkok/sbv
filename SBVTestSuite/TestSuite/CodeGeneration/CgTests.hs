@@ -147,6 +147,8 @@ tests = testGroup "CodeGeneration.CgTests"
   , testCase "compile recursive persistent-array functions" recursivePersistentArrayFunctions
   , testCase "compile recursive ADT functions" recursiveADTDefinedSBVFunctions
   , testCase "compile recursive ADT functions in a library" recursiveADTDefinedSBVFunctionLibrary
+  , testCase "compile firstified higher-order list functions" higherOrderListFunctions
+  , testCase "compile higher-order list functions in a library" higherOrderListFunctionLibrary
   , testCase "compile explicit hard constraints" explicitHardConstraints
   , testCase "reject solver-only constraint features" unsupportedConstraintFeatures
   , testCase "reject solver-only expression operations" unsupportedExpressionFeatures
@@ -2134,6 +2136,69 @@ recursiveADTDefinedSBVFunctionLibrary = withSystemTempDirectory "sbv-recursive-a
                                  (fragment `isInfixOf` stdoutText))
     [ "firstRecursiveADT() =CGNode(CGNode(CGLeaf(10), CGLeaf(11)), CGLeaf(12))"
     , "secondRecursiveADT() =CGNode(CGNode(CGLeaf(20), CGLeaf(21)), CGLeaf(22))"
+    ]
+
+-- | Compile SBV's firstified higher-order list operations, including an
+-- explicit symbolic closure environment, into ordinary private C functions.
+higherOrderListFunctions :: Assertion
+higherOrderListFunctions = withSystemTempDirectory "sbv-higher-order-list-functions" $ \dir -> do
+  let program = do
+        cgOverwriteFiles True
+        cgSetDriverValues [10, 5]
+        values <- cgInput "values" :: SBVCodeGen (SList Word8)
+        offset <- cgInput "offset" :: SBVCodeGen SWord8
+        let mapped   = SL.map (+ (1 :: SWord8)) values
+            filtered = SL.filter (\value -> value .> (11 :: SWord8)) mapped
+            folded   = SL.foldl ((+) @SWord8) 0 mapped
+            paired   = SL.zipWith ((+) @SWord8) values mapped
+
+            closureShift :: Closure SWord8 (SWord8 -> SWord8)
+            closureShift = Closure { closureEnv = offset
+                                   , closureFun = (+)
+                                   }
+
+            shifted = SL.map closureShift values
+
+        cgOutput "mapped"   mapped
+        cgOutput "filtered" filtered
+        cgOutput "folded"   folded
+        cgOutput "paired"   paired
+        cgReturn shifted
+
+  stdoutText <- compileProgramAndRunGenerated dir "higherOrderListFunctions" program
+  sourceText <- readFile (dir </> "higherOrderListFunctions.c")
+  mapM_ (\fragment -> assertBool ("Expected firstified higher-order output to contain " ++ fragment ++ ", received:\n" ++ stdoutText)
+                                 (fragment `isInfixOf` stdoutText))
+    [ ") =[15, 16, 17]"
+    , "mapped =[11, 12, 13]"
+    , "filtered =[12, 13]"
+    , "folded = 36"
+    , "paired =[21, 23, 25]"
+    ]
+  assertBool ("Expected higher-order instances to become private first-order C functions, received:\n" ++ sourceText)
+             ("/* Uninterpreted function */ sbv_function_" `isInfixOf` sourceText)
+
+-- | Exercise independently specialized higher-order functions in separate
+-- translation units of a generated static library.
+higherOrderListFunctionLibrary :: Assertion
+higherOrderListFunctionLibrary = withSystemTempDirectory "sbv-higher-order-list-function-library" $ \dir -> do
+  let component :: Word8 -> SBVCodeGen ()
+      component offset = do
+        cgOverwriteFiles True
+        cgSetDriverValues [10]
+        values <- cgInput "values" :: SBVCodeGen (SList Word8)
+        cgReturn (SL.map (\(value :: SWord8) -> value + literal offset) values)
+
+  (_, cfg, bundle) <- compileToCLib' "higherOrderListFunctionLibrary"
+    [ ("addTen", component 10)
+    , ("addTwenty", component 20)
+    ]
+  renderCgPgmBundle (Just dir) (cfg, bundle)
+  stdoutText <- compileAndRunGenerated dir "higherOrderListFunctionLibrary"
+  mapM_ (\fragment -> assertBool ("Expected higher-order library output to contain " ++ fragment ++ ", received:\n" ++ stdoutText)
+                                 (fragment `isInfixOf` stdoutText))
+    [ "addTen(((SBVList_u8) {(const SWord8[]) {10, 11, 12}, 3})) =[20, 21, 22]"
+    , "addTwenty(((SBVList_u8) {(const SWord8[]) {10, 11, 12}, 3})) =[30, 31, 32]"
     ]
 
 -- | Exercise unnamed and named hard constraints as generated-C precondition
