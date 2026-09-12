@@ -126,6 +126,8 @@ tests = testGroup "CodeGeneration.CgTests"
   , testCase "compile repeated array types into a library" persistentArrayLibrary
   , testCase "compile and execute a callback-backed array input" callbackArrayInput
   , testCase "compile and execute a structured lambda array" structuredLambdaArray
+  , testCase "compile managed structured lambda arrays" managedStructuredLambdaArrays
+  , testCase "retain an escaping managed lambda array" escapingManagedLambdaArray
   , testCase "compile and execute structured lambda tables" structuredLambdaTables
   , testCase "compile and execute a defined SBV function" definedSBVFunction
   , testCase "compose acyclic defined SBV functions" composedDefinedSBVFunctions
@@ -1392,6 +1394,56 @@ structuredLambdaArray = withSystemTempDirectory "sbv-structured-lambda-array" $ 
     [ "0x00000063UL"
     , "nextValue = 0x0000001fUL"
     ]
+
+-- | Exercise text, list, and set allocation inside retained array callbacks,
+-- including an exact list element that shares both the GMP and list arenas.
+managedStructuredLambdaArrays :: Assertion
+managedStructuredLambdaArrays = withSystemTempDirectory "sbv-managed-structured-lambda-arrays" $ \dir -> do
+  let program = do
+        cgOverwriteFiles True
+        cgSetDriverValues [2]
+        key <- cgInput "key" :: SBVCodeGen SWord8
+        let textSource = lambdaArray (\index ->
+                           ite (index .== 2) (literal "hit") (literal "miss") SL.++ literal "!")
+                         :: SArray Word8 String
+            listSource = lambdaArray (\index ->
+                           SL.singleton (sFromIntegral index :: SInteger) SL.++ literal [100])
+                         :: SArray Word8 [Integer]
+            setSource = lambdaArray (\index ->
+                          SS.insert (sFromIntegral index :: SInteger) (SS.singleton 100))
+                        :: SArray Word8 (RCSet Integer)
+        cgOutput "textValue" (readArray textSource key)
+        cgOutput "listValue" (readArray listSource key)
+        cgReturn (readArray setSource key)
+
+  stdoutText <- compileProgramAndRunGenerated dir "managedStructuredLambdaArrays" program
+  mapM_ (\fragment -> assertBool ("Expected managed structured-lambda output to contain " ++ show fragment ++ ", received:\n" ++ stdoutText)
+                                  (fragment `isInfixOf` stdoutText))
+    [ ") ={100, 2}"
+    , "textValue =hit!"
+    , "listValue =[2, 100]"
+    ]
+
+-- | Return a retained lambda array whose callback constructs a tuple with
+-- fresh text and list storage, then read it after the generated call returns.
+escapingManagedLambdaArray :: Assertion
+escapingManagedLambdaArray = withSystemTempDirectory "sbv-escaping-managed-lambda-array" $ \dir -> do
+  let program = do
+        cgOverwriteFiles True
+        let source = lambdaArray (\index ->
+                       tuple ( literal "item" SL.++ literal "!"
+                             , SL.singleton (sFromIntegral index :: SWord16) SL.++ literal [99]
+                             ))
+                     :: SArray Word8 (String, [Word16])
+        cgReturn source
+
+  stdoutText <- compileProgramAndRunGenerated dir "escapingManagedLambdaArray" program
+  sourceText <- readFile (dir </> "escapingManagedLambdaArray.c")
+  assertBool ("Expected an escaping managed lambda array to retain its callback arenas, received:\n" ++ stdoutText)
+             ("[0] =(item!, [0x0000U, 0x0063U])" `isInfixOf` stdoutText)
+  assertBool ("Expected the escaping callback to clone managed results into retained storage, received:\n" ++ sourceText)
+             ("sbv_function_ctx_retain_empty" `isInfixOf` sourceText
+           && "sbv_function_result_clone_" `isInfixOf` sourceText)
 
 -- | Exercise parameter-dependent tables in two structured lambdas, ensuring
 -- their independently numbered local table declarations do not collide.

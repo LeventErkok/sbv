@@ -31,13 +31,11 @@ module Data.SBV.Compilers.C.Array
   , arrayDriverInput
   , arrayDriverStoredInput
   , arrayLambdaName
-  , arrayLambdaUsesGMP
   , arrayConst
   , arrayExpr
   ) where
 
 import Data.Char                        (isAsciiLower, toUpper)
-import qualified Data.Foldable as F
 import qualified Data.Set as Set
 
 import Text.PrettyPrint.HughesPJ
@@ -55,7 +53,7 @@ import Data.SBV.Compilers.C.Types      ( arrayKindTag
 import Data.SBV.Compilers.C.Value      (byValueEqual, managedValueClone, managedValueRelease, valueNeedsOwnership)
 import Data.SBV.Compilers.CodeGen      (CgConfig)
 import Data.SBV.Core.Data
-import Data.SBV.Core.Symbolic          (LambdaInfo(..), smtLambdaInfo)
+import Data.SBV.Core.Symbolic          (smtLambdaInfo)
 
 -- | Return and validate the distinct array kinds used by a program. Arrays may
 -- occur as values, but not as keys: array-key matching would require general
@@ -706,14 +704,13 @@ arrayExpr cfg op svs resultSV args
         -> nodeLowering resultKind
              [text ".kind = SBV_ARRAY_CONSTANT", text ".value =" <+> storedValue (snd pair) defaultValue]
       (ArrayInit (Right lambdaDef), [], [])
-        | Just lambdaInfo <- smtLambdaInfo lambdaDef
-        , let usesGMP = arrayLambdaUsesGMP cfg lambdaInfo
+        | Just _ <- smtLambdaInfo lambdaDef
         -> nodeLowering resultKind
              [ text ".kind = SBV_ARRAY_CALLBACK"
              , text ".lookup ="  <+> text (arrayLambdaName resultSV)
-             , text ".context =" <+> if usesGMP then text "&__sbv_gmp_ctx"            else text "NULL"
-             , text ".retain ="  <+> if usesGMP then text "sbv_gmp_ctx_retain_empty" else text "NULL"
-             , text ".release =" <+> if usesGMP then text "sbv_gmp_ctx_release_owned" else text "NULL"
+             , text ".context =" <+> text "&__sbv_function_ctx"
+             , text ".retain ="  <+> text "sbv_function_ctx_retain_empty"
+             , text ".release =" <+> text "sbv_function_ctx_release_owned"
              ]
         | True
         -> unsupported "lambda arrays without retained structured expressions"
@@ -818,18 +815,6 @@ arrayDriverGuard kind = "SBV_ARRAY_DRIVER_CALLBACK_" ++ map toUpper (arraySuffix
 -- | Return the generated C lookup-helper name for a structured lambda array.
 arrayLambdaName :: SV -> String
 arrayLambdaName array = "sbv_array_lambda_" ++ show array
-
--- | Check whether a structured lambda requires access to its enclosing
--- function's exact-number allocation arena.
-arrayLambdaUsesGMP :: CgConfig -> LambdaInfo -> Bool
-arrayLambdaUsesGMP cfg LambdaInfo{ liAssignments = assignments
-                                 , liParams      = params
-                                 , liOutput      = lambdaOutput
-                                 , liConsts      = constants
-                                 , liTables      = tables
-                                 }
-  = any (isExactGMPKind cfg . kindOf) values
- where values = lambdaOutput : map snd params ++ map fst (F.toList assignments) ++ map fst constants ++ concatMap snd tables
 
 -- | Return the key/value suffix shared by the generated names for an array
 -- kind.
