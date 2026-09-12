@@ -35,7 +35,6 @@ module Data.SBV.Compilers.C.Array
   , arrayExpr
   ) where
 
-import Data.Char                        (isAsciiLower, toUpper)
 import qualified Data.Set as Set
 import qualified Data.Text as T
 
@@ -833,7 +832,7 @@ arrayDriverReleaseName kind = "__sbv_array_release_driver_" ++ arraySuffix kind
 -- | Return the preprocessor guard that deduplicates a per-kind driver callback
 -- when independently generated library components share an array type.
 arrayDriverGuard :: Kind -> String
-arrayDriverGuard kind = "SBV_ARRAY_DRIVER_CALLBACK_" ++ map toUpper (arraySuffix kind) ++ "_DEFINED"
+arrayDriverGuard kind = "SBV_ARRAY_DRIVER_CALLBACK_" ++ arraySuffix kind ++ "_DEFINED"
 
 -- | Return the generated C lookup-helper name for a structured lambda array.
 arrayLambdaName :: SV -> String
@@ -846,19 +845,12 @@ arraySuffix = arrayKindTag
 
 -- | Return the preprocessor guard protecting an array type declaration.
 arrayGuard :: Kind -> String
-arrayGuard kind = map cGuardChar (arrayCType kind) ++ "_DEFINED"
+arrayGuard kind = arrayCType kind ++ "_DEFINED"
 
 -- | Return the preprocessor guard protecting an array descriptor's forward
 -- declaration and stored-value helper prototypes.
 arrayForwardGuard :: Kind -> String
-arrayForwardGuard kind = map cGuardChar (arrayOutputCType kind) ++ "_FORWARD_DEFINED"
-
--- | Convert a generated C identifier character to its preprocessor-guard
--- spelling.
-cGuardChar :: Char -> Char
-cGuardChar character
-  | isAsciiLower character = toUpper character
-  | True                   = character
+arrayForwardGuard kind = arrayOutputCType kind ++ "_FORWARD_DEFINED"
 
 -- | Render the strong equality used to match array keys. Unlike IEEE numeric
 -- equality, this recursively preserves object equality for aggregate fields.

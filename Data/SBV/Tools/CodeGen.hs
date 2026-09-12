@@ -77,6 +77,11 @@ User-supplied C prototypes, declarations, and external implementations remain
 the caller's responsibility; their identifiers must not conflict with the
 generated runtime or entry points.
 
+Generated ADT constructor tags and structural declaration guards preserve
+case. Structural type names encode component boundaries explicitly; array
+names length-prefix both the key and value tags. Use the names in the generated
+header rather than deriving them from Haskell type spellings.
+
 == Representations and execution
 
 Generated code evaluates the symbolic computation without an SMT solver.

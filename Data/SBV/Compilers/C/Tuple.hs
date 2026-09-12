@@ -32,7 +32,6 @@ module Data.SBV.Compilers.C.Tuple
   , kindTag
   ) where
 
-import Data.Char                       (toUpper)
 import Data.List                       (nub, sortOn)
 import qualified Data.Set as Set
 
@@ -147,7 +146,7 @@ tupleOwnershipTypeDecls cfg tuples
           , "#endif"
           , ""
          ]
-         where ownershipGuard = map toUpper (tupleCType kind) ++ "_OWNERSHIP_DEFINED"
+         where ownershipGuard = tupleCType kind ++ "_OWNERSHIP_DEFINED"
 
                initializeField index fieldKind
                   | isExactGMPKind cfg fieldKind
@@ -350,8 +349,8 @@ tupleValue kind _ = error $ "SBV->C: Expected a tuple kind, received " ++ show k
 
 -- | Return the preprocessor guard protecting one tuple definition.
 tupleGuard :: Kind -> String
-tupleGuard kind = map toUpper (tupleCType kind) ++ "_DEFINED"
+tupleGuard kind = tupleCType kind ++ "_DEFINED"
 
 -- | Return the preprocessor guard protecting one tuple forward declaration.
 tupleForwardGuard :: Kind -> String
-tupleForwardGuard kind = map toUpper (tupleCType kind) ++ "_FORWARD_DEFINED"
+tupleForwardGuard kind = tupleCType kind ++ "_FORWARD_DEFINED"

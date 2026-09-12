@@ -25,6 +25,10 @@
     Public C names are validated before rendering. Private parameter and driver bindings prevent
     collisions with accepted user names, which remain unchanged in headers and driver labels.
     Library file-name conflicts are checked case-insensitively for portable bundles.
+    ADT tags and structural declaration guards preserve case, so distinct types such as `Tree`
+    and `TREE` can coexist, including through collections and repeated library components.
+    Array type/helper names now length-prefix their key and value tags; regenerate headers
+    and update callers using the previous generated array names.
 
   * Functions defined with `smtFunction` and its variants can now be first encountered after entering
     query mode. SBV sends their definitions and dependencies incrementally, while retaining termination

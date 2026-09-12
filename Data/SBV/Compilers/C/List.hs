@@ -35,7 +35,6 @@ module Data.SBV.Compilers.C.List
   , listContextEnd
   ) where
 
-import Data.Char                       (toUpper)
 import Data.List                       (nub, sortOn, stripPrefix, tails)
 import qualified Data.Set as Set
 
@@ -474,15 +473,15 @@ listKindTag kind  = kindTag kind
 
 -- | Return the preprocessor guard for one list forward declaration.
 listForwardGuard :: Kind -> String
-listForwardGuard kind = "SBV_LIST_" ++ map toUpper (listKindTag (listElementKind kind)) ++ "_FORWARD_DEFINED"
+listForwardGuard kind = "SBV_LIST_" ++ listKindTag (listElementKind kind) ++ "_FORWARD_DEFINED"
 
 -- | Return the preprocessor guard for one list descriptor.
 listGuard :: Kind -> String
-listGuard kind = "SBV_LIST_" ++ map toUpper (listKindTag (listElementKind kind)) ++ "_DEFINED"
+listGuard kind = "SBV_LIST_" ++ listKindTag (listElementKind kind) ++ "_DEFINED"
 
 -- | Return the preprocessor guard for one list ownership-helper definition.
 listOwnershipGuard :: Kind -> String
-listOwnershipGuard kind = "SBV_LIST_" ++ map toUpper (listKindTag (listElementKind kind)) ++ "_OWNERSHIP_DEFINED"
+listOwnershipGuard kind = "SBV_LIST_" ++ listKindTag (listElementKind kind) ++ "_OWNERSHIP_DEFINED"
 
 -- | Return the element kind of a symbolic-list kind.
 listElementKind :: Kind -> Kind

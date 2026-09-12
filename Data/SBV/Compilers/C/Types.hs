@@ -96,7 +96,11 @@ constElementCType kind
   | isArray kind = elementCType kind ++ " const"
   | True         = "const " ++ elementCType kind
 
--- | Return the collision-free suffix used by a generated structural C type.
+-- | Return the suffix used by a generated structural C type. Structural
+-- components are length-framed and identifiers are escaped injectively.
+-- Consumers must preserve case, including in preprocessor guards and tags.
+-- Booleans and unsigned one-bit vectors intentionally share a representation,
+-- as do a concrete ADT and its corresponding resolved application.
 kindTag :: Kind -> String
 kindTag KBool               = "u1"
 kindTag (KBounded False w)  = "u" ++ show w
@@ -120,8 +124,13 @@ kindTag kind@KArray{}       = "array_" ++ taggedKind (arrayKindTag kind)
 kindTag kind                = error $ "SBV->C: Unsupported structural kind: " ++ show kind
 
 -- | Return the key/value suffix shared by generated names for an array kind.
+-- Frame both components by length, just as for tuple fields and ADT arguments,
+-- so nested tags need not be parsed to find the key/value boundary.
+--
+-- >>> arrayKindTag (KArray (KBounded False 8) (KBounded False 32))
+-- "2_u8_3_u32"
 arrayKindTag :: Kind -> String
-arrayKindTag (KArray keyKind valueKind) = kindTag keyKind ++ "_" ++ kindTag valueKind
+arrayKindTag (KArray keyKind valueKind) = taggedKind (kindTag keyKind) ++ "_" ++ taggedKind (kindTag valueKind)
 arrayKindTag kind                       = error $ "SBV->C: Expected an array kind, received " ++ show kind
 
 -- | Return the public owned-output descriptor name for an array kind.

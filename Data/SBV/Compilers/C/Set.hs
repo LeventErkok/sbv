@@ -36,7 +36,6 @@ module Data.SBV.Compilers.C.Set
   , setContextEnd
   ) where
 
-import Data.Char                       (toUpper)
 import Data.List                       (nub, stripPrefix, tails)
 import qualified Data.Set as Set
 
@@ -426,15 +425,15 @@ setElementTag kind  = kindTag kind
 
 -- | Return the preprocessor guard for one set forward declaration.
 setForwardGuard :: Kind -> String
-setForwardGuard kind = "SBV_SET_" ++ map toUpper (setElementTag (setElementKind kind)) ++ "_FORWARD_DEFINED"
+setForwardGuard kind = "SBV_SET_" ++ setElementTag (setElementKind kind) ++ "_FORWARD_DEFINED"
 
 -- | Return the preprocessor guard for one set descriptor.
 setGuard :: Kind -> String
-setGuard kind = "SBV_SET_" ++ map toUpper (setElementTag (setElementKind kind)) ++ "_DEFINED"
+setGuard kind = "SBV_SET_" ++ setElementTag (setElementKind kind) ++ "_DEFINED"
 
 -- | Return the preprocessor guard for one set ownership-helper definition.
 setOwnershipGuard :: Kind -> String
-setOwnershipGuard kind = "SBV_SET_" ++ map toUpper (setElementTag (setElementKind kind)) ++ "_OWNERSHIP_DEFINED"
+setOwnershipGuard kind = "SBV_SET_" ++ setElementTag (setElementKind kind) ++ "_OWNERSHIP_DEFINED"
 
 -- | Return the generated clone-helper name for a set kind.
 setCloneName :: Kind -> String

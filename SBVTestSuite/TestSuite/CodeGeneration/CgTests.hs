@@ -100,8 +100,15 @@ data CodeGenCollectionTree = CGCollectionLeaf [Integer] (RCSet Rational)
                            | CGCollectionBranch CodeGenCollectionTree
                            deriving Show
 
+-- | A recursive type whose spelling differs from 'CodeGenCASE' only in case.
+data CodeGenCase = CGCaseLeaf Word8 | CGCaseNext CodeGenCase deriving (Eq, Ord, Show)
+
+-- | The case-sensitive companion used to expose collisions in generated
+-- declaration guards, constructor tags, and transitive collection helpers.
+data CodeGenCASE = CGCASELeaf Word8 | CGCASENext CodeGenCASE deriving (Eq, Ord, Show)
+
 -- | Generate the symbolic interfaces for the code-generation ADTs.
-mkSymbolic [''CodeGenADT, ''CodeGenEnum, ''CodeGenEnvelope, ''CodeGenTree, ''CodeGenForest, ''CodeGenEven, ''CodeGenOdd, ''CodeGenLoop, ''CodeGenCollections, ''CodeGenNativeCollections, ''CodeGenText, ''CodeGenArrayBox, ''CodeGenArrayEnvelope, ''CodeGenCollectionTree]
+mkSymbolic [''CodeGenADT, ''CodeGenEnum, ''CodeGenEnvelope, ''CodeGenTree, ''CodeGenForest, ''CodeGenEven, ''CodeGenOdd, ''CodeGenLoop, ''CodeGenCollections, ''CodeGenNativeCollections, ''CodeGenText, ''CodeGenArrayBox, ''CodeGenArrayEnvelope, ''CodeGenCollectionTree, ''CodeGenCase, ''CodeGenCASE]
 
 -- | Code-generation tests.
 tests :: TestTree
@@ -121,6 +128,8 @@ tests = testGroup "CodeGeneration.CgTests"
   , testCase "terminate on failed library preconditions and assertions" libraryRuntimeFailures
   , testCase "reject invalid and reserved public C names before rendering" publicCNameValidation
   , testCase "preserve public C names without local collisions" privateCBindings
+  , testCase "preserve case through ADTs and structural type guards" caseSensitiveCKinds
+  , testCase "frame nested array key and value type names" structuralCNameFraming
   , testCase "compare finite ADT set universes" finiteADTSetUniverses
   , testCase "compile exact symbolic rationals" exactSymbolicRationals
   , testCase "compile rationals with mapped integers" mappedIntegerRationals
@@ -417,6 +426,74 @@ privateCBindings = withSystemTempDirectory "sbv-private-c-bindings" $ \dir -> do
   outputText <- compileAndRunGenerated dir "s0"
   mapM_ (\fragment -> assertBool outputText (fragment `isInfixOf` outputText))
     ["s1 = 9", "group_ctr = 5", "values_element_0 =", "s0(7, 2, values, values_data, group"]
+
+-- | Distinct recursive ADTs must coexist both directly and through every
+-- structural wrapper. Repeated library components must deduplicate each
+-- type's helpers without suppressing the differently-cased companion.
+caseSensitiveCKinds :: Assertion
+caseSensitiveCKinds = mapM_ check [False, True]
+ where check library = withSystemTempDirectory "sbv-case-sensitive-kinds" $ \dir -> do
+         if library
+            then do _ <- compileToCLib (Just dir) "caseSensitiveKinds" [("firstCase", program), ("secondCase", program)]
+                    pure ()
+            else compileToC (Just dir) "caseSensitiveKinds" program
+         outputText <- compileAndRunGenerated dir "caseSensitiveKinds"
+         mapM_ (\fragment -> assertBool outputText (fragment `isInfixOf` outputText))
+           ["CGCaseNext", "CGCASENext", "lowerList =", "upperList =", "lowerSet =", "upperSet ="]
+
+       program = do
+         cgOverwriteFiles True
+         cgSetDriverValues (repeat 1)
+         lower      <- cgInput "lower"      :: SBVCodeGen (SBV CodeGenCase)
+         upper      <- cgInput "upper"      :: SBVCodeGen (SBV CodeGenCASE)
+         lowerTuple <- cgInput "lowerTuple" :: SBVCodeGen (SBV (CodeGenCase, Word8))
+         upperTuple <- cgInput "upperTuple" :: SBVCodeGen (SBV (CodeGenCASE, Word8))
+         lowerList  <- cgInput "lowerListInput" :: SBVCodeGen (SList CodeGenCase)
+         upperList  <- cgInput "upperListInput" :: SBVCodeGen (SList CodeGenCASE)
+         lowerSet   <- cgInput "lowerSetInput"  :: SBVCodeGen (SSet CodeGenCase)
+         upperSet   <- cgInput "upperSetInput"  :: SBVCodeGen (SSet CodeGenCASE)
+         lowerArray <- cgInput "lowerArray" :: SBVCodeGen (SArray Word8 CodeGenCase)
+         upperArray <- cgInput "upperArray" :: SBVCodeGen (SArray Word8 CodeGenCASE)
+         cgOutput "lowerChild" (getCGCaseNext_1 lower)
+         cgOutput "upperChild" (getCGCASENext_1 upper)
+         cgOutput "lowerPair" lowerTuple
+         cgOutput "upperPair" upperTuple
+         cgOutput "lowerList" lowerList
+         cgOutput "upperList" upperList
+         cgOutput "lowerSet" lowerSet
+         cgOutput "upperSet" upperSet
+         cgOutput "lowerArrayResult" (writeArray lowerArray 0 lower)
+         cgOutput "upperArrayResult" (writeArray upperArray 0 upper)
+         cgReturn (tuple (sCGCaseNext lower, sCGCASENext upper))
+
+-- | Different placements of tuple and array boundaries produce distinct C
+-- descriptor names, and the framed names agree across declarations, storage,
+-- access helpers, and driver-side ownership operations.
+structuralCNameFraming :: Assertion
+structuralCNameFraming = withSystemTempDirectory "sbv-structural-c-names" $ \dir -> do
+  compileToC (Just dir) "structuralNames" $ do
+    cgOverwriteFiles True
+    cgSetDriverValues [7, 0, 0]
+    value <- cgInput "value" :: SBVCodeGen SWord32
+    keyed <- cgInput "keyed" :: SBVCodeGen (SArray (Word8, Word16) Word32)
+    paired <- cgInput "paired" :: SBVCodeGen (SArray Word8 (Word16, Word32))
+    let key = tuple (1 :: SWord8, 2 :: SWord16)
+        keyedResult = writeArray keyed key value
+        pairedResult = writeArray paired 1 (tuple (2 :: SWord16, value))
+        nested = constArray (constArray value :: SArray Word16 Word32) :: SArray Word8 (ArrayModel Word16 Word32)
+        (_, pairedValue) = untuple (readArray pairedResult 1)
+    cgOutput "keyedResult" keyedResult
+    cgOutput "pairedResult" pairedResult
+    cgOutput "nested" nested
+    cgReturn (readArray keyedResult key .== value .&& pairedValue .== value .&& readArray (readArray nested 1) 2 .== value)
+  headerText <- readFile (dir </> "structuralNames.h")
+  mapM_ (\typeName -> assertBool headerText (typeName `isInfixOf` headerText))
+    ["SBVArrayOutput_13_t2_2_u8_3_u16_3_u32"
+    , "SBVArrayOutput_2_u8_14_t2_3_u16_3_u32"
+    , "SBVArrayOutput_2_u8_20_array_11_3_u16_3_u32"
+    ]
+  outputText <- compileAndRunGenerated dir "structuralNames"
+  assertBool outputText (") = 1" `isInfixOf` outputText)
 
 -- | Library calls share the standalone fail-fast contract. Exercise both
 -- executable hard constraints and explicit assertions in separate processes.
@@ -1416,7 +1493,7 @@ nestedPersistentArrays = withSystemTempDirectory "sbv-nested-persistent-arrays" 
     , "selected = 0x0000001dUL"
     ]
   assertBool ("Expected nested array values to use retained temporary descriptors, received:\n" ++ sourceText)
-             (    "sbv_array_stored_export_u8_u32(&__sbv_array_ctx" `isInfixOf` sourceText
+             (    "sbv_array_stored_export_2_u8_3_u32(&__sbv_array_ctx" `isInfixOf` sourceText
               && "sbv_array_ctx_end(&__sbv_array_ctx)" `isInfixOf` sourceText
               && "__sbv_array_descriptor_" `isInfixOf` sourceText
              )
@@ -1445,7 +1522,7 @@ tupleStoredArrays = withSystemTempDirectory "sbv-tuple-stored-arrays" $ \dir -> 
     , "pair =([0] =0x00000005UL, 1)"
     ]
   assertBool ("Expected tuple construction and projection to bridge retained arrays, received:\n" ++ sourceText)
-             (    ".field1 = sbv_array_stored_export_u8_u32(&__sbv_array_ctx" `isInfixOf` sourceText
+             (    ".field1 = sbv_array_stored_export_2_u8_3_u32(&__sbv_array_ctx" `isInfixOf` sourceText
               && "__sbv_array_descriptor_" `isInfixOf` sourceText
              )
 
@@ -1472,7 +1549,7 @@ adtStoredArrays = withSystemTempDirectory "sbv-adt-stored-arrays" $ \dir -> do
     , "boxed =CGArrayBox([0] =0x00000005UL, 1)"
     ]
   assertBool ("Expected ADT construction and projection to bridge retained arrays, received:\n" ++ sourceText)
-             (    ".field1 = sbv_array_stored_export_u8_u32(&__sbv_array_ctx" `isInfixOf` sourceText
+             (    ".field1 = sbv_array_stored_export_2_u8_3_u32(&__sbv_array_ctx" `isInfixOf` sourceText
               && "__sbv_array_descriptor_" `isInfixOf` sourceText
              )
 
@@ -1500,7 +1577,7 @@ listStoredArrays = withSystemTempDirectory "sbv-list-stored-arrays" $ \dir -> do
     ]
   assertBool ("Expected list construction and indexing to bridge retained arrays, received:\n" ++ sourceText)
              (    "sbv_list_array_" `isInfixOf` sourceText
-              && "sbv_array_stored_export_u8_u32(&__sbv_array_ctx" `isInfixOf` sourceText
+              && "sbv_array_stored_export_2_u8_3_u32(&__sbv_array_ctx" `isInfixOf` sourceText
               && "__sbv_array_descriptor_" `isInfixOf` sourceText
              )
 
@@ -1537,7 +1614,7 @@ aggregateArrayInputs = withSystemTempDirectory "sbv-aggregate-array-inputs" $ \d
     , "listValue = 0x0000000bUL"
     ]
   assertBool ("Expected retained descriptors for all aggregate array inputs, received:\n" ++ driverText)
-             (length (filter (isInfixOf "sbv_array_output_retain_u8_u32") (lines driverText)) >= 5)
+             (length (filter (isInfixOf "sbv_array_output_retain_2_u8_3_u32") (lines driverText)) >= 5)
 
 -- | Exercise transitive ownership when tuples, lists, and ADTs hide retained
 -- arrays behind one or more concrete ADT fields.
@@ -1836,8 +1913,8 @@ arrayValuedLambdaResults = withSystemTempDirectory "sbv-array-valued-lambda-resu
     , "marker = 0x000fU"
     ]
   assertBool ("Expected array callback results to cross through retained descriptors, received:\n" ++ sourceText)
-             ("sbv_array_stored_export_u8_u32(&__sbv_array_ctx" `isInfixOf` sourceText
-           && "SBVArrayOutput_u8_u32 * sbv_array_lambda_" `isInfixOf` sourceText)
+             ("sbv_array_stored_export_2_u8_3_u32(&__sbv_array_ctx" `isInfixOf` sourceText
+           && "SBVArrayOutput_2_u8_3_u32 * sbv_array_lambda_" `isInfixOf` sourceText)
 
 -- | Exercise array-valued callback results in independent translation units
 -- of a generated static library.
@@ -2323,8 +2400,8 @@ recursivePersistentArrayFunctions = withSystemTempDirectory "sbv-recursive-persi
     , "fallback = 7"
     ]
   assertBool ("Expected recursive array nodes to be declared outside guarded branches, received:\n" ++ sourceText)
-             ("sbv_array_node_u8_u8 __sbv_array_s" `isInfixOf` sourceText
-           && "sbv_array_stored_export_u8_u8(&__sbv_array_ctx" `isInfixOf` sourceText)
+             ("sbv_array_node_2_u8_2_u8 __sbv_array_s" `isInfixOf` sourceText
+           && "sbv_array_stored_export_2_u8_2_u8(&__sbv_array_ctx" `isInfixOf` sourceText)
 
 -- | Construct, traverse, and return a recursive ADT through private recursive
 -- functions after every child-producing C stack frame has unwound.
@@ -2638,12 +2715,12 @@ managedReturnGroups = withSystemTempDirectory "sbv-managed-return-groups" $ \dir
     ]
   assertBool "Expected exact and persistent-array groups to expose mutable output arrays"
              ("mpz_t *result_1" `isInfixOf` headerText
-           && "SBVArrayOutput_u8_u16 *result_2" `isInfixOf` headerText)
+           && "SBVArrayOutput_2_u8_3_u16 *result_2" `isInfixOf` headerText)
   assertBool ("Expected managed group elements to be cloned and released independently, received:\n"
            ++ unlines (filter ("sbv_" `isInfixOf`) (lines (sourceText ++ driverText))))
              ("sbv_output_0[0] = sbv_list_clone_u16" `isInfixOf` sourceText
            && "sbv_list_release_u16(&sbv_driver_output_0[0]);" `isInfixOf` driverText
-           && "sbv_array_output_release_u8_u16(&sbv_driver_output_2[0]);" `isInfixOf` driverText)
+           && "sbv_array_output_release_2_u8_3_u16(&sbv_driver_output_2[0]);" `isInfixOf` driverText)
 
 -- | Exercise grouped return ABIs across multiple generated library
 -- translation units.
@@ -2814,8 +2891,8 @@ managedAggregateArrayLibrary = withSystemTempDirectory "sbv-managed-aggregate-ar
     , "secondManagedArray(source)[0] =CGNativeCollections([0x0004U, 0x0005U, 0x0006U]"
     ]
   assertBool "Expected one reusable guarded aggregate-array ABI"
-             ("SBVArrayOutput_set_3_u16_adt_" `isInfixOf` headerText
-           && "sbv_array_output_release_set_3_u16_adt_" `isInfixOf` headerText)
+             ("SBVArrayOutput_9_set_3_u16_39_adt_SBVADT_x5f_CodeGenNativeCollections" `isInfixOf` headerText
+           && "sbv_array_output_release_9_set_3_u16_39_adt_SBVADT_x5f_CodeGenNativeCollections" `isInfixOf` headerText)
 
 -- | Exercise static and runtime-local finite tables containing text, lists,
 -- sets, and ADTs with managed collection fields.
@@ -2889,8 +2966,8 @@ arrayValuedTables = withSystemTempDirectory "sbv-array-valued-tables" $ \dir -> 
   assertBool ("Expected the selected array value, received:\n" ++ stdoutText) ("0x00000015UL" `isInfixOf` stdoutText)
   assertBool ("Expected the out-of-range default array value, received:\n" ++ stdoutText) ("defaultValue = 0x0000001eUL" `isInfixOf` stdoutText)
   assertBool ("Expected retained array-valued table storage, received:\n" ++ sourceText)
-             (    "SBVArrayOutput_u8_u32 * const table" `isInfixOf` sourceText
-              && "sbv_array_stored_export_u8_u32(&__sbv_array_ctx" `isInfixOf` sourceText
+             (    "SBVArrayOutput_2_u8_3_u32 * const table" `isInfixOf` sourceText
+              && "sbv_array_stored_export_2_u8_3_u32(&__sbv_array_ctx" `isInfixOf` sourceText
               && "__sbv_array_descriptor_" `isInfixOf` sourceText
              )
 

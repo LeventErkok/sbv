@@ -40,7 +40,6 @@ module Data.SBV.Compilers.C.ADT
   , adtConstructors
   ) where
 
-import Data.Char                       (toUpper)
 import qualified Data.Graph as DG
 import Data.List                       (find, nub)
 import qualified Data.Set as Set
@@ -364,7 +363,7 @@ adtOwnershipTypeDecls cfg adts
           , "#endif"
           , ""
          ]
-         where ownershipGuard = map toUpper (adtCType kind) ++ "_OWNERSHIP_DEFINED"
+         where ownershipGuard = adtCType kind ++ "_OWNERSHIP_DEFINED"
 
                initSignature = "static inline SBV_CGEN_UNUSED void "
                             ++ adtOwnedInitName kind
@@ -925,7 +924,7 @@ adtPrintName kind = "sbv_adt_print_" ++ adtCType kind
 
 -- | Return the preprocessor guard for one driver-side recursive ADT printer.
 adtPrintGuard :: Kind -> String
-adtPrintGuard kind = map toUpper (adtPrintName kind) ++ "_DEFINED"
+adtPrintGuard kind = adtPrintName kind ++ "_DEFINED"
 
 -- | Return constructors with parameter variables and 'KApp' references
 -- replaced by their concrete kinds.
@@ -1056,7 +1055,7 @@ adtDereferenceName kind = "sbv_adt_dereference_" ++ adtCType kind
 
 -- | Return the guard protecting one recursive ADT dereference helper.
 dereferenceGuard :: Kind -> String
-dereferenceGuard kind = map toUpper (adtDereferenceName kind) ++ "_DEFINED"
+dereferenceGuard kind = adtDereferenceName kind ++ "_DEFINED"
 
 -- | Join Boolean C expressions with short-circuiting conjunction.
 andExpressions :: [Doc] -> Doc
@@ -1131,15 +1130,15 @@ adtTagCType kind = adtCType kind ++ "_Tag"
 
 -- | Return the generated enumeration constant for one ADT constructor.
 adtTagName :: Kind -> Int -> String
-adtTagName kind constructorIndex = map toUpper (adtCType kind) ++ "_TAG_" ++ show constructorIndex
+adtTagName kind constructorIndex = adtCType kind ++ "_TAG_" ++ show constructorIndex
 
 -- | Return the preprocessor guard protecting one ADT declaration.
 adtGuard :: Kind -> String
-adtGuard kind = map toUpper (adtCType kind) ++ "_DEFINED"
+adtGuard kind = adtCType kind ++ "_DEFINED"
 
 -- | Return the preprocessor guard protecting one ADT forward declaration.
 adtForwardGuard :: Kind -> String
-adtForwardGuard kind = map toUpper (adtCType kind) ++ "_DECLARED"
+adtForwardGuard kind = adtCType kind ++ "_DECLARED"
 
 -- | Render a C99 tagged-union compound literal.
 adtValue :: [Kind] -> Kind -> Int -> [Doc] -> Doc
