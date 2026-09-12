@@ -21,6 +21,7 @@
 module TestSuite.CodeGeneration.CgTests(tests) where
 
 import Control.Exception (ErrorCall, displayException, evaluate, try)
+import Control.Monad (forM)
 import Data.List (isInfixOf)
 import Data.SBV.Internals
 import Data.SBV.Tools.CodeGen (compileToC, compileToCLib)
@@ -124,6 +125,7 @@ tests = testGroup "CodeGeneration.CgTests"
   , testCase "compile divisibility with mapped integers" mappedIntegerDivisibility
   , testCase "compile mapped real non-linear operations" mappedRealNonLinearOperations
   , testCase "compile mapped integer exponentiation" mappedIntegerExponentiation
+  , testCase "execute mapped integer arithmetic at every native width" mappedIntegerArithmetic
   , testCase "reject non-linear exact real operations" exactRealNonLinearDiagnostic
   , testCase "compile repeated exact rationals into a library" exactRationalLibrary
   , testCase "compile and execute persistent arrays" persistentArrays
@@ -343,9 +345,11 @@ libraryValidation = do
     , ("symbolLibrary", [("entry", program True), ("entry_driver", program False)], "Conflicting generated entry points")
     , ("mainLibrary", [("main", program True)], "Conflicting generated entry points")
     ]
-  (_, _, bundle) <- compileToCLib' "noDriverLibrary"
-    [("noDriverLibrary_driver", program False), ("main", program False)]
-  assertBool "Disabled drivers should not reserve files or entry points" ("main.c" `isInfixOf` show bundle)
+  withSystemTempDirectory "sbv-library-no-drivers" $ \dir -> do
+    _ <- compileToCLib (Just dir) "noDriverLibrary"
+      [("noDriverLibrary_driver", program False), ("entry", program False), ("entry_driver", program False)]
+    (makeExit, _, makeError) <- readProcessWithExitCode "make" ["-C", dir, "CCFLAGS=-std=c11 -Wall -Werror -O2"] ""
+    assertEqual makeError ExitSuccess makeExit
  where program driver = do
          cgOverwriteFiles True
          cgGenerateDriver driver
@@ -1182,6 +1186,51 @@ mappedIntegerExponentiation = withSystemTempDirectory "sbv-mapped-integer-expone
   stdoutText <- compileProgramAndRunGenerated dir "mappedIntegerExponentiation" program
   assertBool ("Expected mapped integer exponentiation to succeed, received:\n" ++ stdoutText)
              (") = 1" `isInfixOf` stdoutText)
+
+-- | Check fixed-width integer arithmetic against independently reduced
+-- mathematical results. Include signed overflow, Euclidean versus truncating
+-- division, negative divisors, and the totalized public zero-divisor cases.
+mappedIntegerArithmetic :: Assertion
+mappedIntegerArithmetic = mapM_ check [8, 16, 32, 64]
+ where check bits = withSystemTempDirectory "sbv-mapped-integer-arithmetic" $ \dir -> do
+         let half = 2 ^ (bits - 1)
+             low  = negate half
+             high = half - 1
+             oversized = 2 ^ (137 :: Int) + 3
+             wrap value = (value + half) `mod` (2 * half) - half
+             operands = [(high, 1), (low, -1), (low, 3), (-7, 3), (-7, -3), (7, -3)
+                        , (low, low), (-1, low), (high, low), (low, 0), (0, 0), (high, high), (high, 2)]
+             program = do
+               cgOverwriteFiles True
+               cgIntegerSize bits
+               cgSetDriverValues (concatMap (\(a, b) -> [a, b]) operands ++ [oversized])
+               checks <- forM (zip [0 :: Int ..] operands) $ \(index, (a, b)) -> do
+                 left  <- cgInput ("left"  ++ show index) :: SBVCodeGen SInteger
+                 right <- cgInput ("right" ++ show index) :: SBVCodeGen SInteger
+                 let agrees actual expected = actual .== literal (wrap expected)
+                     (quotient, remainder) = if b == 0 then (0, a) else quotRem a b
+                     (division, modulus)   = if b == 0 then (0, a) else divMod a b
+                     euclidean
+                       | b == 0 = []  -- The internal Euclidean operators leave this case unconstrained.
+                       | True   = [ agrees (sEDiv left right) ((a `div` abs b) * signum b)
+                                  , agrees (sEMod left right) (a `mod` abs b)
+                                  ]
+                 pure $ sAnd $ euclidean ++
+                   [ agrees (left + right) (a + b)
+                   , agrees (left - right) (a - b)
+                   , agrees (left * right) (a * b)
+                   , agrees (negate left)  (negate a)
+                   , agrees (abs left)     (abs a)
+                   , agrees (left + literal oversized) (a + oversized)
+                   , agrees (sQuot left right) quotient
+                   , agrees (sRem  left right) remainder
+                   , agrees (sDiv  left right) division
+                   , agrees (sMod  left right) modulus
+                   ]
+               oversizedInput <- cgInput "oversized" :: SBVCodeGen SInteger
+               cgReturn (sAnd checks .&& oversizedInput .== literal (wrap oversized))
+         outputText <- compileProgramAndRunGenerated dir "mappedArithmetic" program
+         assertBool ("Incorrect " ++ show bits ++ "-bit arithmetic: " ++ outputText) (") = 1" `isInfixOf` outputText)
 
 -- | Check that transcendental operations over exact rational reals explain
 -- how to opt into an approximate native C representation.

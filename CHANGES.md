@@ -20,6 +20,8 @@
     Generated programs and libraries have a documented fail-fast runtime contract: detected
     runtime failures terminate the calling process; no recoverable error-return API is provided.
     Empty libraries and conflicting component files or driver entry points are rejected before rendering.
+    Native-mapped integers use modular arithmetic without signed C overflow, retaining Euclidean
+    division internally and the public truncating and floor-division semantics.
 
   * Functions defined with `smtFunction` and its variants can now be first encountered after entering
     query mode. SBV sends their definitions and dependencies incrementally, while retaining termination

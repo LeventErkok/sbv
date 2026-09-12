@@ -401,7 +401,8 @@ specifierKind cfg kind = case kind of
         specF CgDouble     = text "%a"
         specF CgLongDouble = text "%Lf"
 
--- | Make a constant value of the given type. We don't check for out of bounds here, as it should not be needed.
+-- | Make a constant value of the given type. Explicitly mapped integers are
+-- reduced to their requested width; bounded constants are already normalized.
 --   There are many options here, using binary, decimal, etc. We simply use decimal for values 8-bits or less,
 --   and hex otherwise.
 mkConst :: CgConfig -> CV -> Doc
@@ -425,7 +426,7 @@ mkConst cfg (CV KReal (CAlgReal (AlgRational _ r))) = double (fromRational r :: 
   where sRealSuffix CgFloat      = text "F"
         sRealSuffix CgDouble     = empty
         sRealSuffix CgLongDouble = text "L"
-mkConst cfg (CV KUnbounded       (CInteger i)) = showSizedConst (cgShowU8InHex cfg) i (True, fromJust (cgInteger cfg))
+mkConst cfg (CV KUnbounded       (CInteger i)) = mkConst cfg (normCV (CV (KBounded True (fromJust (cgInteger cfg))) (CInteger i)))
 mkConst cfg (CV (KBounded sg sz) (CInteger i)) = showSizedConst (cgShowU8InHex cfg) i (sg,   sz)
 mkConst cfg (CV KBool            (CInteger i)) = showSizedConst (cgShowU8InHex cfg) i (False, 1)
 mkConst _   (CV KFloat           (CFloat f))   = text $ showCFloat f
@@ -1090,7 +1091,7 @@ genCProg cfg adts lists sets fn proto
        post   = text ""
              $$ vcat (map codeSeg cgs)
              $$ extDecls
-             $$ bitVectorRuntime wideKinds allAssignments
+             $$ bitVectorRuntime (cgInteger cfg) wideKinds allAssignments
              $$ (if requires CRequiresGMP    then gmpRuntime cfg kindInfo allAssignments else empty)
              $$ (if requires CRequiresLibBF  then arbitraryFPRuntime cfg fpKinds allAssignments else empty)
              $$ (if requires CRequiresNativeFPRounding then nativeFPRuntime else empty)
@@ -2365,7 +2366,7 @@ ppExpr cfg adts functionNames structuredLambdaNames consts (SBVApp op opArgs) re
           , gmpExpr cfg op opArgs (kindOf resultSV) renderedArgs
           , arbitraryFPExpr cfg consts op opArgs (kindOf resultSV) renderedArgs
           , nativeFPExpr consts op opArgs (kindOf resultSV) renderedArgs
-          , nativeBVExpr op opArgs (kindOf resultSV) renderedArgs
+          , nativeBVExpr (cgInteger cfg) op opArgs (kindOf resultSV) renderedArgs
           , nativeBVOverflowExpr op opArgs renderedArgs
           , wideBVExpr op opArgs (kindOf resultSV) renderedArgs
           ]

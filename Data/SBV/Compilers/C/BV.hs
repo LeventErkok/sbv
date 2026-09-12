@@ -80,9 +80,10 @@ wideBVTypeDecls ks = text . unlines $
 -- | Runtime routines for each used exact-width type, together with the exact
 -- native arithmetic, bit-manipulation, and cross-width helpers demanded by
 -- the complete symbolic DAG. Native-only programs can require these helpers
--- even when no limb-backed type occurs.
-bitVectorRuntime :: [Kind] -> [(SV, SBVExpr)] -> Doc
-bitVectorRuntime ks asgns
+-- even when no limb-backed type occurs. The optional integer width selects
+-- modular arithmetic helpers for explicitly mapped 'SInteger' values too.
+bitVectorRuntime :: Maybe Int -> [Kind] -> [(SV, SBVExpr)] -> Doc
+bitVectorRuntime integerWidth ks asgns
   | null routines = empty
   | True          = text . unlines . map markUnused $
        [ "/* Exact bit-vector runtime. All arithmetic is modulo the declared width. */"
@@ -141,8 +142,9 @@ bitVectorRuntime ks asgns
 
        nativeArithmetic args arith = case args of
          source : _
-           | isNativeBV source -> [SpecialArithmetic arith (kindOf source)]
-         _                     -> []
+           | let kind = nativeArithmeticKind integerWidth (kindOf source)
+           , isNativeBVKind kind -> [SpecialArithmetic (integerArithmetic (kindOf source) arith) kind]
+         _                        -> []
 
        markUnused line
          | Just rest <- stripPrefix "static inline " line = "static inline SBV_CGEN_UNUSED " ++ rest
@@ -210,9 +212,10 @@ wideBVExpr op svs resultKind args
 -- | Lower native-width arithmetic, conversion, and bit manipulation through
 -- exact bit-vector helpers. This avoids C's signed-overflow, promotion,
 -- signed-shift, and oversized-shift behavior while retaining the scalar
--- public ABI.
-nativeBVExpr :: Op -> [SV] -> Kind -> [Doc] -> Maybe CLowering
-nativeBVExpr op svs resultKind args = case (op, svs, args) of
+-- public ABI. Explicitly mapped integers share the modular arithmetic helpers,
+-- with separate Euclidean division helpers matching their symbolic operations.
+nativeBVExpr :: Maybe Int -> Op -> [SV] -> Kind -> [Doc] -> Maybe CLowering
+nativeBVExpr integerWidth op svs resultKind args = case (op, svs, args) of
   (Extract hi lo , [source]   , [renderedSource])
     | isNativeBV source
     , isNativeBVKind resultKind
@@ -278,11 +281,26 @@ nativeBVExpr op svs resultKind args = case (op, svs, args) of
   _ -> Nothing
  where lower = Just . expressionLowering CByValue []
 
-       nativeUnary source = isNativeBV source && kindOf source == resultKind
+       arithmeticKind = nativeArithmeticKind integerWidth resultKind
+
+       nativeUnary source = isNativeBVKind arithmeticKind && kindOf source == resultKind
 
        nativeBinary left right = nativeUnary left && kindOf right == resultKind
 
-       arithmetic arith = lower . namedCall (prefix resultKind ++ "_" ++ arithmeticSuffix arith)
+       arithmetic arith = lower . namedCall (prefix arithmeticKind ++ "_" ++ arithmeticSuffix (integerArithmetic resultKind arith))
+
+-- | Select the scalar representation used for arithmetic without changing the
+-- symbolic graph or treating mapped integers as bit-vectors for other operations.
+nativeArithmeticKind :: Maybe Int -> Kind -> Kind
+nativeArithmeticKind (Just bits) KUnbounded = KBounded True bits
+nativeArithmeticKind _           kind       = kind
+
+-- | Integer division in the symbolic graph is Euclidean, even when a native
+-- representation is selected. Bit-vector division remains truncating.
+integerArithmetic :: Kind -> NativeArithmetic -> NativeArithmetic
+integerArithmetic KUnbounded SpecialQuot = SpecialEuclideanQuot
+integerArithmetic KUnbounded SpecialRem  = SpecialEuclideanRem
+integerArithmetic _          arith       = arith
 
 -- | Lower overflow predicates for scalar C bit-vector representations. The
 -- one-bit unsigned case follows its Boolean truth table; wider native cases
@@ -384,6 +402,8 @@ data NativeArithmetic = SpecialAdd
                       | SpecialAbs
                       | SpecialQuot
                       | SpecialRem
+                      | SpecialEuclideanQuot
+                      | SpecialEuclideanRem
                       deriving (Eq)
 
 -- | Emit one exact native-width arithmetic helper. Modular operations are
@@ -417,15 +437,32 @@ nativeArithmeticRuntime arith kind =
          | True         = ["  return (" ++ ty ++ ") " ++ bits ++ ";"]
 
        body = case arith of
-         SpecialAdd  -> modular (raw "a" ++ " + " ++ raw "b")
-         SpecialSub  -> modular (raw "a" ++ " - " ++ raw "b")
-         SpecialMul  -> modular (raw "a" ++ " * " ++ raw "b")
-         SpecialNeg  -> modular ("UINT64_C(0) - " ++ raw "a")
+         SpecialAdd           -> modular (raw "a" ++ " + " ++ raw "b")
+         SpecialSub           -> modular (raw "a" ++ " - " ++ raw "b")
+         SpecialMul           -> modular (raw "a" ++ " * " ++ raw "b")
+         SpecialNeg           -> modular ("UINT64_C(0) - " ++ raw "a")
          SpecialAbs
            | hasSign kind -> modular ("(" ++ raw "a" ++ " & " ++ signMask ++ ") != 0 ? UINT64_C(0) - " ++ raw "a" ++ " : " ++ raw "a")
            | True         -> modular (raw "a")
-         SpecialQuot -> divisionBody "/" ("(" ++ ty ++ ") 0") "a"
-         SpecialRem  -> divisionBody "%" "a" ("(" ++ ty ++ ") 0")
+         SpecialQuot          -> divisionBody "/" ("(" ++ ty ++ ") 0") "a"
+         SpecialRem           -> divisionBody "%" "a" ("(" ++ ty ++ ") 0")
+         SpecialEuclideanQuot -> euclideanBody True
+         SpecialEuclideanRem  -> euclideanBody False
+
+       -- Once zero and minimum/-1 are excluded, both division and its
+       -- Euclidean correction fit the signed type. Subtract the negative
+       -- divisor directly so its minimum value is never negated.
+       euclideanBody quotient =
+         [ "  if (b == (" ++ ty ++ ") 0) return " ++ (if quotient then "0" else "a") ++ ";"
+         , "  if (a == " ++ minimumValue ++ " && b == (" ++ ty ++ ") -1) return " ++ (if quotient then "a" else "0") ++ ";"
+         , "  const " ++ ty ++ " remainder = (" ++ ty ++ ") (a % b);"
+         ]
+         ++ if quotient
+            then [ "  const " ++ ty ++ " quotient = (" ++ ty ++ ") (a / b);"
+                 , "  return remainder < 0 ? (b > 0 ? quotient - 1 : quotient + 1) : quotient;"
+                 ]
+            else [ "  return remainder < 0 ? (b > 0 ? remainder + b : remainder - b) : remainder;"
+                 ]
 
        divisionBody operator zeroResult overflowResult =
             ["  if (b == (" ++ ty ++ ") 0) return " ++ zeroResult ++ ";"]
@@ -439,13 +476,15 @@ nativeArithmeticRuntime arith kind =
 
 -- | Return the generated helper suffix for exact native arithmetic.
 arithmeticSuffix :: NativeArithmetic -> String
-arithmeticSuffix SpecialAdd  = "add"
-arithmeticSuffix SpecialSub  = "sub"
-arithmeticSuffix SpecialMul  = "mul"
-arithmeticSuffix SpecialNeg  = "neg"
-arithmeticSuffix SpecialAbs  = "abs"
-arithmeticSuffix SpecialQuot = "quot"
-arithmeticSuffix SpecialRem  = "rem"
+arithmeticSuffix SpecialAdd           = "add"
+arithmeticSuffix SpecialSub           = "sub"
+arithmeticSuffix SpecialMul           = "mul"
+arithmeticSuffix SpecialNeg           = "neg"
+arithmeticSuffix SpecialAbs           = "abs"
+arithmeticSuffix SpecialQuot          = "quot"
+arithmeticSuffix SpecialRem           = "rem"
+arithmeticSuffix SpecialEuclideanQuot = "equot"
+arithmeticSuffix SpecialEuclideanRem  = "erem"
 
 -- | Emit exact native-width rotations through an unsigned representation so
 -- the result is independent of integer promotions and signed-shift rules.
