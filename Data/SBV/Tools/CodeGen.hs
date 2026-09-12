@@ -87,6 +87,22 @@ can compile to private C functions, including recursive definitions. Explicit
 closure environments remain SBV values; this is not an ABI for runtime Haskell
 function values. Hard constraints become executable preconditions.
 
+== Runtime failures
+
+Generated programs and libraries use a fail-fast contract: a detected runtime
+failure terminates the calling process, using @abort@ or an unsuccessful exit.
+This includes failed executable preconditions and enabled assertions, detected
+invalid descriptors or missing required callback hooks, and allocation or
+resource-limit failures. There is no recoverable status-returning API.
+
+Callers must still satisfy the generated header's ABI and ownership requirements;
+runtime checks cannot validate arbitrary pointers or detect every malformed
+value. Outputs and cleanup are not guaranteed after failure. Intercepting
+termination or using @longjmp@ is not a supported recovery mechanism.
+
+Ordinary numerical results, including floating-point NaNs and infinities and
+SBV-defined totalized operations, are not themselves runtime failures.
+
 == Boundaries
 
 General extensional array equality and regular-expression operations are not

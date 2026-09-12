@@ -75,6 +75,10 @@ import GHC.Stack
 -- result, we return whatever the code-gen function returns. Most uses should simply have @()@ as
 -- the return type here, but the value can be useful if you want to chain the result of
 -- one compilation act to the next.
+--
+-- Detected runtime failures in the generated code terminate the calling process;
+-- there is no recoverable error-return interface. See the runtime contract in
+-- "Data.SBV.Tools.CodeGen".
 compileToC :: Maybe FilePath -> String -> SBVCodeGen a -> IO a
 compileToC mbDirName nm f = do (retVal, cfg, bundle) <- compileToC' nm f
                                renderCgPgmBundle mbDirName (cfg, bundle)
@@ -95,6 +99,11 @@ compileToC' nm f = do rands <- randoms <$> newStdGen
 --
 --   * The third argument is the list of functions to include, in the form of function-name/code pairs, similar
 --     to the second and third arguments of 'compileToC', except in a list.
+--
+-- The component list must be nonempty and component names must be distinct.
+-- Generated file names and driver entry points must not collide either.
+-- As with 'compileToC', detected runtime failures terminate the calling process,
+-- including when the generated functions are used as a library.
 compileToCLib :: Maybe FilePath -> String -> [(String, SBVCodeGen a)] -> IO [a]
 compileToCLib mbDirName libName comps = do (retVal, cfg, pgm) <- compileToCLib' libName comps
                                            renderCgPgmBundle mbDirName (cfg, pgm)
@@ -102,12 +111,24 @@ compileToCLib mbDirName libName comps = do (retVal, cfg, pgm) <- compileToCLib' 
 
 -- | Lower level version of 'compileToCLib', producing a t'CgPgmBundle'
 compileToCLib' :: String -> [(String, SBVCodeGen a)] -> IO ([a], CgConfig, CgPgmBundle)
-compileToCLib' libName comps = do resCfgBundles <- mapM component comps
-                                  let (finalCfg, finalPgm) = mergeToLib libName [(c, b) | (_, c, b) <- resCfgBundles]
-                                  pure ([r | (r, _, _) <- resCfgBundles], finalCfg, finalPgm)
- where component (componentName, program) = do
+compileToCLib' libName comps
+  | null comps
+  = error "SBV.compileToCLib: A library must contain at least one component."
+  | not (null duplicates)
+  = error $ "SBV.compileToCLib: Duplicate component names: " ++ unwords duplicates
+  | True
+  = do resCfgBundles <- mapM component comps
+       let (finalCfg, finalPgm) = mergeToLib libName [(c, b) | (_, c, b) <- resCfgBundles]
+       finalPgm `seq` pure ([r | (r, _, _) <- resCfgBundles], finalCfg, finalPgm)
+ where duplicates = duplicateNames (map fst comps)
+
+       component (componentName, program) = do
          rands <- randoms <$> newStdGen
          codeGen SBVToCLibraryComponent (defaultCgConfig { cgDriverVals = rands }) componentName program
+
+-- | Report each repeated name once, preserving its first occurrence order.
+duplicateNames :: [String] -> [String]
+duplicateNames names = [nm | nm <- nub names, length (filter (== nm) names) > 1]
 
 ---------------------------------------------------------------------------
 -- * Implementation
@@ -2596,8 +2617,12 @@ mergeToLib libName cfgBundles
   | length nubKinds /= 1
   = error $  "Cannot merge programs with differing SInteger/SReal mappings. Received the following kinds:\n"
           ++ unlines (map show nubKinds)
+  | not (null duplicateFiles)
+  = error $ "SBV.compileToCLib: Conflicting generated file names: " ++ unwords duplicateFiles
+  | not (null duplicateSymbols)
+  = error $ "SBV.compileToCLib: Conflicting generated entry points: " ++ unwords duplicateSymbols
   | True
-  = (finalCfg, CgPgmBundle bundleKind $ sources ++ libHeader : [libDriver | anyDriver] ++ [libMake | anyMake])
+  = (finalCfg, CgPgmBundle bundleKind resultFiles)
   where bundles     = map snd cfgBundles
         kinds       = [k | CgPgmBundle k _ <- bundles]
         nubKinds    = nub kinds
@@ -2624,6 +2649,9 @@ mergeToLib libName cfgBundles
                     $$ if "-lbf" `elem` mkFlags then text "#include <libbf.h>" else empty
         libMake     = ("Makefile", (CgMakefile mkFlags, [genLibMake anyDriver libName sourceNms mkFlags]))
         libDriver   = (libName ++ "_driver.c", (CgDriver, mergeDrivers libName libHInclude drivers))
+        resultFiles = sources ++ libHeader : [libDriver | anyDriver] ++ [libMake | anyMake]
+        duplicateFiles = duplicateNames (map fst resultFiles)
+        duplicateSymbols = duplicateNames $ map takeBaseName sourceNms ++ [fn ++ "_driver" | (fn, _) <- drivers] ++ ["main" | anyDriver]
         finalCfg    = case cfgBundles of
                         []         -> defaultCgConfig
                         ((c, _):_) -> c

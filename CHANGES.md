@@ -17,6 +17,9 @@
     and preserves external prototypes and runtime dependencies when combining library components.
     Finite/cofinite set comparisons account for finite ADTs with fields. Unsupported comparisons
     involving array-valued aggregates are rejected during generation instead of aborting at runtime.
+    Generated programs and libraries have a documented fail-fast runtime contract: detected
+    runtime failures terminate the calling process; no recoverable error-return API is provided.
+    Empty libraries and conflicting component files or driver entry points are rejected before rendering.
 
   * Functions defined with `smtFunction` and its variants can now be first encountered after entering
     query mode. SBV sends their definitions and dependencies incrementally, while retaining termination

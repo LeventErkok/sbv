@@ -31,10 +31,11 @@ import qualified Data.SBV.Set as SS
 import Data.SBV.Tuple (tuple, untuple)
 import qualified Data.SBV.Tools.CodeGen.Legacy as PublicLegacy
 
-import System.Exit     (ExitCode(..))
-import System.FilePath ((</>))
-import System.IO.Temp  (withSystemTempDirectory)
-import System.Process  (readProcessWithExitCode)
+import System.Directory (listDirectory)
+import System.Exit      (ExitCode(..))
+import System.FilePath  ((</>))
+import System.IO.Temp   (withSystemTempDirectory)
+import System.Process   (readProcessWithExitCode)
 
 import Test.Tasty.HUnit (assertBool, assertEqual)
 
@@ -115,6 +116,8 @@ tests = testGroup "CodeGeneration.CgTests"
   , testCase "relink library drivers after component changes" libraryDriverDependencies
   , testCase "reject comparisons of array-valued collections" arrayCollectionComparisons
   , testCase "preserve external prototypes in libraries" libraryExternalPrototypes
+  , testCase "reject empty or conflicting libraries before rendering" libraryValidation
+  , testCase "terminate on failed library preconditions and assertions" libraryRuntimeFailures
   , testCase "compare finite ADT set universes" finiteADTSetUniverses
   , testCase "compile exact symbolic rationals" exactSymbolicRationals
   , testCase "compile rationals with mapped integers" mappedIntegerRationals
@@ -328,6 +331,53 @@ libraryExternalPrototypes = withSystemTempDirectory "sbv-library-prototypes" $ \
                          cgReturn (uninterpret "external" value :: SWord8))]
   (makeExit, _, makeError) <- readProcessWithExitCode "make" ["-C", dir, "CCFLAGS=-std=c11 -Wall -Werror -O2", "externalCall.o"] ""
   assertEqual makeError ExitSuccess makeExit
+
+-- | Reject invalid library layouts before rendering any files. Driver symbols
+-- are checked separately from file names, and disabled drivers reserve neither.
+libraryValidation :: Assertion
+libraryValidation = do
+  mapM_ check
+    [("emptyLibrary", [], "at least one component")
+    , ("duplicateLibrary", [("duplicate", program True), ("duplicate", program True)], "Duplicate component names")
+    , ("fileLibrary", [("fileLibrary_driver", program True)], "Conflicting generated file names")
+    , ("symbolLibrary", [("entry", program True), ("entry_driver", program False)], "Conflicting generated entry points")
+    , ("mainLibrary", [("main", program True)], "Conflicting generated entry points")
+    ]
+  (_, _, bundle) <- compileToCLib' "noDriverLibrary"
+    [("noDriverLibrary_driver", program False), ("main", program False)]
+  assertBool "Disabled drivers should not reserve files or entry points" ("main.c" `isInfixOf` show bundle)
+ where program driver = do
+         cgOverwriteFiles True
+         cgGenerateDriver driver
+         value <- cgInput "value" :: SBVCodeGen SWord8
+         cgReturn value
+
+       check (libName, components, diagnostic) = withSystemTempDirectory "sbv-library-validation" $ \dir -> do
+         result <- try (compileToCLib (Just dir) libName components) :: IO (Either ErrorCall [()])
+         case result of
+           Left exception -> assertBool (displayException exception) (diagnostic `isInfixOf` displayException exception)
+           Right _        -> assertBool ("Expected library rejection: " ++ libName) False
+         assertEqual "Invalid libraries must not write files" [] =<< listDirectory dir
+
+-- | Library calls share the standalone fail-fast contract. Exercise both
+-- executable hard constraints and explicit assertions in separate processes.
+libraryRuntimeFailures :: Assertion
+libraryRuntimeFailures = mapM_ check [False, True]
+ where check assertion = withSystemTempDirectory "sbv-library-fail-fast" $ \dir -> do
+         _ <- compileToCLib (Just dir) "failFastLibrary"
+           [("checkedEntry", do cgOverwriteFiles True
+                                cgSetDriverValues [7]
+                                value <- cgInput "value" :: SBVCodeGen SWord8
+                                if assertion
+                                   then cgReturn (sAssert Nothing "library assertion" (value .< 5) value)
+                                   else do constrain (value .< 5)
+                                           cgReturn value)]
+         (makeExit, _, makeError) <- readProcessWithExitCode "make" ["-C", dir, "CCFLAGS=-std=c11 -Wall -Werror -O2"] ""
+         assertEqual makeError ExitSuccess makeExit
+         (runExit, _, runError) <- readProcessWithExitCode (dir </> "failFastLibrary_driver") [] ""
+         assertBool "Expected a failed library call to terminate the process" (runExit /= ExitSuccess)
+         let diagnostic = if assertion then "ASSERTION FAILED" else "CONSTRAINT FAILED"
+         assertBool runError (diagnostic `isInfixOf` runError)
 
 -- | Finite sums and products have complete universes even when constructors
 -- carry fields. Dynamic inputs prevent constant folding from hiding the C
