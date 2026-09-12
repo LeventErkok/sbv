@@ -130,6 +130,8 @@ tests = testGroup "CodeGeneration.CgTests"
   , testCase "retain an escaping managed lambda array" escapingManagedLambdaArray
   , testCase "call defined functions inside array lambdas" definedFunctionsInsideArrayLambdas
   , testCase "call defined functions from library array lambdas" definedFunctionArrayLambdaLibrary
+  , testCase "return arrays from structured array lambdas" arrayValuedLambdaResults
+  , testCase "return array-valued lambdas from a library" arrayValuedLambdaLibrary
   , testCase "compile and execute structured lambda tables" structuredLambdaTables
   , testCase "compile and execute a defined SBV function" definedSBVFunction
   , testCase "compose acyclic defined SBV functions" composedDefinedSBVFunctions
@@ -1508,6 +1510,77 @@ definedFunctionArrayLambdaLibrary = withSystemTempDirectory "sbv-defined-functio
                                   (fragment `isInfixOf` stdoutText))
     [ "firstLambda()[0] =first-0"
     , "secondLambda()[0] =second-0"
+    ]
+
+-- | Return direct and tuple-contained persistent arrays from retained
+-- callbacks, read them during the generated call, and read the direct result
+-- again after its outer array escapes.
+arrayValuedLambdaResults :: Assertion
+arrayValuedLambdaResults = withSystemTempDirectory "sbv-array-valued-lambda-results" $ \dir -> do
+  let program = do
+        cgOverwriteFiles True
+        cgSetDriverValues [5]
+        key <- cgInput "key" :: SBVCodeGen SWord8
+        let inner :: SWord8 -> SArray Word8 Word32
+            inner index = writeArray
+                            (constArray (sFromIntegral index + 1 :: SWord32) :: SArray Word8 Word32)
+                            index
+                            99
+
+            makeInner :: SWord8 -> SArray Word8 Word32
+            makeInner = smtFunction "C lambda inner array" inner
+
+            directSource   = lambdaArray inner :: SArray Word8 (ArrayModel Word8 Word32)
+            functionSource = lambdaArray makeInner :: SArray Word8 (ArrayModel Word8 Word32)
+            boxedSource    = lambdaArray (\index -> tuple (inner index, sFromIntegral index + 10 :: SWord16))
+                           :: SArray Word8 (ArrayModel Word8 Word32, Word16)
+            directInner   = readArray directSource key
+            functionInner = readArray functionSource key
+            (boxedInner, marker) = untuple (readArray boxedSource key)
+        cgOutput "directStored"  (readArray directInner key)
+        cgOutput "directDefault" (readArray directInner (key + 1))
+        cgOutput "functionStored" (readArray functionInner key)
+        cgOutput "boxedStored"   (readArray boxedInner key)
+        cgOutput "marker"        marker
+        cgReturn directSource
+
+  stdoutText <- compileProgramAndRunGenerated dir "arrayValuedLambdaResults" program
+  sourceText <- readFile (dir </> "arrayValuedLambdaResults.c")
+  mapM_ (\fragment -> assertBool ("Expected an array-valued lambda output to contain " ++ show fragment ++ ", received:\n" ++ stdoutText)
+                                  (fragment `isInfixOf` stdoutText))
+    [ ")[0] =[0] =0x00000063UL"
+    , "directStored = 0x00000063UL"
+    , "directDefault = 0x00000006UL"
+    , "functionStored = 0x00000063UL"
+    , "boxedStored = 0x00000063UL"
+    , "marker = 0x000fU"
+    ]
+  assertBool ("Expected array callback results to cross through retained descriptors, received:\n" ++ sourceText)
+             ("sbv_array_stored_export_u8_u32(&__sbv_array_ctx" `isInfixOf` sourceText
+           && "SBVArrayOutput_u8_u32 * sbv_array_lambda_" `isInfixOf` sourceText)
+
+-- | Exercise array-valued callback results in independent translation units
+-- of a generated static library.
+arrayValuedLambdaLibrary :: Assertion
+arrayValuedLambdaLibrary = withSystemTempDirectory "sbv-array-valued-lambda-library" $ \dir -> do
+  let component :: Word32 -> SBVCodeGen ()
+      component value = do
+        cgOverwriteFiles True
+        let source = lambdaArray (\index ->
+                       writeArray (constArray (literal value) :: SArray Word8 Word32) index (literal value + 1))
+                     :: SArray Word8 (ArrayModel Word8 Word32)
+        cgReturn source
+
+  (_, cfg, bundle) <- compileToCLib' "arrayValuedLambdaLibrary"
+    [ ("firstNestedArray", component 20)
+    , ("secondNestedArray", component 30)
+    ]
+  renderCgPgmBundle (Just dir) (cfg, bundle)
+  stdoutText <- compileAndRunGenerated dir "arrayValuedLambdaLibrary"
+  mapM_ (\fragment -> assertBool ("Expected a library array-valued lambda output to contain " ++ show fragment ++ ", received:\n" ++ stdoutText)
+                                  (fragment `isInfixOf` stdoutText))
+    [ "firstNestedArray()[0] =[0] =0x00000015UL"
+    , "secondNestedArray()[0] =[0] =0x0000001fUL"
     ]
 
 -- | Exercise parameter-dependent tables in two structured lambdas, ensuring

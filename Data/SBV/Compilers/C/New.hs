@@ -1704,9 +1704,13 @@ definedFunctionResultRuntime kinds = text . unlines $
 -- and implementation.
 definedFunctionSignature :: String -> Kind -> [(Quantifier, SV)] -> Doc
 definedFunctionSignature originalName resultKind parameters
-  = text "static" <+> text (showCType resultKind) <+> text (CTypes.definedFunctionCName originalName)
+  = text "static" <+> text resultType <+> text (CTypes.definedFunctionCName originalName)
       P.<> parens renderedParameters
- where renderedParameters = fsep . punctuate comma $
+ where resultType
+         | isArray resultKind = CTypes.elementCType resultKind
+         | True               = showCType resultKind
+
+       renderedParameters = fsep . punctuate comma $
            text "sbv_function_ctx *const __sbv_parent_function_ctx"
          : [text "const" <+> text (showCType parameter) <+> text (show parameter) | (_, parameter) <- parameters]
 
@@ -1829,7 +1833,7 @@ ppDefinedFunction cfg adts functionNames originalName declaredResultKind (SBVTyp
           $$ text "{"
           $$ nest 2 (   contextSetup
                      $$ vcat (map snd (mergeLocated generatedTables assignmentDocs))
-                     $$ text "const" <+> text (showCType resultKind) <+> text "__sbv_function_result =" <+> functionResult P.<> semi
+                     $$ text "const" <+> text functionResultType <+> text "__sbv_function_result =" <+> functionResult P.<> semi
                      $$ contextCommit
                      $$ text "return __sbv_function_result;"
                     )
@@ -1837,10 +1841,16 @@ ppDefinedFunction cfg adts functionNames originalName declaredResultKind (SBVTyp
           $$ text ""
 
        functionResult
+         | isArray resultKind
+         = arrayStoredValue resultKind (showSV cfg functionConsts functionOutput)
          | definedFunctionResultNeedsClone cfg adts resultKind
          = definedFunctionResultClone resultKind (showSV cfg functionConsts functionOutput)
          | True
          = showSV cfg functionConsts functionOutput
+
+       functionResultType
+         | isArray resultKind = CTypes.elementCType resultKind
+         | True               = showCType resultKind
 
 -- | Lower a retained one-argument array lambda into a C lookup callback. Its
 -- local DAG uses the ordinary lowering pipeline, so scalar and managed values
@@ -1861,8 +1871,6 @@ ppArrayLambda cfg adts functionNames arraySV LambdaInfo{ liAssignments = lambdaP
         -> die $ "Array-lambda result kind " ++ show (kindOf lambdaOutput) ++ " does not match " ++ show valueKind
         | not (null nestedLambdas)
         -> tbd "Nested structured lambdas inside lambda arrays"
-        | isArray valueKind
-        -> tbd "Structured lambda arrays returning arrays"
         | True
         -> (helper keyKind valueKind parameter, requirements)
       (KArray{}, _) -> die $ "Expected exactly one universal array-lambda parameter, received " ++ show parameters
@@ -1905,12 +1913,12 @@ ppArrayLambda cfg adts functionNames arraySV LambdaInfo{ liAssignments = lambdaP
          ++ [CRequiresFunctionResults | definedFunctionResultNeedsClone cfg adts (kindOf lambdaOutput)]
 
        helper keyKind valueKind parameter
-         = text "static" <+> text (showCType valueKind) <+> text (arrayLambdaName arraySV)
+         = text "static" <+> text (callbackResultType valueKind) <+> text (arrayLambdaName arraySV)
              P.<> parens (fsep (punctuate comma [text "const void *context", text (showCType keyKind) <+> text (show parameter)]))
           $$ text "{"
           $$ nest 2 (   contextSetup
                      $$ vcat (map snd (mergeLocated generatedTables assignmentDocs))
-                     $$ text "const" <+> text (showCType valueKind) <+> text "__sbv_lambda_result" <+> text "=" <+> lambdaResult P.<> semi
+                     $$ text "const" <+> text (callbackResultType valueKind) <+> text "__sbv_lambda_result" <+> text "=" <+> lambdaResult P.<> semi
                      $$ contextCommit
                      $$ text "return __sbv_lambda_result;"
                     )
@@ -1918,10 +1926,16 @@ ppArrayLambda cfg adts functionNames arraySV LambdaInfo{ liAssignments = lambdaP
           $$ text ""
 
        lambdaResult
+         | isArray lambdaOutput
+         = arrayStoredValue (kindOf lambdaOutput) (showSV cfg lambdaConsts lambdaOutput)
          | definedFunctionResultNeedsClone cfg adts (kindOf lambdaOutput)
          = definedFunctionResultClone (kindOf lambdaOutput) (showSV cfg lambdaConsts lambdaOutput)
          | True
          = showSV cfg lambdaConsts lambdaOutput
+
+       callbackResultType kind
+         | isArray kind = CTypes.elementCType kind
+         | True         = showCType kind
 
        contextSetup
          | not needsFunctionContext = parens (text "void") <+> text "context" P.<> semi
@@ -2093,7 +2107,7 @@ ppExpr cfg adts functionNames consts (SBVApp op opArgs) resultSV lhs (typ, var)
         renderedArgs = map (showSV cfg consts) opArgs
 
         selected = fromMaybe legacy $ chooseLowering
-          [ arrayExpr cfg op opArgs resultSV renderedArgs
+          [ arrayExpr cfg (`lookup` functionNames) op opArgs resultSV renderedArgs
           , tableExpr cfg (showSV cfg consts) op resultSV
           , setExpr cfg op opArgs (kindOf resultSV) renderedArgs
           , nonLinearExpr cfg op opArgs (kindOf resultSV) renderedArgs

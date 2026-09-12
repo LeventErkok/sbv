@@ -37,6 +37,7 @@ module Data.SBV.Compilers.C.Array
 
 import Data.Char                        (isAsciiLower, toUpper)
 import qualified Data.Set as Set
+import qualified Data.Text as T
 
 import Text.PrettyPrint.HughesPJ
 import qualified Text.PrettyPrint.HughesPJ as P ((<>), render)
@@ -685,9 +686,11 @@ arrayConst _ _ = Nothing
 -- | Lower array initialization, reads, writes, and array-valued conditionals.
 -- Structured lambda-backed arrays, including free arrays, become callback
 -- roots. Array-valued elements cross node boundaries through retained
--- descriptor pointers. General extensional array equality remains unsupported.
-arrayExpr :: CgConfig -> Op -> [SV] -> SV -> [Doc] -> Maybe CLowering
-arrayExpr cfg op svs resultSV args
+-- descriptor pointers. The supplied name resolver identifies private defined
+-- functions whose array results also cross through retained descriptors.
+-- General extensional array equality remains unsupported.
+arrayExpr :: CgConfig -> (T.Text -> Maybe String) -> Op -> [SV] -> SV -> [Doc] -> Maybe CLowering
+arrayExpr cfg definedFunctionName op svs resultSV args
   | not (isArray resultKind || any isArray svs)
   = Nothing
   | True
@@ -698,7 +701,13 @@ arrayExpr cfg op svs resultSV args
       (SeqOp{},            _, _) -> Nothing
       (SetOp{},            _, _) -> Nothing
       (LkUp{},             _, _) -> Nothing
-      (Uninterpreted{},     _, _) -> Nothing
+      (Uninterpreted symbol, _, renderedArguments)
+        | isArray resultKind
+        , Just functionName <- definedFunctionName symbol
+        -> Just $ arrayStoredLoad resultSV
+             (namedCall functionName (text "&__sbv_function_ctx" : renderedArguments))
+        | True
+        -> Nothing
       (ArrayInit (Left pair), [_], [defaultValue])
         | resultKind == uncurry KArray pair
         -> nodeLowering resultKind
