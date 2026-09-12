@@ -3,6 +3,16 @@
 
 ### Version 14.8, Not yet released
 
+  * Replace the default SBV-to-C compiler with a comprehensive backend. Generated programs and
+    static libraries now support arbitrary-width signed and unsigned bit-vectors, native and
+    arbitrary-format floating point with explicit rounding modes, exact GMP-backed integers and
+    rational reals, strings, lists, sets, tuples, algebraic datatypes, persistent arrays, lookup
+    tables, recursive `smtFunction` definitions, closed nested array lambdas, and SBV's firstified
+    higher-order functions. Solver-only constructs continue to receive focused diagnostics.
+
+    Existing code importing `Data.SBV.Tools.CodeGen` selects the new backend. The original compiler
+    remains available as an escape hatch by importing `Data.SBV.Tools.CodeGen.Legacy` instead.
+
   * Functions defined with `smtFunction` and its variants can now be first encountered after entering
     query mode. SBV sends their definitions and dependencies incrementally, while retaining termination
     and productivity checks. Calling `registerFunction` before the query is no longer required for this case.

@@ -91,13 +91,35 @@ int main(void)
 
 #include "addSub.h"
 
+/* Exact bit-vector runtime. All arithmetic is modulo the declared width. */
+#ifndef SBV_CGEN_UNUSED
+#if defined(__GNUC__) || defined(__clang__)
+#define SBV_CGEN_UNUSED __attribute__((unused))
+#else
+#define SBV_CGEN_UNUSED
+#endif
+#endif
+
+static inline SBV_CGEN_UNUSED SWord8 sbv_bv_u8_add(SWord8 a, SWord8 b)
+{
+  const SWord8 bits = (SWord8) ((((uint64_t) (SWord8) a) + ((uint64_t) (SWord8) b)) & UINT64_C(0x00000000000000ff));
+  return (SWord8) bits;
+}
+
+static inline SBV_CGEN_UNUSED SWord8 sbv_bv_u8_sub(SWord8 a, SWord8 b)
+{
+  const SWord8 bits = (SWord8) ((((uint64_t) (SWord8) a) - ((uint64_t) (SWord8) b)) & UINT64_C(0x00000000000000ff));
+  return (SWord8) bits;
+}
+
+
 void addSub(const SWord8 x, const SWord8 y, SWord8 *sum,
             SWord8 *dif)
 {
   const SWord8 s0 = x;
   const SWord8 s1 = y;
-  const SWord8 s2 = s0 + s1;
-  const SWord8 s3 = s0 - s1;
+  const SWord8 s2 = sbv_bv_u8_add(s0, s1);
+  const SWord8 s3 = sbv_bv_u8_sub(s0, s1);
 
   *sum = s2;
   *dif = s3;

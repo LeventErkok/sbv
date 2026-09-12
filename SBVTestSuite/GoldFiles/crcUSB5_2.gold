@@ -85,55 +85,206 @@ int main(void)
 
 #include "crcUSB5.h"
 
+/* Exact bit-vector runtime. All arithmetic is modulo the declared width. */
+#ifndef SBV_CGEN_UNUSED
+#if defined(__GNUC__) || defined(__clang__)
+#define SBV_CGEN_UNUSED __attribute__((unused))
+#else
+#define SBV_CGEN_UNUSED
+#endif
+#endif
+
+static inline SBV_CGEN_UNUSED SWord16 sbv_bv_u16_shl(SWord16 a, SWord16 amount)
+{
+  const uint64_t n = (uint64_t) (SWord16) amount;
+  const SWord16 result = n >= 16 ? (SWord16) 0 : (SWord16) ((uint64_t) (SWord16) a << n);
+  return result;
+}
+
+static inline SBV_CGEN_UNUSED SWord16 sbv_bv_u16_lshr(SWord16 a, SWord16 amount)
+{
+  const uint64_t n = (uint64_t) (SWord16) amount;
+  return n >= 16 ? (SWord16) 0 : (SWord16) ((uint64_t) (SWord16) a >> n);
+}
+
+static inline SBV_CGEN_UNUSED SBool sbv_bv_extract_u16_15_15_u1(SWord16 a)
+{
+  SBool r = (SBool) 0;
+  uint64_t i;
+  for (i = 0; i < 1; ++i) { r = (SBool) ((uint64_t) r | ((uint64_t) (((((uint64_t) a) >> (i + 15)) & UINT64_C(1)) != 0) << (i))); }
+  return r;
+}
+
+static inline SBV_CGEN_UNUSED SBool sbv_bv_extract_u16_14_14_u1(SWord16 a)
+{
+  SBool r = (SBool) 0;
+  uint64_t i;
+  for (i = 0; i < 1; ++i) { r = (SBool) ((uint64_t) r | ((uint64_t) (((((uint64_t) a) >> (i + 14)) & UINT64_C(1)) != 0) << (i))); }
+  return r;
+}
+
+static inline SBV_CGEN_UNUSED SBool sbv_bv_extract_u16_13_13_u1(SWord16 a)
+{
+  SBool r = (SBool) 0;
+  uint64_t i;
+  for (i = 0; i < 1; ++i) { r = (SBool) ((uint64_t) r | ((uint64_t) (((((uint64_t) a) >> (i + 13)) & UINT64_C(1)) != 0) << (i))); }
+  return r;
+}
+
+static inline SBV_CGEN_UNUSED SBool sbv_bv_extract_u16_12_12_u1(SWord16 a)
+{
+  SBool r = (SBool) 0;
+  uint64_t i;
+  for (i = 0; i < 1; ++i) { r = (SBool) ((uint64_t) r | ((uint64_t) (((((uint64_t) a) >> (i + 12)) & UINT64_C(1)) != 0) << (i))); }
+  return r;
+}
+
+static inline SBV_CGEN_UNUSED SBool sbv_bv_extract_u16_11_11_u1(SWord16 a)
+{
+  SBool r = (SBool) 0;
+  uint64_t i;
+  for (i = 0; i < 1; ++i) { r = (SBool) ((uint64_t) r | ((uint64_t) (((((uint64_t) a) >> (i + 11)) & UINT64_C(1)) != 0) << (i))); }
+  return r;
+}
+
+static inline SBV_CGEN_UNUSED SBool sbv_bv_extract_u16_10_10_u1(SWord16 a)
+{
+  SBool r = (SBool) 0;
+  uint64_t i;
+  for (i = 0; i < 1; ++i) { r = (SBool) ((uint64_t) r | ((uint64_t) (((((uint64_t) a) >> (i + 10)) & UINT64_C(1)) != 0) << (i))); }
+  return r;
+}
+
+static inline SBV_CGEN_UNUSED SBool sbv_bv_extract_u16_9_9_u1(SWord16 a)
+{
+  SBool r = (SBool) 0;
+  uint64_t i;
+  for (i = 0; i < 1; ++i) { r = (SBool) ((uint64_t) r | ((uint64_t) (((((uint64_t) a) >> (i + 9)) & UINT64_C(1)) != 0) << (i))); }
+  return r;
+}
+
+static inline SBV_CGEN_UNUSED SBool sbv_bv_extract_u16_8_8_u1(SWord16 a)
+{
+  SBool r = (SBool) 0;
+  uint64_t i;
+  for (i = 0; i < 1; ++i) { r = (SBool) ((uint64_t) r | ((uint64_t) (((((uint64_t) a) >> (i + 8)) & UINT64_C(1)) != 0) << (i))); }
+  return r;
+}
+
+static inline SBV_CGEN_UNUSED SBool sbv_bv_extract_u16_7_7_u1(SWord16 a)
+{
+  SBool r = (SBool) 0;
+  uint64_t i;
+  for (i = 0; i < 1; ++i) { r = (SBool) ((uint64_t) r | ((uint64_t) (((((uint64_t) a) >> (i + 7)) & UINT64_C(1)) != 0) << (i))); }
+  return r;
+}
+
+static inline SBV_CGEN_UNUSED SBool sbv_bv_extract_u16_6_6_u1(SWord16 a)
+{
+  SBool r = (SBool) 0;
+  uint64_t i;
+  for (i = 0; i < 1; ++i) { r = (SBool) ((uint64_t) r | ((uint64_t) (((((uint64_t) a) >> (i + 6)) & UINT64_C(1)) != 0) << (i))); }
+  return r;
+}
+
+static inline SBV_CGEN_UNUSED SBool sbv_bv_extract_u16_5_5_u1(SWord16 a)
+{
+  SBool r = (SBool) 0;
+  uint64_t i;
+  for (i = 0; i < 1; ++i) { r = (SBool) ((uint64_t) r | ((uint64_t) (((((uint64_t) a) >> (i + 5)) & UINT64_C(1)) != 0) << (i))); }
+  return r;
+}
+
+static inline SBV_CGEN_UNUSED SBool sbv_bv_extract_u16_4_4_u1(SWord16 a)
+{
+  SBool r = (SBool) 0;
+  uint64_t i;
+  for (i = 0; i < 1; ++i) { r = (SBool) ((uint64_t) r | ((uint64_t) (((((uint64_t) a) >> (i + 4)) & UINT64_C(1)) != 0) << (i))); }
+  return r;
+}
+
+static inline SBV_CGEN_UNUSED SBool sbv_bv_extract_u16_3_3_u1(SWord16 a)
+{
+  SBool r = (SBool) 0;
+  uint64_t i;
+  for (i = 0; i < 1; ++i) { r = (SBool) ((uint64_t) r | ((uint64_t) (((((uint64_t) a) >> (i + 3)) & UINT64_C(1)) != 0) << (i))); }
+  return r;
+}
+
+static inline SBV_CGEN_UNUSED SBool sbv_bv_extract_u16_2_2_u1(SWord16 a)
+{
+  SBool r = (SBool) 0;
+  uint64_t i;
+  for (i = 0; i < 1; ++i) { r = (SBool) ((uint64_t) r | ((uint64_t) (((((uint64_t) a) >> (i + 2)) & UINT64_C(1)) != 0) << (i))); }
+  return r;
+}
+
+static inline SBV_CGEN_UNUSED SBool sbv_bv_extract_u16_1_1_u1(SWord16 a)
+{
+  SBool r = (SBool) 0;
+  uint64_t i;
+  for (i = 0; i < 1; ++i) { r = (SBool) ((uint64_t) r | ((uint64_t) (((((uint64_t) a) >> (i + 1)) & UINT64_C(1)) != 0) << (i))); }
+  return r;
+}
+
+static inline SBV_CGEN_UNUSED SBool sbv_bv_extract_u16_0_0_u1(SWord16 a)
+{
+  SBool r = (SBool) 0;
+  uint64_t i;
+  for (i = 0; i < 1; ++i) { r = (SBool) ((uint64_t) r | ((uint64_t) (((((uint64_t) a) >> (i)) & UINT64_C(1)) != 0) << (i))); }
+  return r;
+}
+
+
 SWord16 crcUSB5(const SWord16 msg)
 {
   const SWord16 s0 = msg;
-  const SWord16 s2 = s0 << 5;
-  const SBool   s3 = (SBool) ((s2 >> 15) & 1);
+  const SWord16 s2 = sbv_bv_u16_shl(s0, 0x0005U);
+  const SBool   s3 = sbv_bv_extract_u16_15_15_u1(s2);
   const SBool   s5 = s3 != false;
-  const SBool   s6 = (SBool) ((s2 >> 14) & 1);
+  const SBool   s6 = sbv_bv_extract_u16_14_14_u1(s2);
   const SBool   s7 = false != s6;
-  const SBool   s8 = (SBool) ((s2 >> 13) & 1);
+  const SBool   s8 = sbv_bv_extract_u16_13_13_u1(s2);
   const SBool   s9 = false != s8;
-  const SBool   s10 = (SBool) ((s2 >> 12) & 1);
+  const SBool   s10 = sbv_bv_extract_u16_12_12_u1(s2);
   const SBool   s11 = false != s10;
   const SBool   s12 = !s11;
   const SBool   s13 = s5 ? s12 : s11;
-  const SBool   s14 = (SBool) ((s2 >> 11) & 1);
+  const SBool   s14 = sbv_bv_extract_u16_11_11_u1(s2);
   const SBool   s15 = false != s14;
   const SBool   s16 = !s15;
   const SBool   s17 = s7 ? s16 : s15;
-  const SBool   s18 = (SBool) ((s2 >> 10) & 1);
+  const SBool   s18 = sbv_bv_extract_u16_10_10_u1(s2);
   const SBool   s19 = false != s18;
   const SBool   s20 = !s19;
   const SBool   s21 = s5 ? s20 : s19;
   const SBool   s22 = !s21;
   const SBool   s23 = s9 ? s22 : s21;
-  const SBool   s24 = (SBool) ((s2 >> 9) & 1);
+  const SBool   s24 = sbv_bv_extract_u16_9_9_u1(s2);
   const SBool   s25 = false != s24;
   const SBool   s26 = !s25;
   const SBool   s27 = s7 ? s26 : s25;
   const SBool   s28 = !s27;
   const SBool   s29 = s13 ? s28 : s27;
-  const SBool   s30 = (SBool) ((s2 >> 8) & 1);
+  const SBool   s30 = sbv_bv_extract_u16_8_8_u1(s2);
   const SBool   s31 = false != s30;
   const SBool   s32 = !s31;
   const SBool   s33 = s9 ? s32 : s31;
   const SBool   s34 = !s33;
   const SBool   s35 = s17 ? s34 : s33;
-  const SBool   s36 = (SBool) ((s2 >> 7) & 1);
+  const SBool   s36 = sbv_bv_extract_u16_7_7_u1(s2);
   const SBool   s37 = false != s36;
   const SBool   s38 = !s37;
   const SBool   s39 = s13 ? s38 : s37;
   const SBool   s40 = !s39;
   const SBool   s41 = s23 ? s40 : s39;
-  const SBool   s42 = (SBool) ((s2 >> 6) & 1);
+  const SBool   s42 = sbv_bv_extract_u16_6_6_u1(s2);
   const SBool   s43 = false != s42;
   const SBool   s44 = !s43;
   const SBool   s45 = s17 ? s44 : s43;
   const SBool   s46 = !s45;
   const SBool   s47 = s29 ? s46 : s45;
-  const SBool   s48 = (SBool) ((s2 >> 5) & 1);
+  const SBool   s48 = sbv_bv_extract_u16_5_5_u1(s2);
   const SBool   s49 = false != s48;
   const SBool   s50 = !s49;
   const SBool   s51 = s23 ? s50 : s49;
@@ -161,29 +312,29 @@ SWord16 crcUSB5(const SWord16 msg)
   const SBool   s73 = s47 ? s72 : s47;
   const SBool   s74 = !s53;
   const SBool   s75 = s53 ? s74 : s53;
-  const SBool   s76 = (SBool) ((s2 >> 4) & 1);
+  const SBool   s76 = sbv_bv_extract_u16_4_4_u1(s2);
   const SBool   s77 = false != s76;
   const SBool   s78 = !s77;
   const SBool   s79 = s29 ? s78 : s77;
   const SBool   s80 = !s79;
   const SBool   s81 = s41 ? s80 : s79;
-  const SBool   s82 = (SBool) ((s2 >> 3) & 1);
+  const SBool   s82 = sbv_bv_extract_u16_3_3_u1(s2);
   const SBool   s83 = false != s82;
   const SBool   s84 = !s83;
   const SBool   s85 = s35 ? s84 : s83;
   const SBool   s86 = !s85;
   const SBool   s87 = s47 ? s86 : s85;
-  const SBool   s88 = (SBool) ((s2 >> 2) & 1);
+  const SBool   s88 = sbv_bv_extract_u16_2_2_u1(s2);
   const SBool   s89 = false != s88;
   const SBool   s90 = !s89;
   const SBool   s91 = s41 ? s90 : s89;
   const SBool   s92 = !s91;
   const SBool   s93 = s53 ? s92 : s91;
-  const SBool   s94 = (SBool) ((s2 >> 1) & 1);
+  const SBool   s94 = sbv_bv_extract_u16_1_1_u1(s2);
   const SBool   s95 = false != s94;
   const SBool   s96 = !s95;
   const SBool   s97 = s47 ? s96 : s95;
-  const SBool   s98 = (SBool) (s2 & 1);
+  const SBool   s98 = sbv_bv_extract_u16_0_0_u1(s2);
   const SBool   s99 = false != s98;
   const SBool   s100 = !s99;
   const SBool   s101 = s53 ? s100 : s99;
