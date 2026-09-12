@@ -42,6 +42,7 @@ import qualified Data.Set as Set
 import Text.PrettyPrint.HughesPJ
 import qualified Text.PrettyPrint.HughesPJ as P ((<>))
 
+import Data.SBV.Compilers.C.Finite     (finiteDomainSize)
 import Data.SBV.Compilers.C.GMP        (isExactGMPKind)
 import Data.SBV.Compilers.C.Lowering   (CLowering, CRequirement(..), expressionLowering)
 import Data.SBV.Compilers.C.Types      (elementCType, kindTag)
@@ -637,30 +638,6 @@ isConcreteADT kind = isADT kind && not (isRoundingMode kind) && not (isUninterpr
 -- allowing finite sums of products without importing the ADT lowering module.
 -- Recursive domains and domains too large for a descriptor return 'Nothing'.
 elementDomainSize :: (Kind -> [[Kind]]) -> Kind -> Maybe Integer
-elementDomainSize constructorsOf = domainSize Set.empty
- where domainSize _ KBool             = Just 2
-       domainSize _ (KBounded _ width)
-         | width < 64                 = Just (2 ^ width)
-         | True                       = Nothing
-       domainSize _ KFloat            = Just (2 ^ (32 :: Int) - 2 ^ (24 :: Int) + 3)
-       domainSize _ KDouble           = Just (2 ^ (64 :: Int) - 2 ^ (53 :: Int) + 3)
-       domainSize _ KChar             = Just 0x30000
-       domainSize _ (KFP eb sb)
-         | eb + sb <= 64              = Just (2 ^ (eb + sb) - 2 ^ sb + 3)
-         | True                       = Nothing
-       domainSize visited (KTuple fields) = productSize visited fields
-       domainSize visited kind
-         | isRoundingMode kind        = Just 5
-         | isConcreteADT kind || isReference kind
-         , kind `Set.notMember` visited
-         = mapM (productSize (Set.insert kind visited)) (constructorsOf kind) >>= boundedSize . sum
-         | True                       = Nothing
-
-       productSize visited fields = mapM (domainSize visited) fields >>= boundedSize . product
-
-       boundedSize total
-         | total <= 2 ^ (64 :: Int) - 1 = Just total
-         | True                         = Nothing
-
-       isReference KApp{} = True
-       isReference _      = False
+elementDomainSize constructorsOf kind = do
+  total <- finiteDomainSize constructorsOf kind
+  if total <= 2 ^ (64 :: Int) - 1 then Just total else Nothing

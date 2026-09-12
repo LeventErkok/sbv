@@ -28,6 +28,7 @@ module Data.SBV.Compilers.C.FP
   , arbitraryFPCType
   , arbitraryFPEqual
   , arbitraryFPObjectEqual
+  , arbitraryFPIsNaN
   , nativeFPObjectEqual
   ) where
 
@@ -480,6 +481,10 @@ arbitraryFPPrint k value = namedCall (prefix k ++ "_fprint") [text "stdout", val
 -- equality: all NaNs compare equal and the two signed zeroes remain distinct.
 arbitraryFPObjectEqual :: Kind -> Doc -> Doc -> Doc
 arbitraryFPObjectEqual k left right = namedCall (prefix k ++ "_obj_eq") [left, right]
+
+-- | Classify a raw arbitrary-format value without performing arithmetic.
+arbitraryFPIsNaN :: Kind -> Doc -> Doc
+arbitraryFPIsNaN kind value = namedCall (prefix kind ++ "_is_nan") [value]
 
 -- | Compare two arbitrary floating-point values using IEEE equality.
 arbitraryFPEqual :: Kind -> Doc -> Doc -> Doc

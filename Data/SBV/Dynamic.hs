@@ -111,7 +111,7 @@ module Data.SBV.Dynamic
   , SBVCodeGen
 
   -- ** Setting code-generation options
-  , cgPerformRTCs, cgSetDriverValues, cgGenerateDriver, cgGenerateMakefile
+  , cgPerformRTCs, cgSetDriverValues, cgArrayEqualityLimit, cgGenerateDriver, cgGenerateMakefile
 
   -- ** Designating inputs
   , svCgInput, svCgInputArr
@@ -148,7 +148,7 @@ import Data.SBV.Compilers.CodeGen ( SBVCodeGen
                                   , svCgInput, svCgInputArr
                                   , svCgOutput, svCgOutputArr
                                   , svCgReturn, svCgReturnArr
-                                  , cgPerformRTCs, cgSetDriverValues, cgGenerateDriver, cgGenerateMakefile
+                                  , cgPerformRTCs, cgSetDriverValues, cgArrayEqualityLimit, cgGenerateDriver, cgGenerateMakefile
                                   , cgAddPrototype, cgAddDecl, cgAddLDFlags, cgIgnoreSAssert
                                   , cgIntegerSize, cgSRealType, CgSRealType(..)
                                   )

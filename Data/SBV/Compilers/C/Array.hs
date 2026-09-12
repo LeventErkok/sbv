@@ -33,7 +33,11 @@ module Data.SBV.Compilers.C.Array
   , arrayLambdaName
   , arrayConst
   , arrayExpr
+  , arrayReadName
+  , arrayEqualName
   ) where
+
+import Data.List (nubBy, tails)
 
 import qualified Data.Set as Set
 import qualified Data.Text as T
@@ -58,9 +62,11 @@ import Data.SBV.Core.Symbolic          (smtLambdaInfo)
 
 -- | Return and validate the distinct array kinds used by a program. Arrays may
 -- occur as values, but not as keys: array-key matching would require general
--- extensional equality, which the C backend cannot implement.
+-- extensional equality, which the C backend cannot implement for arbitrary
+-- domains. Deduplicate by C type: Boolean and unsigned one-bit keys or values
+-- have the same representation and share their runtime helpers.
 arrayKinds :: Set.Set Kind -> [Kind]
-arrayKinds = map validate . filter isArray . Set.toAscList
+arrayKinds = nubBy (\left right -> arrayCType left == arrayCType right) . map validate . filter isArray . Set.toAscList
  where validate k@(KArray keyKind valueKind)
          | isArray keyKind
          = error $ "SBV->C: Array-valued array keys require unsupported extensional equality: " ++ show k
@@ -690,8 +696,8 @@ arrayConst _ _ = Nothing
 -- Structured lambda-backed arrays, including free arrays, become callback
 -- roots. Array-valued elements cross node boundaries through retained
 -- descriptor pointers. The supplied name resolvers identify private defined
--- functions and lambda-lifted array callbacks. General extensional array
--- equality remains unsupported.
+-- functions and lambda-lifted array callbacks. Equality calls a helper whose
+-- finite key domain and enumeration limit are checked by the C renderer.
 arrayExpr :: CgConfig
           -> (T.Text -> Maybe String)
           -> (SV -> Maybe String)
@@ -753,14 +759,22 @@ arrayExpr cfg definedFunctionName structuredLambdaName op svs resultSV args
         -> expression $ renderedCondition <+> text "?" <+> renderedLeft <+> text ":" <+> renderedRight
       (Label label, [_], [array])
         -> expression $ array <+> text "/*" <+> text label <+> text "*/"
-      (Equal{}, _, _)    -> unsupported "general extensional array equality"
-      (NotEqual, _, _)   -> unsupported "general extensional array equality"
+      (Equal{}, initial:rest, a:as)
+        | all ((== kindOf initial) . kindOf) rest
+        -> expression $ conjunction [namedCall (arrayEqualName (kindOf initial)) [a, b] | b <- as]
+      (NotEqual, initial:rest, _)
+        | all ((== kindOf initial) . kindOf) rest
+        -> expression $ conjunction [text "!" P.<> parens (namedCall (arrayEqualName (kindOf initial)) [a, b])
+                                    | a:as <- tails args, b <- as]
       _                  -> error $ "SBV->C: Unsupported array operation " ++ show op
                            ++ " with argument kinds " ++ show (map kindOf svs)
                            ++ " and result kind " ++ show resultKind
  where resultKind = kindOf resultSV
 
        expression = Just . expressionLowering requirements
+
+       conjunction [] = text "true"
+       conjunction ds = hsep (punctuate (text " &&") (map parens ds))
 
        nodeLowering kind fields = Just CLowering
          { loweringExpression   = text "&" P.<> text nodeName
@@ -788,6 +802,10 @@ arrayExpr cfg definedFunctionName structuredLambdaName op svs resultSV args
        unsupported feature = error $ "SBV->C: Arrays do not yet support " ++ feature ++ "."
 
        namedCall functionName callArgs = text functionName P.<> parens (fsep (punctuate comma callArgs))
+
+-- | Name the private exact finite-domain array equality helper.
+arrayEqualName :: Kind -> String
+arrayEqualName kind = "sbv_array_equal_" ++ arraySuffix kind
 
 -- | Initialize the arena that owns array descriptors embedded in temporary
 -- generated values.

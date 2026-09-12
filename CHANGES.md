@@ -55,6 +55,11 @@
     Finite table selection now protects unselected entries and unused defaults too. Already
     available entries retain direct C-array lookup; guarded entries use selective control flow,
     with checked wide and exact indices validated before machine-index narrowing.
+    Direct array equality now enumerates supported finite key domains exactly, including
+    callback-backed arrays and comparisons inside defined functions and array lambdas.
+    `cgArrayEqualityLimit` controls the allowed domain size (256 keys by default); excessive,
+    infinite, and unsupported domains fail during generation instead of approximating equality.
+    Floating-point keys and values use SMT object semantics, including NaNs and signed zeros.
 
   * Functions defined with `smtFunction` and its variants can now be first encountered after entering
     query mode. SBV sends their definitions and dependencies incrementally, while retaining termination

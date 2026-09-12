@@ -28,7 +28,7 @@ module Data.SBV.Compilers.CodeGen (
         , svCgReturn, svCgReturnArr
 
         -- * Settings
-        , cgPerformRTCs, cgSetDriverValues
+        , cgPerformRTCs, cgSetDriverValues, cgArrayEqualityLimit
         , cgAddPrototype, cgAddDecl, cgAddLDFlags, cgIgnoreSAssert, cgOverwriteFiles, cgShowU8UsingHex
         , cgIntegerSize, cgSRealType, CgSRealType(..)
 
@@ -64,31 +64,33 @@ class CgTarget a where
 
 -- | Options for code-generation.
 data CgConfig = CgConfig {
-          cgRTC                :: Bool               -- ^ If 'True', perform run-time-checks for index-out-of-bounds or shifting-by-large values etc.
-        , cgInteger            :: Maybe Int          -- ^ Optional lossy bit-size for representing SInteger; 'Nothing' selects exact GMP integers
-        , cgReal               :: Maybe CgSRealType  -- ^ Optional lossy representation for SReal; 'Nothing' selects exact GMP rationals
-        , cgDriverVals         :: [Integer]          -- ^ Values to use for the driver program generated, useful for generating non-random drivers.
-        , cgGenDriver          :: Bool               -- ^ If 'True', will generate a driver program
-        , cgGenMakefile        :: Bool               -- ^ If 'True', will generate a makefile
-        , cgIgnoreAsserts      :: Bool               -- ^ If 'True', will ignore 'Data.SBV.sAssert' calls
-        , cgOverwriteGenerated :: Bool               -- ^ If 'True', will overwrite the generated files without prompting.
-        , cgShowU8InHex        :: Bool               -- ^ If 'True', then 8-bit unsigned values will be shown in hex as well, otherwise decimal. (Other types always shown in hex.)
+          cgRTC                  :: Bool              -- ^ If 'True', perform run-time-checks for index-out-of-bounds or shifting-by-large values etc.
+        , cgInteger              :: Maybe Int         -- ^ Optional lossy bit-size for representing SInteger; 'Nothing' selects exact GMP integers
+        , cgReal                 :: Maybe CgSRealType -- ^ Optional lossy representation for SReal; 'Nothing' selects exact GMP rationals
+        , cgDriverVals           :: [Integer]         -- ^ Values to use for the driver program generated, useful for generating non-random drivers.
+        , cgGenDriver            :: Bool              -- ^ If 'True', will generate a driver program
+        , cgGenMakefile          :: Bool              -- ^ If 'True', will generate a makefile
+        , cgIgnoreAsserts        :: Bool              -- ^ If 'True', will ignore 'Data.SBV.sAssert' calls
+        , cgOverwriteGenerated   :: Bool              -- ^ If 'True', will overwrite the generated files without prompting.
+        , cgShowU8InHex          :: Bool              -- ^ If 'True', then 8-bit unsigned values will be shown in hex as well, otherwise decimal. (Other types always shown in hex.)
+        , cgArrayEqualityMaxKeys :: Integer           -- ^ Maximum key-domain size for exhaustive array equality in the current C backend.
         }
 
 -- | Default options for code generation. Run-time checks are disabled, driver
 -- values are random, and any 'SInteger' or rational 'SReal' values use exact
 -- GMP representations.
 defaultCgConfig :: CgConfig
-defaultCgConfig = CgConfig { cgRTC                = False
-                           , cgInteger            = Nothing
-                           , cgReal               = Nothing
-                           , cgDriverVals         = []
-                           , cgGenDriver          = True
-                           , cgGenMakefile        = True
-                           , cgIgnoreAsserts      = False
-                           , cgOverwriteGenerated = False
-                           , cgShowU8InHex        = False
-                           }
+defaultCgConfig = CgConfig { cgRTC                  = False
+                          , cgInteger              = Nothing
+                          , cgReal                 = Nothing
+                          , cgDriverVals           = []
+                          , cgGenDriver            = True
+                          , cgGenMakefile          = True
+                          , cgIgnoreAsserts        = False
+                          , cgOverwriteGenerated   = False
+                          , cgShowU8InHex          = False
+                          , cgArrayEqualityMaxKeys = 256
+                          }
 
 -- | Abstraction of target language values
 data CgVal = CgAtomic SV
@@ -149,6 +151,32 @@ cgSym = SBVCodeGen . lift
 -- | Sets RTC (run-time-checks) for index-out-of-bounds, shift-with-large value etc. on/off. Default: 'False'.
 cgPerformRTCs :: Bool -> SBVCodeGen ()
 cgPerformRTCs b = modify' (\s -> s { cgFinalConfig = (cgFinalConfig s) { cgRTC = b } })
+
+-- | Set the maximum number of keys enumerated by an array equality comparison
+-- in the current C backend. The default is 256. Larger or infinite domains
+-- are rejected during generation; equality is never approximated. Zero
+-- disables exhaustive array equality. Negative limits are invalid.
+--
+-- For example, @cgArrayEqualityLimit 65536@ permits comparing arrays indexed
+-- by 'SWord16', at the cost of up to 65,536 lookups in each array per comparison.
+-- The setting also applies inside generated defined functions and array lambdas.
+--
+-- >>> import Data.SBV
+-- >>> import Data.SBV.Internals (compileToC')
+-- >>> :{
+-- let compareArrays = do
+--       cgArrayEqualityLimit 65536
+--       left  <- cgInput "left"  :: SBVCodeGen (SArray Word16 Word8)
+--       right <- cgInput "right" :: SBVCodeGen (SArray Word16 Word8)
+--       cgReturn (left .== right)
+-- :}
+--
+-- >>> (_, _, generated) <- compileToC' "compareArrays" compareArrays
+-- >>> length (show generated) `seq` pure ()
+cgArrayEqualityLimit :: Integer -> SBVCodeGen ()
+cgArrayEqualityLimit limit
+  | limit < 0 = error "SBV.cgArrayEqualityLimit: The limit must be nonnegative."
+  | True      = modify' (\s -> s { cgFinalConfig = (cgFinalConfig s) { cgArrayEqualityMaxKeys = limit } })
 
 -- | Sets number of bits to be used for representing the 'SInteger' type in the generated C code.
 -- The argument must be one of @8@, @16@, @32@, or @64@. Note that this is essentially unsafe as

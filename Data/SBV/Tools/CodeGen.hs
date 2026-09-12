@@ -20,7 +20,7 @@ module Data.SBV.Tools.CodeGen (
           SBVCodeGen, cgSym
 
         -- ** Setting code-generation options
-        , cgPerformRTCs, cgSetDriverValues, cgGenerateDriver, cgGenerateMakefile, cgOverwriteFiles, cgShowU8UsingHex
+        , cgPerformRTCs, cgSetDriverValues, cgArrayEqualityLimit, cgGenerateDriver, cgGenerateMakefile, cgOverwriteFiles, cgShowU8UsingHex
 
         -- ** Designating inputs
         , cgInput, cgInputArr
@@ -208,12 +208,52 @@ termination or using @longjmp@ is not a supported recovery mechanism.
 Ordinary numerical results, including floating-point NaNs and infinities and
 SBV-defined totalized operations, are not themselves runtime failures.
 
+== Array equality
+
+Array equality enumerates a supported finite key domain and compares values
+using SMT object equality: NaNs are equal and signed floating-point zeros are
+distinct. It works for constant, updated, lambda-backed, and caller-provided
+arrays, stopping at the first mismatch. No backing array is materialized.
+Use 'Data.SBV..===' for arrays involving floating-point types; ordinary
+'Data.SBV..==' on such arrays is rejected by SBV before C generation.
+Lookup callbacks must respect SMT key equality, including returning the same
+value for all NaN encodings of a floating-point key.
+
+'cgArrayEqualityLimit' controls the maximum domain size, defaulting to 256
+keys per comparison. For example, setting it to 65536 permits 'SWord16' keys,
+at the cost of up to 65,536 lookups in each array. The setting also applies
+inside defined functions and array lambdas, independently for each library
+component. A zero limit disables exhaustive comparison. This is a generation
+setting, not a runtime timeout; lookup and value-comparison costs are additional.
+
+Supported key domains are Booleans, bit-vectors, characters, rounding modes,
+floating-point formats, and non-recursive tuples and ADTs built from these.
+Floating-point enumeration visits bit encodings but compares only one NaN
+representative. Large domains require explicit opt-in even when the generated
+loop itself is compact.
+
+For example, admit the full 16-bit domain when generating a comparator:
+
+>>> import Data.SBV
+>>> import Data.SBV.Internals (compileToC')
+>>> :{
+let compareArrays = do
+      cgArrayEqualityLimit 65536
+      left  <- cgInput "left"  :: SBVCodeGen (SArray Word16 Word8)
+      right <- cgInput "right" :: SBVCodeGen (SArray Word16 Word8)
+      cgReturn (left .== right)
+:}
+
+>>> (_, _, generated) <- compileToC' "compareArrays" compareArrays
+>>> length (show generated) `seq` pure ()
+
 == Boundaries
 
-General extensional array equality and regular-expression operations are not
-implemented. Quantifiers, special solver relations, uninterpreted sorts, and
-soft constraints are also rejected. Finite-domain array equality and regex
-matching are possible future extensions, not inherently solver-only tasks.
+Array comparisons with infinite or unsupported key domains, or values that
+themselves contain arrays, are rejected during generation. Comparing arrays
+nested inside collections or aggregates is also not implemented. Regular-expression
+operations, quantifiers, special solver relations, uninterpreted sorts, and
+soft constraints are rejected. Regex matching remains a possible executable extension.
 
 Exact GMP reals represent rational values, not arbitrary algebraic or
 transcendental values. Select 'cgSRealType' for native approximations and

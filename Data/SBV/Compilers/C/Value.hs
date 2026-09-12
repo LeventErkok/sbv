@@ -77,7 +77,8 @@ byValueEqual cfg strong kind left right
   | KTuple fields <- kind                      = tupleEquality fields
   | isConcreteADT kind                         = call (adtEqualityName strong kind) [left, right]
   | True                                       = left <+> text "==" <+> right
- where tupleEquality fields = parens . fsep . punctuate (text " &&") $
+ where tupleEquality []     = parens . fsep . punctuate comma $ [text "(void)" <+> parens left, text "(void)" <+> parens right, text "true"]
+       tupleEquality fields = parens . fsep . punctuate (text " &&") $
          zipWith equalField [1 :: Int ..] fields
 
        equalField index fieldKind = byValueEqual cfg strong fieldKind

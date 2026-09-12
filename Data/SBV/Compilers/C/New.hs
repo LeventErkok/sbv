@@ -42,6 +42,7 @@ import Data.SBV.Compilers.C.ADT
 import Data.SBV.Compilers.C.Array
 import Data.SBV.Compilers.C.BV
 import Data.SBV.Compilers.C.FP
+import Data.SBV.Compilers.C.Finite (finiteDomainSize)
 import Data.SBV.Compilers.C.GMP
 import Data.SBV.Compilers.C.List
 import Data.SBV.Compilers.C.Lowering
@@ -51,7 +52,7 @@ import Data.SBV.Compilers.C.Table
 import Data.SBV.Compilers.C.Text
 import qualified Data.SBV.Compilers.C.Types as CTypes (arrayStoredReleaseName, constElementCType, definedFunctionCName, elementCType, kindTag)
 import Data.SBV.Compilers.C.Tuple
-import Data.SBV.Compilers.C.Value (managedValueClone, managedValueRelease, valueNeedsOwnership)
+import Data.SBV.Compilers.C.Value (byValueEqual, managedValueClone, managedValueRelease, valueNeedsOwnership)
 import Data.SBV.Compilers.CodeGen
 
 import Data.SBV.Utils.PrettyNum   (chex, showCFloat, showCDouble)
@@ -1185,6 +1186,7 @@ genCProg cfg adts lists sets fn proto
              $$ (if requires CRequiresSets             then setRuntime cfg (map snd . adtConstructors adts . resolveADTReferences adts) sets else empty)
              $$ (if requires CRequiresArrays           then arrayRuntime cfg arrays else empty)
              $$ adtEqualityRuntime cfg adts
+             $$ vcat [ppArrayEquality cfg adts kind | kind <- equalityArrayKinds]
              $$ definedFunctionResultRuntime functionResultKinds
              $$ (if hasStructuredCallbacks then definedFunctionContextType requirements else empty)
              $$ vcat functionPrototypes
@@ -1281,6 +1283,10 @@ genCProg cfg adts lists sets fn proto
        arrayLambdaAssignments = concatMap (\(_, _, lambdaInfo) -> F.toList (liAssignments lambdaInfo)) arrayLambdaDefinitions
        lambdaAssignments      = functionAssignments ++ arrayLambdaAssignments
        allAssignments         = assignments ++ lambdaAssignments
+       equalityArrayKinds     = nubBy (\left right -> arrayEqualName left == arrayEqualName right)
+                                    [kindOf value | (_, SBVApp op (value:_)) <- allAssignments
+                                                , op `elem` [Equal False, Equal True, NotEqual]
+                                                , isArray value]
 
        functionPrototypes  = [ definedFunctionSignature functionName resultKind (liParams lambdaInfo) P.<> semi
                              | (functionName, resultKind, _, _, lambdaInfo) <- structuredDefinitions
@@ -2548,6 +2554,7 @@ ppExpr :: CgConfig
        -> (Doc, Set.Set CRequirement, [Doc])
 ppExpr cfg adts functionNames structuredLambdaNames consts (SBVApp op opArgs) resultSV lhs (typ, var) declareResult
   | requiresExtensionalEquality adts op (map kindOf opArgs)
+  , not (op `elem` [Equal False, Equal True, NotEqual] && all isArray opArgs)
   = error $ "SBV->C: " ++ show op ++ " requires general extensional array equality, including array-valued elements or fields."
   | True
   = ( vcat $ declarations
@@ -2782,6 +2789,102 @@ ppExpr cfg adts functionNames structuredLambdaNames consts (SBVApp op opArgs) re
         shift toLeft i a = a <+> text cop <+> i
           where cop | toLeft = "<<"
                     | True   = ">>"
+
+-- | Render exact equality over a finite array domain. Each iteration performs
+-- two ordered lookups and an SMT object comparison; no backing arrays are
+-- materialized. Reject excessive domains before any C files are emitted.
+ppArrayEquality :: CgConfig -> [Kind] -> Kind -> Doc
+ppArrayEquality cfg adts kind@(KArray keyKind valueKind)
+  | requiresExtensionalEquality adts (Equal True) [valueKind]
+  = die "Nested extensional array equality is not yet supported."
+  | Nothing <- cardinality
+  = die $ "Extensional array equality cannot enumerate key domain " ++ show keyKind
+  | Just count <- cardinality, count > cgArrayEqualityMaxKeys cfg
+  = die $ "Extensional array equality for " ++ show keyKind ++ " requires " ++ show count
+       ++ " keys, exceeding cgArrayEqualityLimit " ++ show (cgArrayEqualityMaxKeys cfg)
+       ++ ". Raise cgArrayEqualityLimit explicitly to permit this work."
+  | True
+  = text "static SBV_CGEN_UNUSED bool" <+> text (arrayEqualName kind)
+      P.<> parens (text (arrayCType kind ++ " left, " ++ arrayCType kind ++ " right"))
+ $$ text "{"
+ $$ nest 2 (enumerate "__sbv_key" keyKind compareAt $$ text "return true;")
+ $$ text "}"
+ $$ text ""
+ where cardinality = finiteDomainSize (map snd . adtConstructors adts) keyKind
+
+       compareAt key = text ("const " ++ showCType keyKind ++ " key =") <+> key P.<> semi
+                    $$ text ("const " ++ CTypes.elementCType valueKind ++ " left_value = " ++ arrayReadName kind ++ "(left, key);")
+                    $$ text ("const " ++ CTypes.elementCType valueKind ++ " right_value = " ++ arrayReadName kind ++ "(right, key);")
+                    $$ text "if" P.<> parens (text "!" P.<> parens (byValueEqual cfg True valueKind (text "left_value") (text "right_value")))
+                    $$ nest 2 (text "return false;")
+
+       enumerate scope key yield
+         | key == KBool || key == KBounded False 1
+         = counted scope 2 (\counter -> yield (parens (text "SBool") <+> counter))
+         | key == KFloat   = floating scope key 32 yield
+         | key == KDouble  = floating scope key 64 yield
+         | KFP eb sb <- key = floating scope key (eb + sb) yield
+         | isWideBV key
+         = limbEnumeration scope key (intSizeOf key) yield
+         | isBounded key
+         = let raw       = scope ++ "_raw"
+               keyDoc    = if hasSign key then text scope else text raw
+               signedKey = if hasSign key
+                              then text (showCType key ++ " " ++ scope ++ "; memcpy(&" ++ scope ++ ", &" ++ raw ++ ", sizeof " ++ scope ++ ");")
+                              else empty
+           in text ("uint" ++ show (intSizeOf key) ++ "_t " ++ raw ++ " = 0;")
+           $$ text "do {"
+           $$ nest 2 (signedKey $$ yield keyDoc $$ text ("++" ++ raw ++ ";"))
+           $$ text ("} while (" ++ raw ++ " != 0);")
+         | key == KChar
+         = counted scope 0x30000 yield
+         | isRoundingMode key
+         = counted scope 5 (\counter -> yield (parens (text (showCType key)) <+> counter))
+         | KTuple fields <- key
+         = enumerateFields scope fields (yield . tupleValue key)
+         | isConcreteADTKind key
+         = vcat [ text "{" $$ nest 2 (enumerateFields (scope ++ "_c" ++ show index) fields (yield . adtValue adts key index)) $$ text "}"
+                | (index, (_, fields)) <- zip [1 :: Int ..] (adtConstructors adts key)]
+         | True
+         = die $ "Cannot enumerate array key kind " ++ show key
+
+       limbEnumeration :: String -> Kind -> Int -> (Doc -> Doc) -> Doc
+       limbEnumeration scope key width yield =
+         let limbCount  = (width + 63) `div` 64
+             limb index = scope ++ ".limb[" ++ show index ++ "]"
+             topMask    = 2 ^ (1 + (width - 1) `mod` 64) - 1 :: Integer
+         in text (showCType key ++ " " ++ scope ++ " = {{0}};")
+         $$ text "do {"
+         $$ nest 2 (yield (text scope)
+                 $$ text ("for (size_t i = 0; i < " ++ show limbCount ++ "; ++i) { if (++" ++ scope ++ ".limb[i] != 0) break; }")
+                 $$ text (limb (limbCount - 1) ++ " &= UINT64_C(" ++ show topMask ++ ");"))
+         $$ text ("} while (" ++ intercalate " || " [limb i ++ " != 0" | i <- [0 .. limbCount - 1]] ++ ");")
+
+       floating :: String -> Kind -> Int -> (Doc -> Doc) -> Doc
+       floating scope key width yield =
+         let seen        = scope ++ "_nan_seen"
+             visit value = text "const bool is_nan =" <+> (if isFP key then arbitraryFPIsNaN key value else text "isnan" P.<> parens value) P.<> semi
+                        $$ text ("if (!is_nan || !" ++ seen ++ ") {")
+                        $$ nest 2 (text (seen ++ " |= is_nan;") $$ yield value)
+                        $$ text "}"
+             raw         = scope ++ "_raw"
+             nativeLoop = text ("uint" ++ show width ++ "_t " ++ raw ++ " = 0;")
+                       $$ text "do {"
+                       $$ nest 2 (text (showCType key ++ " " ++ scope ++ "; memcpy(&" ++ scope ++ ", &" ++ raw ++ ", sizeof " ++ scope ++ ");")
+                               $$ visit (text scope) $$ text ("++" ++ raw ++ ";"))
+                       $$ text ("} while (" ++ raw ++ " != 0);")
+         in text ("bool " ++ seen ++ " = false;")
+         $$ if isFP key then limbEnumeration scope key width visit else nativeLoop
+
+       enumerateFields scope fields yield = fieldsFrom (1 :: Int) fields []
+         where fieldsFrom _ [] values = yield (reverse values)
+               fieldsFrom index (field:rest) values = enumerate (scope ++ "_f" ++ show index) field
+                                                         (\value -> fieldsFrom (index + 1) rest (value : values))
+
+       counted scope count yield = text ("for (uint32_t " ++ scope ++ " = 0; " ++ scope ++ " < " ++ show (count :: Integer) ++ "; ++" ++ scope ++ ") {")
+                                $$ nest 2 (yield (text scope))
+                                $$ text "}"
+ppArrayEquality _ _ kind = die $ "Expected an array equality kind, received " ++ show kind
 
 -- | Detect comparisons that transitively require array equality, resolving
 -- recursive ADT references without revisiting already inspected definitions.

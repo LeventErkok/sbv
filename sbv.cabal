@@ -319,6 +319,7 @@ Library
                   , Data.SBV.Compilers.C.Array
                   , Data.SBV.Compilers.C.BV
                   , Data.SBV.Compilers.C.FP
+                  , Data.SBV.Compilers.C.Finite
                   , Data.SBV.Compilers.C.GMP
                   , Data.SBV.Compilers.C.Legacy
                   , Data.SBV.Compilers.C.Legacy.Internal
@@ -387,6 +388,7 @@ Test-Suite SBVTest
   hs-source-dirs  : SBVTestSuite
   main-is         : SBVTest.hs
   other-modules   : Utils.SBVTestFramework
+                  , Utils.CCodeGen
                   , TestSuite.ADT.ADT
                   , TestSuite.ADT.Expr
                   , TestSuite.ADT.MutRec

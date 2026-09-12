@@ -23,6 +23,7 @@ module TestSuite.CodeGeneration.CgTests(tests) where
 import Control.Exception (ErrorCall, displayException, evaluate, try)
 import Control.Monad (forM, unless, when)
 import Data.List (isInfixOf)
+import Data.Proxy (Proxy(..))
 import Data.SBV.Internals
 import Data.SBV.Tools.CodeGen (compileToC, compileToCLib)
 import qualified Data.SBV.Char as SC
@@ -41,6 +42,7 @@ import System.Process   (readProcessWithExitCode)
 import Test.Tasty.HUnit (assertBool, assertEqual)
 
 import Utils.SBVTestFramework
+import Utils.CCodeGen (generatedMakeOptions)
 
 -- | A non-recursive, parameterized sum type used to exercise C tagged-union
 -- generation with nullary, unary, and product constructors.
@@ -141,6 +143,12 @@ tests = testGroup "CodeGeneration.CgTests"
   , testCase "reject non-linear exact real operations" exactRealNonLinearDiagnostic
   , testCase "compile repeated exact rationals into a library" exactRationalLibrary
   , testCase "compile and execute persistent arrays" persistentArrays
+  , testCase "compare finite arrays including callback and defined-function values" finiteArrayEquality
+  , testCase "configure finite array equality limits" finiteArrayEqualityLimits
+  , testCase "enumerate scalar and aggregate finite array keys" finiteArrayKeyKinds
+  , testCase "observe finite array callback coverage and short circuiting" finiteArrayCallbacks
+  , testCase "reject unsupported finite array equality domains before rendering" finiteArrayRejections
+  , testCase "compare managed and floating finite array values" finiteArrayValues
   , testCase "compile and execute nested persistent arrays" nestedPersistentArrays
   , testCase "compile and execute arrays stored in tuples" tupleStoredArrays
   , testCase "compile and execute arrays stored in ADTs" adtStoredArrays
@@ -298,6 +306,213 @@ nativeFloatingRemainders = mapM_ check [(7, 4), (6, 4), (-7, 4), (7, -4)]
                cgReturn ((fpRem leftFloat rightFloat .== expectedFloat) .&& (fpRem leftDouble rightDouble .== expectedDouble))
          outputText <- compileProgramAndRunGenerated dir "nativeRemainder" program
          assertBool ("Incorrect native remainder: " ++ outputText) ("= 1" `isInfixOf` outputText)
+
+-- | Equality observes every key, including a mismatch at the last key. The
+-- same helper is available inside defined functions and retained lambdas.
+finiteArrayEquality :: Assertion
+finiteArrayEquality = mapM_ check [(library, identical) | library <- [False, True], identical <- [False, True]]
+ where check (library, identical) = withSystemTempDirectory "sbv-finite-array-equality" $ \dir -> do
+         let functionName = "finiteArrayEquality"
+             program = do
+               cgOverwriteFiles True
+               cgSetDriverValues [3, if identical then 3 else 4]
+               left  <- cgInput "left"  :: SBVCodeGen (SArray Word8 Word32)
+               right <- cgInput "right" :: SBVCodeGen (SArray Word8 Word32)
+               let equalArrays = smtFunction "C finite array equality" ((.==) :: SArray Word8 Word32 -> SArray Word8 Word32 -> SBool)
+                   changed     = writeArray left 255 (readArray left 255 + 1)
+                   another     = writeArray left 255 (readArray left 255 + 2)
+                   callback    = lambdaArray (\key -> (constArray key :: SArray Bool Bool) .== constArray sTrue) :: SArray Bool Bool
+               cgReturn $ sAnd [ (left .== right) .== literal identical
+                               , equalArrays left right .== literal identical
+                               , left ./= changed
+                               , distinct [left, changed, another]
+                               , (left .=== right) .== literal identical
+                               , readArray callback sTrue
+                               , sNot (readArray callback sFalse)
+                               ]
+         (_, cfg, bundle) <- if library
+                               then compileToCLib' functionName [("equalityComponent", program)]
+                               else compileToC' functionName ((:[]) <$> program)
+         renderCgPgmBundle (Just dir) (cfg, bundle)
+         outputText <- compileAndRunGenerated dir functionName
+         assertBool outputText (") = 1" `isInfixOf` outputText)
+
+-- | The limit rejects excessive work during generation, can be raised to
+-- admit a 16-bit key domain, and can be set to zero to disable enumeration.
+finiteArrayEqualityLimits :: Assertion
+finiteArrayEqualityLimits = do
+  let program limit = do
+        cgOverwriteFiles True
+        cgSetDriverValues [7, 7]
+        mapM_ cgArrayEqualityLimit limit
+        left  <- cgInput "left"  :: SBVCodeGen (SArray Word16 Word8)
+        right <- cgInput "right" :: SBVCodeGen (SArray Word16 Word8)
+        cgReturn (left .== right)
+  mapM_ (\limit -> do
+    result <- try (do (_, _, bundle) <- compileToC' "limitedEquality" (program limit)
+                      evaluate (length (show bundle))) :: IO (Either ErrorCall Int)
+    case result of
+      Left exception -> assertBool (displayException exception) ("cgArrayEqualityLimit" `isInfixOf` displayException exception)
+      Right _        -> assertFailure "Expected the array equality limit to reject generation") [Nothing, Just 0, Just (-1)]
+  withSystemTempDirectory "sbv-configured-array-equality" $ \dir -> do
+    outputText <- compileProgramAndRunGenerated dir "configuredEquality" (program (Just 65536))
+    sourceText <- readFile (dir </> "configuredEquality.c")
+    assertBool outputText (") = 1" `isInfixOf` outputText)
+    assertBool "Equality must use a compact loop, not an unrolled key table" (length sourceText < 50000)
+
+-- | Enumerate signed bit patterns, sub-native bit-vectors, sums, products,
+-- and rounding modes without relying on the example driver's sample keys.
+finiteArrayKeyKinds :: Assertion
+finiteArrayKeyKinds = withSystemTempDirectory "sbv-finite-array-key-kinds" $ \dir -> do
+  let pair :: forall key. SymVal key => Proxy key -> String -> SBVCodeGen SBool
+      pair _ prefix = do
+        left  <- cgInput (prefix ++ "Left")  :: SBVCodeGen (SArray key Word8)
+        right <- cgInput (prefix ++ "Right") :: SBVCodeGen (SArray key Word8)
+        pure (left .=== right)
+      program = do
+        cgOverwriteFiles True
+        cgSetDriverValues (repeat 3)
+        results <- sequence [ pair (Proxy @Bool) "bool"
+                            , pair (Proxy @Int8) "signed"
+                            , pair (Proxy @(WordN 1)) "bit"
+                            , pair (Proxy @(IntN 1)) "signedBit"
+                            , pair (Proxy @(WordN 5)) "wide"
+                            , pair (Proxy @(IntN 5)) "signedWide"
+                            , pair (Proxy @(Bool, WordN 2)) "tuple"
+                            , pair (Proxy @(Maybe Bool)) "maybe"
+                            , pair (Proxy @(Either Bool (WordN 2))) "either"
+                            , pair (Proxy @CodeGenEnum) "enum"
+                            , pair (Proxy @RoundingMode) "rounding"
+                            , pair (Proxy @(FloatingPoint 2 3)) "tinyFloat"
+                            , pair (Proxy @()) "unit"
+                            ]
+        cgReturn (sAnd results)
+  outputText <- compileProgramAndRunGenerated dir "finiteArrayKeys" program
+  assertBool outputText (") = 1" `isInfixOf` outputText)
+
+-- | Exercise actual C callbacks, counting complete enumeration and early
+-- mismatches. Tiny floats cover every object exactly once, including both
+-- zeros and a single NaN, and library components retain independent limits.
+finiteArrayCallbacks :: Assertion
+finiteArrayCallbacks = withSystemTempDirectory "sbv-finite-array-callbacks" $ \dir -> do
+  let component :: forall key. SymVal key => Proxy key -> Integer -> SBVCodeGen ()
+      component _ limit = do
+        cgOverwriteFiles True
+        cgGenerateDriver False
+        cgArrayEqualityLimit limit
+        left  <- cgInput "left"  :: SBVCodeGen (SArray key Word8)
+        right <- cgInput "right" :: SBVCodeGen (SArray key Word8)
+        cgReturn (left .=== right)
+      large = do
+        cgOverwriteFiles True
+        cgGenerateDriver False
+        cgArrayEqualityLimit 65536
+        left  <- cgInput "left"  :: SBVCodeGen (SArray Word16 Word8)
+        right <- cgInput "right" :: SBVCodeGen (SArray Word16 Word8)
+        let compareArrays = smtFunction "C configured equality" ((.==) :: SArray Word16 Word8 -> SArray Word16 Word8 -> SBool)
+        cgReturn (compareArrays left right)
+  _ <- compileToCLib (Just dir) "arrayEqualityLibrary"
+    [("compareBytes", component (Proxy @Word8) 256)
+    , ("compareTinyFloats", component (Proxy @(FloatingPoint 2 3)) 27)
+    , ("compareChars", component (Proxy @Char) 0x30000)
+    , ("compareLarge", large)
+    ]
+  compileAndRunCaller dir "arrayEqualityLibrary" $ unlines
+    ["#include \"arrayEqualityLibrary.h\""
+    , "#include <assert.h>"
+    , "static unsigned calls, nans, positive_zeros, negative_zeros;"
+    , "static SWord8 byte_lookup(const void *context, SWord8 key)"
+    , "{ ++calls; return context != NULL && key == *(const unsigned *) context; }"
+    , "static SWord8 float_lookup(const void *context, SFP2_3 key)"
+    , "{"
+    , "  (void) context; ++calls;"
+    , "  unsigned raw = (unsigned) key.limb[0];"
+    , "  bool nan = (raw & 12) == 12 && (raw & 3) != 0;"
+    , "  nans += nan; positive_zeros += raw == 0; negative_zeros += raw == 16;"
+    , "  return nan ? 1 : (SWord8) raw;"
+    , "}"
+    , "static SWord8 char_lookup(const void *context, SChar key)"
+    , "{ (void) context; ++calls; return (SWord8) key; }"
+    , "static SWord8 large_lookup(const void *context, SWord16 key)"
+    , "{ (void) context; ++calls; return (SWord8) key; }"
+    , "int main(void)"
+    , "{"
+    , "  unsigned changed = 255;"
+    , "  SBVArrayInput_2_u8_2_u8 left = {byte_lookup, NULL, NULL, NULL};"
+    , "  SBVArrayInput_2_u8_2_u8 right = {byte_lookup, &changed, NULL, NULL};"
+    , "  assert(!compareBytes(left, right) && calls == 512);"
+    , "  calls = 0; changed = 0; assert(!compareBytes(left, right) && calls == 2);"
+    , "  calls = 0; assert(compareBytes(left, left) && calls == 512);"
+    , "  SBVArrayInput_8_fp_e2_s3_2_u8 floats = {float_lookup, NULL, NULL, NULL};"
+    , "  calls = 0; assert(compareTinyFloats(floats, floats) && calls == 54);"
+    , "  assert(nans == 2 && positive_zeros == 2 && negative_zeros == 2);"
+    , "  SBVArrayInput_4_char_2_u8 chars = {char_lookup, NULL, NULL, NULL};"
+    , "  calls = 0; assert(compareChars(chars, chars) && calls == 0x60000);"
+    , "  SBVArrayInput_3_u16_2_u8 large = {large_lookup, NULL, NULL, NULL};"
+    , "  calls = 0; assert(compareLarge(large, large) && calls == 131072);"
+    , "  return 0;"
+    , "}"
+    ]
+
+-- | Reject oversized, infinite, recursive, and nested-array comparisons
+-- before creating files. Opt-in permits compact native-floating and wide
+-- bit-vector loops to be generated without attempting to execute them.
+finiteArrayRejections :: Assertion
+finiteArrayRejections = do
+  let comparison :: forall key. SymVal key => Proxy key -> SBVCodeGen ()
+      comparison _ = do
+        cgGenerateDriver False
+        left  <- cgInput "left"  :: SBVCodeGen (SArray key Word8)
+        right <- cgInput "right" :: SBVCodeGen (SArray key Word8)
+        cgReturn (left .=== right)
+      reject diagnostic program = withSystemTempDirectory "sbv-array-equality-rejection" $ \dir -> do
+        result <- try (compileToC (Just dir) "rejectedEquality" program) :: IO (Either ErrorCall ())
+        case result of
+          Left exception -> assertBool (displayException exception) (diagnostic `isInfixOf` displayException exception)
+          Right _        -> assertFailure "Expected array equality to reject generation"
+        assertEqual "Rejected equality must not create files" [] =<< listDirectory dir
+      checkCompact program = do
+        (_, _, bundle) <- compileToC' "largeDomain" (cgArrayEqualityLimit (2 ^ (673 :: Int)) >> program)
+        assertBool "Explicitly admitted large domains must generate compact loops" (length (show bundle) < 100000)
+  mapM_ (reject "cgArrayEqualityLimit")
+    [comparison (Proxy @Word32), comparison (Proxy @(WordN 673)), comparison (Proxy @Float)
+    , cgArrayEqualityLimit 26 >> comparison (Proxy @(FloatingPoint 2 3))]
+  mapM_ (reject "cannot enumerate key domain")
+    [comparison (Proxy @Integer), comparison (Proxy @String), comparison (Proxy @CodeGenTree)]
+  reject "Nested extensional array equality" $ do
+    cgGenerateDriver False
+    left  <- cgInput "left"  :: SBVCodeGen (SArray Bool (ArrayModel Bool Word8))
+    right <- cgInput "right" :: SBVCodeGen (SArray Bool (ArrayModel Bool Word8))
+    cgReturn (left .== right)
+  mapM_ checkCompact [comparison (Proxy @Float), comparison (Proxy @Double), comparison (Proxy @(WordN 673))]
+
+-- | Array values use structural object equality, including managed GMP,
+-- collection and ADT values, NaNs, and the distinction between signed zeros.
+finiteArrayValues :: Assertion
+finiteArrayValues = withSystemTempDirectory "sbv-finite-array-values" $ \dir -> do
+  let pair :: forall value. SymVal value => Proxy value -> String -> SBVCodeGen SBool
+      pair _ prefix = do
+        left  <- cgInput (prefix ++ "Left")  :: SBVCodeGen (SArray Bool value)
+        right <- cgInput (prefix ++ "Right") :: SBVCodeGen (SArray Bool value)
+        pure (left .=== right)
+      program = do
+        cgOverwriteFiles True
+        cgSetDriverValues (repeat 3)
+        results <- sequence [ pair (Proxy @Integer) "integer"
+                            , pair (Proxy @Rational) "rational"
+                            , pair (Proxy @String) "string"
+                            , pair (Proxy @[Integer]) "list"
+                            , pair (Proxy @(RCSet Word8)) "set"
+                            , pair (Proxy @(Maybe Integer)) "adt"
+                            ]
+        bits <- cgInput "bits" :: SBVCodeGen SWord32
+        let array value = constArray value :: SArray Bool Float
+            nanValue    = sWord32AsSFloat (bits .|. 0x7fc00000)
+            positive    = sWord32AsSFloat (bits .&. 0)
+            negative    = sWord32AsSFloat ((bits .&. 0) .|. 0x80000000)
+        cgReturn $ sAnd (results ++ [array nanValue .=== array (nanValue + 1), sNot (array positive .=== array negative)])
+  outputText <- compileProgramAndRunGenerated dir "finiteArrayValues" program
+  assertBool outputText (") = 1" `isInfixOf` outputText)
 
 -- | Discover rounding-mode declarations through collection element kinds,
 -- and compile their borrowed/owned interfaces with strict C warnings.
@@ -588,7 +803,8 @@ compileAndRunCaller dir libraryName source = do
     ["caller: caller.c " ++ libraryName ++ ".h " ++ libraryName ++ ".a"
     , "\t${CC} ${CCFLAGS} ${GMP_CFLAGS} caller.c " ++ libraryName ++ ".a ${LDFLAGS} -o $@"
     ]
-  (makeExit, _, makeError) <- readProcessWithExitCode "make" ["-C", dir, "CCFLAGS=-std=c11 -Wall -Werror -O2", "caller"] ""
+  makeOptions <- generatedMakeOptions dir
+  (makeExit, _, makeError) <- readProcessWithExitCode "make" (["-C", dir, "caller"] ++ makeOptions) ""
   assertEqual makeError ExitSuccess makeExit
   (runExit, _, runError) <- readProcessWithExitCode (dir </> "caller") [] ""
   assertEqual runError ExitSuccess runExit
@@ -667,7 +883,8 @@ legacyPublicFacade = withSystemTempDirectory "sbv-legacy-c-backend" $ \dir -> do
 -- warnings so representation and ownership qualifier errors cannot pass silently.
 compileAndRunGenerated :: FilePath -> String -> IO String
 compileAndRunGenerated dir executableName = do
-  (makeExit, _, makeError) <- readProcessWithExitCode "make" ["-C", dir, "CCFLAGS=-std=c11 -Wall -Werror -O2"] ""
+  makeOptions <- generatedMakeOptions dir
+  (makeExit, _, makeError) <- readProcessWithExitCode "make" (["-C", dir] ++ makeOptions) ""
   assertEqual makeError ExitSuccess makeExit
   (runExit, outputText, runError) <- readProcessWithExitCode (dir </> executableName ++ "_driver") [] ""
   assertEqual runError ExitSuccess runExit

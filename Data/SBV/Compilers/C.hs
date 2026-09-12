@@ -25,7 +25,9 @@
 -- * Characters, strings, lists, finite or cofinite sets, tuples, and concrete
 --   algebraic datatypes, including recursive datatypes.
 -- * Finite lookup tables and persistent arrays created from constants,
---   writes, retained lambdas, or caller-provided lookup callbacks.
+--   writes, retained lambdas, or caller-provided lookup callbacks. Direct
+--   array equality enumerates supported finite key domains, subject to
+--   @cgArrayEqualityLimit@ (256 keys by default).
 -- * First-order @smtFunction@ definitions and SBV's firstified
 --   @smtHOFunction@ specializations, including recursive and mutually
 --   recursive groups, closed nested array lambdas, explicit closure
@@ -43,8 +45,8 @@
 --
 -- Quantifiers, special solver relations, uninterpreted sorts, and soft
 -- constraints are rejected. Regular-expression operations and general
--- extensional array equality are also not implemented; restricted executable
--- implementations are possible future extensions. The C backend compiles higher-order uses after SBV has
+-- extensional array equality are also not implemented. Arrays nested in
+-- compared values remain unsupported. The C backend compiles higher-order uses after SBV has
 -- firstified them; it does not expose symbolic functions as runtime C values.
 --
 -- Import "Data.SBV.Compilers.C.Legacy" to retain the previous compiler while
