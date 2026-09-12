@@ -32,10 +32,62 @@ SFloat toFP_Int16_ToFloat(const SInt16 sbv_input_0)
 #include "floatCodeGen.h"
 #include <libbf.h>
 
+/* LibBF-backed arbitrary floating-point runtime. */
+#ifndef SBV_CGEN_UNUSED
+#if defined(__GNUC__) || defined(__clang__)
+#define SBV_CGEN_UNUSED __attribute__((unused))
+#else
+#define SBV_CGEN_UNUSED
+#endif
+#endif
+
+static SBV_CGEN_UNUSED inline bf_rnd_t sbv_bf_rounding_mode(int mode)
+{
+  switch (mode) {
+    case 0: return BF_RNDN;
+    case 1: return BF_RNDNA;
+    case 2: return BF_RNDU;
+    case 3: return BF_RNDD;
+    case 4: return BF_RNDZ;
+    default: abort();
+  }
+}
+
+static SBV_CGEN_UNUSED void *sbv_bf_realloc(void *opaque, void *ptr, size_t size)
+{
+  (void) opaque;
+  return realloc(ptr, size);
+}
+
+static SBV_CGEN_UNUSED inline SFloat sbv_fp_cast_s32_float(SInt32 a, bf_rnd_t rnd)
+{
+  uint64_t words[1]; uint64_t carry = 1; size_t i; limb_t j;
+  const bool negative = ((((uint64_t) a) >> (31)) & UINT64_C(1)) != 0;
+  bf_context_t ctx; bf_t x, chunk; double result;
+  for (i = 0; i < 1; ++i) {
+    words[i] = 0;
+    for (j = 0; j < 64 && i * 64 + j < 32; ++j)
+      if (((((uint64_t) a) >> ((i * 64 + j))) & UINT64_C(1)) != 0) words[i] |= UINT64_C(1) << j;
+  }
+  if (negative) for (i = 0; i < 1; ++i) {
+    const uint64_t next = ~words[i] + carry; carry = carry && next == 0; words[i] = next;
+  }
+  words[0] &= UINT64_C(0x00000000ffffffff);
+  bf_context_init(&ctx, sbv_bf_realloc, NULL); bf_init(&ctx, &x); bf_init(&ctx, &chunk); bf_set_ui(&x, 0);
+  for (i = 1; i-- > 0;) {
+    bf_mul_2exp(&x, i == 0 ? 32 : 64, BF_PREC_INF, BF_FLAG_EXT_EXP | BF_RNDZ);
+    bf_set_ui(&chunk, words[i]); bf_add(&x, &x, &chunk, BF_PREC_INF, BF_FLAG_EXT_EXP | BF_RNDZ);
+  }
+  if (negative) bf_neg(&x);
+  bf_round(&x, 24, BF_FLAG_SUBNORMAL | bf_set_exp_bits(8) | (bf_flags_t) rnd); bf_get_float64(&x, &result, rnd);
+  bf_delete(&chunk); bf_delete(&x); bf_context_end(&ctx); return (SFloat) result;
+}
+
+
 SFloat toFP_Int32_ToFloat(const SInt32 sbv_input_0)
 {
   const SInt32 s0 = sbv_input_0;
-  const SFloat s2 = (SFloat) s0;
+  const SFloat s2 = sbv_fp_cast_s32_float(s0, BF_RNDN);
 
   return s2;
 }
@@ -46,10 +98,62 @@ SFloat toFP_Int32_ToFloat(const SInt32 sbv_input_0)
 #include "floatCodeGen.h"
 #include <libbf.h>
 
+/* LibBF-backed arbitrary floating-point runtime. */
+#ifndef SBV_CGEN_UNUSED
+#if defined(__GNUC__) || defined(__clang__)
+#define SBV_CGEN_UNUSED __attribute__((unused))
+#else
+#define SBV_CGEN_UNUSED
+#endif
+#endif
+
+static SBV_CGEN_UNUSED inline bf_rnd_t sbv_bf_rounding_mode(int mode)
+{
+  switch (mode) {
+    case 0: return BF_RNDN;
+    case 1: return BF_RNDNA;
+    case 2: return BF_RNDU;
+    case 3: return BF_RNDD;
+    case 4: return BF_RNDZ;
+    default: abort();
+  }
+}
+
+static SBV_CGEN_UNUSED void *sbv_bf_realloc(void *opaque, void *ptr, size_t size)
+{
+  (void) opaque;
+  return realloc(ptr, size);
+}
+
+static SBV_CGEN_UNUSED inline SFloat sbv_fp_cast_s64_float(SInt64 a, bf_rnd_t rnd)
+{
+  uint64_t words[1]; uint64_t carry = 1; size_t i; limb_t j;
+  const bool negative = ((((uint64_t) a) >> (63)) & UINT64_C(1)) != 0;
+  bf_context_t ctx; bf_t x, chunk; double result;
+  for (i = 0; i < 1; ++i) {
+    words[i] = 0;
+    for (j = 0; j < 64 && i * 64 + j < 64; ++j)
+      if (((((uint64_t) a) >> ((i * 64 + j))) & UINT64_C(1)) != 0) words[i] |= UINT64_C(1) << j;
+  }
+  if (negative) for (i = 0; i < 1; ++i) {
+    const uint64_t next = ~words[i] + carry; carry = carry && next == 0; words[i] = next;
+  }
+  words[0] &= UINT64_C(0xffffffffffffffff);
+  bf_context_init(&ctx, sbv_bf_realloc, NULL); bf_init(&ctx, &x); bf_init(&ctx, &chunk); bf_set_ui(&x, 0);
+  for (i = 1; i-- > 0;) {
+    bf_mul_2exp(&x, i == 0 ? 64 : 64, BF_PREC_INF, BF_FLAG_EXT_EXP | BF_RNDZ);
+    bf_set_ui(&chunk, words[i]); bf_add(&x, &x, &chunk, BF_PREC_INF, BF_FLAG_EXT_EXP | BF_RNDZ);
+  }
+  if (negative) bf_neg(&x);
+  bf_round(&x, 24, BF_FLAG_SUBNORMAL | bf_set_exp_bits(8) | (bf_flags_t) rnd); bf_get_float64(&x, &result, rnd);
+  bf_delete(&chunk); bf_delete(&x); bf_context_end(&ctx); return (SFloat) result;
+}
+
+
 SFloat toFP_Int64_ToFloat(const SInt64 sbv_input_0)
 {
   const SInt64 s0 = sbv_input_0;
-  const SFloat s2 = (SFloat) s0;
+  const SFloat s2 = sbv_fp_cast_s64_float(s0, BF_RNDN);
 
   return s2;
 }
@@ -88,10 +192,62 @@ SFloat toFP_Word16_ToFloat(const SWord16 sbv_input_0)
 #include "floatCodeGen.h"
 #include <libbf.h>
 
+/* LibBF-backed arbitrary floating-point runtime. */
+#ifndef SBV_CGEN_UNUSED
+#if defined(__GNUC__) || defined(__clang__)
+#define SBV_CGEN_UNUSED __attribute__((unused))
+#else
+#define SBV_CGEN_UNUSED
+#endif
+#endif
+
+static SBV_CGEN_UNUSED inline bf_rnd_t sbv_bf_rounding_mode(int mode)
+{
+  switch (mode) {
+    case 0: return BF_RNDN;
+    case 1: return BF_RNDNA;
+    case 2: return BF_RNDU;
+    case 3: return BF_RNDD;
+    case 4: return BF_RNDZ;
+    default: abort();
+  }
+}
+
+static SBV_CGEN_UNUSED void *sbv_bf_realloc(void *opaque, void *ptr, size_t size)
+{
+  (void) opaque;
+  return realloc(ptr, size);
+}
+
+static SBV_CGEN_UNUSED inline SFloat sbv_fp_cast_u32_float(SWord32 a, bf_rnd_t rnd)
+{
+  uint64_t words[1]; uint64_t carry = 1; size_t i; limb_t j;
+  const bool negative = false;
+  bf_context_t ctx; bf_t x, chunk; double result;
+  for (i = 0; i < 1; ++i) {
+    words[i] = 0;
+    for (j = 0; j < 64 && i * 64 + j < 32; ++j)
+      if (((((uint64_t) a) >> ((i * 64 + j))) & UINT64_C(1)) != 0) words[i] |= UINT64_C(1) << j;
+  }
+  if (negative) for (i = 0; i < 1; ++i) {
+    const uint64_t next = ~words[i] + carry; carry = carry && next == 0; words[i] = next;
+  }
+  words[0] &= UINT64_C(0x00000000ffffffff);
+  bf_context_init(&ctx, sbv_bf_realloc, NULL); bf_init(&ctx, &x); bf_init(&ctx, &chunk); bf_set_ui(&x, 0);
+  for (i = 1; i-- > 0;) {
+    bf_mul_2exp(&x, i == 0 ? 32 : 64, BF_PREC_INF, BF_FLAG_EXT_EXP | BF_RNDZ);
+    bf_set_ui(&chunk, words[i]); bf_add(&x, &x, &chunk, BF_PREC_INF, BF_FLAG_EXT_EXP | BF_RNDZ);
+  }
+  if (negative) bf_neg(&x);
+  bf_round(&x, 24, BF_FLAG_SUBNORMAL | bf_set_exp_bits(8) | (bf_flags_t) rnd); bf_get_float64(&x, &result, rnd);
+  bf_delete(&chunk); bf_delete(&x); bf_context_end(&ctx); return (SFloat) result;
+}
+
+
 SFloat toFP_Word32_ToFloat(const SWord32 sbv_input_0)
 {
   const SWord32 s0 = sbv_input_0;
-  const SFloat  s2 = (SFloat) s0;
+  const SFloat  s2 = sbv_fp_cast_u32_float(s0, BF_RNDN);
 
   return s2;
 }
@@ -102,10 +258,62 @@ SFloat toFP_Word32_ToFloat(const SWord32 sbv_input_0)
 #include "floatCodeGen.h"
 #include <libbf.h>
 
+/* LibBF-backed arbitrary floating-point runtime. */
+#ifndef SBV_CGEN_UNUSED
+#if defined(__GNUC__) || defined(__clang__)
+#define SBV_CGEN_UNUSED __attribute__((unused))
+#else
+#define SBV_CGEN_UNUSED
+#endif
+#endif
+
+static SBV_CGEN_UNUSED inline bf_rnd_t sbv_bf_rounding_mode(int mode)
+{
+  switch (mode) {
+    case 0: return BF_RNDN;
+    case 1: return BF_RNDNA;
+    case 2: return BF_RNDU;
+    case 3: return BF_RNDD;
+    case 4: return BF_RNDZ;
+    default: abort();
+  }
+}
+
+static SBV_CGEN_UNUSED void *sbv_bf_realloc(void *opaque, void *ptr, size_t size)
+{
+  (void) opaque;
+  return realloc(ptr, size);
+}
+
+static SBV_CGEN_UNUSED inline SFloat sbv_fp_cast_u64_float(SWord64 a, bf_rnd_t rnd)
+{
+  uint64_t words[1]; uint64_t carry = 1; size_t i; limb_t j;
+  const bool negative = false;
+  bf_context_t ctx; bf_t x, chunk; double result;
+  for (i = 0; i < 1; ++i) {
+    words[i] = 0;
+    for (j = 0; j < 64 && i * 64 + j < 64; ++j)
+      if (((((uint64_t) a) >> ((i * 64 + j))) & UINT64_C(1)) != 0) words[i] |= UINT64_C(1) << j;
+  }
+  if (negative) for (i = 0; i < 1; ++i) {
+    const uint64_t next = ~words[i] + carry; carry = carry && next == 0; words[i] = next;
+  }
+  words[0] &= UINT64_C(0xffffffffffffffff);
+  bf_context_init(&ctx, sbv_bf_realloc, NULL); bf_init(&ctx, &x); bf_init(&ctx, &chunk); bf_set_ui(&x, 0);
+  for (i = 1; i-- > 0;) {
+    bf_mul_2exp(&x, i == 0 ? 64 : 64, BF_PREC_INF, BF_FLAG_EXT_EXP | BF_RNDZ);
+    bf_set_ui(&chunk, words[i]); bf_add(&x, &x, &chunk, BF_PREC_INF, BF_FLAG_EXT_EXP | BF_RNDZ);
+  }
+  if (negative) bf_neg(&x);
+  bf_round(&x, 24, BF_FLAG_SUBNORMAL | bf_set_exp_bits(8) | (bf_flags_t) rnd); bf_get_float64(&x, &result, rnd);
+  bf_delete(&chunk); bf_delete(&x); bf_context_end(&ctx); return (SFloat) result;
+}
+
+
 SFloat toFP_Word64_ToFloat(const SWord64 sbv_input_0)
 {
   const SWord64 s0 = sbv_input_0;
-  const SFloat  s2 = (SFloat) s0;
+  const SFloat  s2 = sbv_fp_cast_u64_float(s0, BF_RNDN);
 
   return s2;
 }
@@ -128,10 +336,46 @@ SFloat toFP_Float_ToFloat(const SFloat sbv_input_0)
 #include "floatCodeGen.h"
 #include <libbf.h>
 
+/* LibBF-backed arbitrary floating-point runtime. */
+#ifndef SBV_CGEN_UNUSED
+#if defined(__GNUC__) || defined(__clang__)
+#define SBV_CGEN_UNUSED __attribute__((unused))
+#else
+#define SBV_CGEN_UNUSED
+#endif
+#endif
+
+static SBV_CGEN_UNUSED inline bf_rnd_t sbv_bf_rounding_mode(int mode)
+{
+  switch (mode) {
+    case 0: return BF_RNDN;
+    case 1: return BF_RNDNA;
+    case 2: return BF_RNDU;
+    case 3: return BF_RNDD;
+    case 4: return BF_RNDZ;
+    default: abort();
+  }
+}
+
+static SBV_CGEN_UNUSED void *sbv_bf_realloc(void *opaque, void *ptr, size_t size)
+{
+  (void) opaque;
+  return realloc(ptr, size);
+}
+
+static SBV_CGEN_UNUSED inline SFloat sbv_fp_cast_double_float(SDouble a, bf_rnd_t rnd)
+{
+  bf_context_t ctx; bf_t x; double result;
+  bf_context_init(&ctx, sbv_bf_realloc, NULL); bf_init(&ctx, &x); bf_set_float64(&x, (double) a);
+  bf_round(&x, 24, BF_FLAG_SUBNORMAL | bf_set_exp_bits(8) | (bf_flags_t) rnd); bf_get_float64(&x, &result, rnd);
+  bf_delete(&x); bf_context_end(&ctx); return (SFloat) result;
+}
+
+
 SFloat toFP_Double_ToFloat(const SDouble sbv_input_0)
 {
   const SDouble s0 = sbv_input_0;
-  const SFloat  s2 = (SFloat) s0;
+  const SFloat  s2 = sbv_fp_cast_double_float(s0, BF_RNDN);
 
   return s2;
 }
@@ -264,10 +508,62 @@ SDouble toFP_Int32_ToDouble(const SInt32 sbv_input_0)
 #include "floatCodeGen.h"
 #include <libbf.h>
 
+/* LibBF-backed arbitrary floating-point runtime. */
+#ifndef SBV_CGEN_UNUSED
+#if defined(__GNUC__) || defined(__clang__)
+#define SBV_CGEN_UNUSED __attribute__((unused))
+#else
+#define SBV_CGEN_UNUSED
+#endif
+#endif
+
+static SBV_CGEN_UNUSED inline bf_rnd_t sbv_bf_rounding_mode(int mode)
+{
+  switch (mode) {
+    case 0: return BF_RNDN;
+    case 1: return BF_RNDNA;
+    case 2: return BF_RNDU;
+    case 3: return BF_RNDD;
+    case 4: return BF_RNDZ;
+    default: abort();
+  }
+}
+
+static SBV_CGEN_UNUSED void *sbv_bf_realloc(void *opaque, void *ptr, size_t size)
+{
+  (void) opaque;
+  return realloc(ptr, size);
+}
+
+static SBV_CGEN_UNUSED inline SDouble sbv_fp_cast_s64_double(SInt64 a, bf_rnd_t rnd)
+{
+  uint64_t words[1]; uint64_t carry = 1; size_t i; limb_t j;
+  const bool negative = ((((uint64_t) a) >> (63)) & UINT64_C(1)) != 0;
+  bf_context_t ctx; bf_t x, chunk; double result;
+  for (i = 0; i < 1; ++i) {
+    words[i] = 0;
+    for (j = 0; j < 64 && i * 64 + j < 64; ++j)
+      if (((((uint64_t) a) >> ((i * 64 + j))) & UINT64_C(1)) != 0) words[i] |= UINT64_C(1) << j;
+  }
+  if (negative) for (i = 0; i < 1; ++i) {
+    const uint64_t next = ~words[i] + carry; carry = carry && next == 0; words[i] = next;
+  }
+  words[0] &= UINT64_C(0xffffffffffffffff);
+  bf_context_init(&ctx, sbv_bf_realloc, NULL); bf_init(&ctx, &x); bf_init(&ctx, &chunk); bf_set_ui(&x, 0);
+  for (i = 1; i-- > 0;) {
+    bf_mul_2exp(&x, i == 0 ? 64 : 64, BF_PREC_INF, BF_FLAG_EXT_EXP | BF_RNDZ);
+    bf_set_ui(&chunk, words[i]); bf_add(&x, &x, &chunk, BF_PREC_INF, BF_FLAG_EXT_EXP | BF_RNDZ);
+  }
+  if (negative) bf_neg(&x);
+  bf_round(&x, 53, BF_FLAG_SUBNORMAL | bf_set_exp_bits(11) | (bf_flags_t) rnd); bf_get_float64(&x, &result, rnd);
+  bf_delete(&chunk); bf_delete(&x); bf_context_end(&ctx); return (SDouble) result;
+}
+
+
 SDouble toFP_Int64_ToDouble(const SInt64 sbv_input_0)
 {
   const SInt64  s0 = sbv_input_0;
-  const SDouble s2 = (SDouble) s0;
+  const SDouble s2 = sbv_fp_cast_s64_double(s0, BF_RNDN);
 
   return s2;
 }
@@ -320,10 +616,62 @@ SDouble toFP_Word32_ToDouble(const SWord32 sbv_input_0)
 #include "floatCodeGen.h"
 #include <libbf.h>
 
+/* LibBF-backed arbitrary floating-point runtime. */
+#ifndef SBV_CGEN_UNUSED
+#if defined(__GNUC__) || defined(__clang__)
+#define SBV_CGEN_UNUSED __attribute__((unused))
+#else
+#define SBV_CGEN_UNUSED
+#endif
+#endif
+
+static SBV_CGEN_UNUSED inline bf_rnd_t sbv_bf_rounding_mode(int mode)
+{
+  switch (mode) {
+    case 0: return BF_RNDN;
+    case 1: return BF_RNDNA;
+    case 2: return BF_RNDU;
+    case 3: return BF_RNDD;
+    case 4: return BF_RNDZ;
+    default: abort();
+  }
+}
+
+static SBV_CGEN_UNUSED void *sbv_bf_realloc(void *opaque, void *ptr, size_t size)
+{
+  (void) opaque;
+  return realloc(ptr, size);
+}
+
+static SBV_CGEN_UNUSED inline SDouble sbv_fp_cast_u64_double(SWord64 a, bf_rnd_t rnd)
+{
+  uint64_t words[1]; uint64_t carry = 1; size_t i; limb_t j;
+  const bool negative = false;
+  bf_context_t ctx; bf_t x, chunk; double result;
+  for (i = 0; i < 1; ++i) {
+    words[i] = 0;
+    for (j = 0; j < 64 && i * 64 + j < 64; ++j)
+      if (((((uint64_t) a) >> ((i * 64 + j))) & UINT64_C(1)) != 0) words[i] |= UINT64_C(1) << j;
+  }
+  if (negative) for (i = 0; i < 1; ++i) {
+    const uint64_t next = ~words[i] + carry; carry = carry && next == 0; words[i] = next;
+  }
+  words[0] &= UINT64_C(0xffffffffffffffff);
+  bf_context_init(&ctx, sbv_bf_realloc, NULL); bf_init(&ctx, &x); bf_init(&ctx, &chunk); bf_set_ui(&x, 0);
+  for (i = 1; i-- > 0;) {
+    bf_mul_2exp(&x, i == 0 ? 64 : 64, BF_PREC_INF, BF_FLAG_EXT_EXP | BF_RNDZ);
+    bf_set_ui(&chunk, words[i]); bf_add(&x, &x, &chunk, BF_PREC_INF, BF_FLAG_EXT_EXP | BF_RNDZ);
+  }
+  if (negative) bf_neg(&x);
+  bf_round(&x, 53, BF_FLAG_SUBNORMAL | bf_set_exp_bits(11) | (bf_flags_t) rnd); bf_get_float64(&x, &result, rnd);
+  bf_delete(&chunk); bf_delete(&x); bf_context_end(&ctx); return (SDouble) result;
+}
+
+
 SDouble toFP_Word64_ToDouble(const SWord64 sbv_input_0)
 {
   const SWord64 s0 = sbv_input_0;
-  const SDouble s2 = (SDouble) s0;
+  const SDouble s2 = sbv_fp_cast_u64_double(s0, BF_RNDN);
 
   return s2;
 }
@@ -440,10 +788,54 @@ SDouble toFP_Real_ToDouble(const SReal sbv_input_0)
 #include "floatCodeGen.h"
 #include <libbf.h>
 
+/* LibBF-backed arbitrary floating-point runtime. */
+#ifndef SBV_CGEN_UNUSED
+#if defined(__GNUC__) || defined(__clang__)
+#define SBV_CGEN_UNUSED __attribute__((unused))
+#else
+#define SBV_CGEN_UNUSED
+#endif
+#endif
+
+static SBV_CGEN_UNUSED inline bf_rnd_t sbv_bf_rounding_mode(int mode)
+{
+  switch (mode) {
+    case 0: return BF_RNDN;
+    case 1: return BF_RNDNA;
+    case 2: return BF_RNDU;
+    case 3: return BF_RNDD;
+    case 4: return BF_RNDZ;
+    default: abort();
+  }
+}
+
+static SBV_CGEN_UNUSED void *sbv_bf_realloc(void *opaque, void *ptr, size_t size)
+{
+  (void) opaque;
+  return realloc(ptr, size);
+}
+
+static SBV_CGEN_UNUSED inline SInt8 sbv_fp_cast_float_s8(SFloat a, bf_rnd_t rnd)
+{
+  bf_context_t ctx; bf_t x; SWord8 raw = (SWord8) 0; limb_t i;
+  bf_context_init(&ctx, sbv_bf_realloc, NULL); bf_init(&ctx, &x); bf_set_float64(&x, (double) a); bf_rint(&x, rnd);
+  if (bf_is_finite(&x) && !bf_is_zero(&x)) {
+    const slimb_t base = (slimb_t) x.len * LIMB_BITS;
+    for (i = 0; i < 8; ++i) {
+      const slimb_t bit = (slimb_t) i - x.expn + base;
+      if (bit >= 0 && bit < base) { raw = (SWord8) ((uint64_t) raw | ((uint64_t) (((x.tab[bit / LIMB_BITS] >> (bit % LIMB_BITS)) & 1) != 0) << (i))); }
+    }
+    if (x.sign) raw = (SWord8) (~(uint64_t) raw + UINT64_C(1));
+  }
+  bf_delete(&x); bf_context_end(&ctx);
+  SInt8 result; memcpy(&result, &raw, sizeof result); return result;
+}
+
+
 SInt8 fromFP_Float_ToInt8(const SFloat sbv_input_0)
 {
   const SFloat s0 = sbv_input_0;
-  const SInt8  s2 = (SInt8) rintf(s0);
+  const SInt8  s2 = sbv_fp_cast_float_s8(s0, BF_RNDN);
 
   return s2;
 }
@@ -454,10 +846,54 @@ SInt8 fromFP_Float_ToInt8(const SFloat sbv_input_0)
 #include "floatCodeGen.h"
 #include <libbf.h>
 
+/* LibBF-backed arbitrary floating-point runtime. */
+#ifndef SBV_CGEN_UNUSED
+#if defined(__GNUC__) || defined(__clang__)
+#define SBV_CGEN_UNUSED __attribute__((unused))
+#else
+#define SBV_CGEN_UNUSED
+#endif
+#endif
+
+static SBV_CGEN_UNUSED inline bf_rnd_t sbv_bf_rounding_mode(int mode)
+{
+  switch (mode) {
+    case 0: return BF_RNDN;
+    case 1: return BF_RNDNA;
+    case 2: return BF_RNDU;
+    case 3: return BF_RNDD;
+    case 4: return BF_RNDZ;
+    default: abort();
+  }
+}
+
+static SBV_CGEN_UNUSED void *sbv_bf_realloc(void *opaque, void *ptr, size_t size)
+{
+  (void) opaque;
+  return realloc(ptr, size);
+}
+
+static SBV_CGEN_UNUSED inline SInt16 sbv_fp_cast_float_s16(SFloat a, bf_rnd_t rnd)
+{
+  bf_context_t ctx; bf_t x; SWord16 raw = (SWord16) 0; limb_t i;
+  bf_context_init(&ctx, sbv_bf_realloc, NULL); bf_init(&ctx, &x); bf_set_float64(&x, (double) a); bf_rint(&x, rnd);
+  if (bf_is_finite(&x) && !bf_is_zero(&x)) {
+    const slimb_t base = (slimb_t) x.len * LIMB_BITS;
+    for (i = 0; i < 16; ++i) {
+      const slimb_t bit = (slimb_t) i - x.expn + base;
+      if (bit >= 0 && bit < base) { raw = (SWord16) ((uint64_t) raw | ((uint64_t) (((x.tab[bit / LIMB_BITS] >> (bit % LIMB_BITS)) & 1) != 0) << (i))); }
+    }
+    if (x.sign) raw = (SWord16) (~(uint64_t) raw + UINT64_C(1));
+  }
+  bf_delete(&x); bf_context_end(&ctx);
+  SInt16 result; memcpy(&result, &raw, sizeof result); return result;
+}
+
+
 SInt16 fromFP_Float_ToInt16(const SFloat sbv_input_0)
 {
   const SFloat s0 = sbv_input_0;
-  const SInt16 s2 = (SInt16) rintf(s0);
+  const SInt16 s2 = sbv_fp_cast_float_s16(s0, BF_RNDN);
 
   return s2;
 }
@@ -468,10 +904,54 @@ SInt16 fromFP_Float_ToInt16(const SFloat sbv_input_0)
 #include "floatCodeGen.h"
 #include <libbf.h>
 
+/* LibBF-backed arbitrary floating-point runtime. */
+#ifndef SBV_CGEN_UNUSED
+#if defined(__GNUC__) || defined(__clang__)
+#define SBV_CGEN_UNUSED __attribute__((unused))
+#else
+#define SBV_CGEN_UNUSED
+#endif
+#endif
+
+static SBV_CGEN_UNUSED inline bf_rnd_t sbv_bf_rounding_mode(int mode)
+{
+  switch (mode) {
+    case 0: return BF_RNDN;
+    case 1: return BF_RNDNA;
+    case 2: return BF_RNDU;
+    case 3: return BF_RNDD;
+    case 4: return BF_RNDZ;
+    default: abort();
+  }
+}
+
+static SBV_CGEN_UNUSED void *sbv_bf_realloc(void *opaque, void *ptr, size_t size)
+{
+  (void) opaque;
+  return realloc(ptr, size);
+}
+
+static SBV_CGEN_UNUSED inline SInt32 sbv_fp_cast_float_s32(SFloat a, bf_rnd_t rnd)
+{
+  bf_context_t ctx; bf_t x; SWord32 raw = (SWord32) 0; limb_t i;
+  bf_context_init(&ctx, sbv_bf_realloc, NULL); bf_init(&ctx, &x); bf_set_float64(&x, (double) a); bf_rint(&x, rnd);
+  if (bf_is_finite(&x) && !bf_is_zero(&x)) {
+    const slimb_t base = (slimb_t) x.len * LIMB_BITS;
+    for (i = 0; i < 32; ++i) {
+      const slimb_t bit = (slimb_t) i - x.expn + base;
+      if (bit >= 0 && bit < base) { raw = (SWord32) ((uint64_t) raw | ((uint64_t) (((x.tab[bit / LIMB_BITS] >> (bit % LIMB_BITS)) & 1) != 0) << (i))); }
+    }
+    if (x.sign) raw = (SWord32) (~(uint64_t) raw + UINT64_C(1));
+  }
+  bf_delete(&x); bf_context_end(&ctx);
+  SInt32 result; memcpy(&result, &raw, sizeof result); return result;
+}
+
+
 SInt32 fromFP_Float_ToInt32(const SFloat sbv_input_0)
 {
   const SFloat s0 = sbv_input_0;
-  const SInt32 s2 = (SInt32) rintf(s0);
+  const SInt32 s2 = sbv_fp_cast_float_s32(s0, BF_RNDN);
 
   return s2;
 }
@@ -482,10 +962,54 @@ SInt32 fromFP_Float_ToInt32(const SFloat sbv_input_0)
 #include "floatCodeGen.h"
 #include <libbf.h>
 
+/* LibBF-backed arbitrary floating-point runtime. */
+#ifndef SBV_CGEN_UNUSED
+#if defined(__GNUC__) || defined(__clang__)
+#define SBV_CGEN_UNUSED __attribute__((unused))
+#else
+#define SBV_CGEN_UNUSED
+#endif
+#endif
+
+static SBV_CGEN_UNUSED inline bf_rnd_t sbv_bf_rounding_mode(int mode)
+{
+  switch (mode) {
+    case 0: return BF_RNDN;
+    case 1: return BF_RNDNA;
+    case 2: return BF_RNDU;
+    case 3: return BF_RNDD;
+    case 4: return BF_RNDZ;
+    default: abort();
+  }
+}
+
+static SBV_CGEN_UNUSED void *sbv_bf_realloc(void *opaque, void *ptr, size_t size)
+{
+  (void) opaque;
+  return realloc(ptr, size);
+}
+
+static SBV_CGEN_UNUSED inline SInt64 sbv_fp_cast_float_s64(SFloat a, bf_rnd_t rnd)
+{
+  bf_context_t ctx; bf_t x; SWord64 raw = (SWord64) 0; limb_t i;
+  bf_context_init(&ctx, sbv_bf_realloc, NULL); bf_init(&ctx, &x); bf_set_float64(&x, (double) a); bf_rint(&x, rnd);
+  if (bf_is_finite(&x) && !bf_is_zero(&x)) {
+    const slimb_t base = (slimb_t) x.len * LIMB_BITS;
+    for (i = 0; i < 64; ++i) {
+      const slimb_t bit = (slimb_t) i - x.expn + base;
+      if (bit >= 0 && bit < base) { raw = (SWord64) ((uint64_t) raw | ((uint64_t) (((x.tab[bit / LIMB_BITS] >> (bit % LIMB_BITS)) & 1) != 0) << (i))); }
+    }
+    if (x.sign) raw = (SWord64) (~(uint64_t) raw + UINT64_C(1));
+  }
+  bf_delete(&x); bf_context_end(&ctx);
+  SInt64 result; memcpy(&result, &raw, sizeof result); return result;
+}
+
+
 SInt64 fromFP_Float_ToInt64(const SFloat sbv_input_0)
 {
   const SFloat s0 = sbv_input_0;
-  const SInt64 s2 = (SInt64) rintf(s0);
+  const SInt64 s2 = sbv_fp_cast_float_s64(s0, BF_RNDN);
 
   return s2;
 }
@@ -496,10 +1020,54 @@ SInt64 fromFP_Float_ToInt64(const SFloat sbv_input_0)
 #include "floatCodeGen.h"
 #include <libbf.h>
 
+/* LibBF-backed arbitrary floating-point runtime. */
+#ifndef SBV_CGEN_UNUSED
+#if defined(__GNUC__) || defined(__clang__)
+#define SBV_CGEN_UNUSED __attribute__((unused))
+#else
+#define SBV_CGEN_UNUSED
+#endif
+#endif
+
+static SBV_CGEN_UNUSED inline bf_rnd_t sbv_bf_rounding_mode(int mode)
+{
+  switch (mode) {
+    case 0: return BF_RNDN;
+    case 1: return BF_RNDNA;
+    case 2: return BF_RNDU;
+    case 3: return BF_RNDD;
+    case 4: return BF_RNDZ;
+    default: abort();
+  }
+}
+
+static SBV_CGEN_UNUSED void *sbv_bf_realloc(void *opaque, void *ptr, size_t size)
+{
+  (void) opaque;
+  return realloc(ptr, size);
+}
+
+static SBV_CGEN_UNUSED inline SWord8 sbv_fp_cast_float_u8(SFloat a, bf_rnd_t rnd)
+{
+  bf_context_t ctx; bf_t x; SWord8 raw = (SWord8) 0; limb_t i;
+  bf_context_init(&ctx, sbv_bf_realloc, NULL); bf_init(&ctx, &x); bf_set_float64(&x, (double) a); bf_rint(&x, rnd);
+  if (bf_is_finite(&x) && !bf_is_zero(&x)) {
+    const slimb_t base = (slimb_t) x.len * LIMB_BITS;
+    for (i = 0; i < 8; ++i) {
+      const slimb_t bit = (slimb_t) i - x.expn + base;
+      if (bit >= 0 && bit < base) { raw = (SWord8) ((uint64_t) raw | ((uint64_t) (((x.tab[bit / LIMB_BITS] >> (bit % LIMB_BITS)) & 1) != 0) << (i))); }
+    }
+    if (x.sign) raw = (SWord8) (~(uint64_t) raw + UINT64_C(1));
+  }
+  bf_delete(&x); bf_context_end(&ctx);
+  return raw;
+}
+
+
 SWord8 fromFP_Float_ToWord8(const SFloat sbv_input_0)
 {
   const SFloat s0 = sbv_input_0;
-  const SWord8 s2 = (SWord8) rintf(s0);
+  const SWord8 s2 = sbv_fp_cast_float_u8(s0, BF_RNDN);
 
   return s2;
 }
@@ -510,10 +1078,54 @@ SWord8 fromFP_Float_ToWord8(const SFloat sbv_input_0)
 #include "floatCodeGen.h"
 #include <libbf.h>
 
+/* LibBF-backed arbitrary floating-point runtime. */
+#ifndef SBV_CGEN_UNUSED
+#if defined(__GNUC__) || defined(__clang__)
+#define SBV_CGEN_UNUSED __attribute__((unused))
+#else
+#define SBV_CGEN_UNUSED
+#endif
+#endif
+
+static SBV_CGEN_UNUSED inline bf_rnd_t sbv_bf_rounding_mode(int mode)
+{
+  switch (mode) {
+    case 0: return BF_RNDN;
+    case 1: return BF_RNDNA;
+    case 2: return BF_RNDU;
+    case 3: return BF_RNDD;
+    case 4: return BF_RNDZ;
+    default: abort();
+  }
+}
+
+static SBV_CGEN_UNUSED void *sbv_bf_realloc(void *opaque, void *ptr, size_t size)
+{
+  (void) opaque;
+  return realloc(ptr, size);
+}
+
+static SBV_CGEN_UNUSED inline SWord16 sbv_fp_cast_float_u16(SFloat a, bf_rnd_t rnd)
+{
+  bf_context_t ctx; bf_t x; SWord16 raw = (SWord16) 0; limb_t i;
+  bf_context_init(&ctx, sbv_bf_realloc, NULL); bf_init(&ctx, &x); bf_set_float64(&x, (double) a); bf_rint(&x, rnd);
+  if (bf_is_finite(&x) && !bf_is_zero(&x)) {
+    const slimb_t base = (slimb_t) x.len * LIMB_BITS;
+    for (i = 0; i < 16; ++i) {
+      const slimb_t bit = (slimb_t) i - x.expn + base;
+      if (bit >= 0 && bit < base) { raw = (SWord16) ((uint64_t) raw | ((uint64_t) (((x.tab[bit / LIMB_BITS] >> (bit % LIMB_BITS)) & 1) != 0) << (i))); }
+    }
+    if (x.sign) raw = (SWord16) (~(uint64_t) raw + UINT64_C(1));
+  }
+  bf_delete(&x); bf_context_end(&ctx);
+  return raw;
+}
+
+
 SWord16 fromFP_Float_ToWord16(const SFloat sbv_input_0)
 {
   const SFloat  s0 = sbv_input_0;
-  const SWord16 s2 = (SWord16) rintf(s0);
+  const SWord16 s2 = sbv_fp_cast_float_u16(s0, BF_RNDN);
 
   return s2;
 }
@@ -524,10 +1136,54 @@ SWord16 fromFP_Float_ToWord16(const SFloat sbv_input_0)
 #include "floatCodeGen.h"
 #include <libbf.h>
 
+/* LibBF-backed arbitrary floating-point runtime. */
+#ifndef SBV_CGEN_UNUSED
+#if defined(__GNUC__) || defined(__clang__)
+#define SBV_CGEN_UNUSED __attribute__((unused))
+#else
+#define SBV_CGEN_UNUSED
+#endif
+#endif
+
+static SBV_CGEN_UNUSED inline bf_rnd_t sbv_bf_rounding_mode(int mode)
+{
+  switch (mode) {
+    case 0: return BF_RNDN;
+    case 1: return BF_RNDNA;
+    case 2: return BF_RNDU;
+    case 3: return BF_RNDD;
+    case 4: return BF_RNDZ;
+    default: abort();
+  }
+}
+
+static SBV_CGEN_UNUSED void *sbv_bf_realloc(void *opaque, void *ptr, size_t size)
+{
+  (void) opaque;
+  return realloc(ptr, size);
+}
+
+static SBV_CGEN_UNUSED inline SWord32 sbv_fp_cast_float_u32(SFloat a, bf_rnd_t rnd)
+{
+  bf_context_t ctx; bf_t x; SWord32 raw = (SWord32) 0; limb_t i;
+  bf_context_init(&ctx, sbv_bf_realloc, NULL); bf_init(&ctx, &x); bf_set_float64(&x, (double) a); bf_rint(&x, rnd);
+  if (bf_is_finite(&x) && !bf_is_zero(&x)) {
+    const slimb_t base = (slimb_t) x.len * LIMB_BITS;
+    for (i = 0; i < 32; ++i) {
+      const slimb_t bit = (slimb_t) i - x.expn + base;
+      if (bit >= 0 && bit < base) { raw = (SWord32) ((uint64_t) raw | ((uint64_t) (((x.tab[bit / LIMB_BITS] >> (bit % LIMB_BITS)) & 1) != 0) << (i))); }
+    }
+    if (x.sign) raw = (SWord32) (~(uint64_t) raw + UINT64_C(1));
+  }
+  bf_delete(&x); bf_context_end(&ctx);
+  return raw;
+}
+
+
 SWord32 fromFP_Float_ToWord32(const SFloat sbv_input_0)
 {
   const SFloat  s0 = sbv_input_0;
-  const SWord32 s2 = (SWord32) rintf(s0);
+  const SWord32 s2 = sbv_fp_cast_float_u32(s0, BF_RNDN);
 
   return s2;
 }
@@ -538,10 +1194,54 @@ SWord32 fromFP_Float_ToWord32(const SFloat sbv_input_0)
 #include "floatCodeGen.h"
 #include <libbf.h>
 
+/* LibBF-backed arbitrary floating-point runtime. */
+#ifndef SBV_CGEN_UNUSED
+#if defined(__GNUC__) || defined(__clang__)
+#define SBV_CGEN_UNUSED __attribute__((unused))
+#else
+#define SBV_CGEN_UNUSED
+#endif
+#endif
+
+static SBV_CGEN_UNUSED inline bf_rnd_t sbv_bf_rounding_mode(int mode)
+{
+  switch (mode) {
+    case 0: return BF_RNDN;
+    case 1: return BF_RNDNA;
+    case 2: return BF_RNDU;
+    case 3: return BF_RNDD;
+    case 4: return BF_RNDZ;
+    default: abort();
+  }
+}
+
+static SBV_CGEN_UNUSED void *sbv_bf_realloc(void *opaque, void *ptr, size_t size)
+{
+  (void) opaque;
+  return realloc(ptr, size);
+}
+
+static SBV_CGEN_UNUSED inline SWord64 sbv_fp_cast_float_u64(SFloat a, bf_rnd_t rnd)
+{
+  bf_context_t ctx; bf_t x; SWord64 raw = (SWord64) 0; limb_t i;
+  bf_context_init(&ctx, sbv_bf_realloc, NULL); bf_init(&ctx, &x); bf_set_float64(&x, (double) a); bf_rint(&x, rnd);
+  if (bf_is_finite(&x) && !bf_is_zero(&x)) {
+    const slimb_t base = (slimb_t) x.len * LIMB_BITS;
+    for (i = 0; i < 64; ++i) {
+      const slimb_t bit = (slimb_t) i - x.expn + base;
+      if (bit >= 0 && bit < base) { raw = (SWord64) ((uint64_t) raw | ((uint64_t) (((x.tab[bit / LIMB_BITS] >> (bit % LIMB_BITS)) & 1) != 0) << (i))); }
+    }
+    if (x.sign) raw = (SWord64) (~(uint64_t) raw + UINT64_C(1));
+  }
+  bf_delete(&x); bf_context_end(&ctx);
+  return raw;
+}
+
+
 SWord64 fromFP_Float_ToWord64(const SFloat sbv_input_0)
 {
   const SFloat  s0 = sbv_input_0;
-  const SWord64 s2 = (SWord64) rintf(s0);
+  const SWord64 s2 = sbv_fp_cast_float_u64(s0, BF_RNDN);
 
   return s2;
 }
@@ -607,17 +1307,18 @@ static SBV_CGEN_UNUSED void *sbv_bf_realloc(void *opaque, void *ptr, size_t size
 
 static SBV_CGEN_UNUSED inline SInt64 sbv_fp_cast_float_integer(SFloat a, bf_rnd_t rnd)
 {
-  bf_context_t ctx; bf_t x; SInt64 raw = (SInt64) 0; limb_t i;
+  bf_context_t ctx; bf_t x; SWord64 raw = (SWord64) 0; limb_t i;
   bf_context_init(&ctx, sbv_bf_realloc, NULL); bf_init(&ctx, &x); bf_set_float64(&x, (double) a); bf_rint(&x, rnd);
   if (bf_is_finite(&x) && !bf_is_zero(&x)) {
     const slimb_t base = (slimb_t) x.len * LIMB_BITS;
     for (i = 0; i < 64; ++i) {
       const slimb_t bit = (slimb_t) i - x.expn + base;
-      if (bit >= 0 && bit < base) { raw = (SInt64) ((uint64_t) raw | ((uint64_t) (((x.tab[bit / LIMB_BITS] >> (bit % LIMB_BITS)) & 1) != 0) << (i))); }
+      if (bit >= 0 && bit < base) { raw = (SWord64) ((uint64_t) raw | ((uint64_t) (((x.tab[bit / LIMB_BITS] >> (bit % LIMB_BITS)) & 1) != 0) << (i))); }
     }
-    if (x.sign) raw = (SInt64) (~(uint64_t) raw + UINT64_C(1));
+    if (x.sign) raw = (SWord64) (~(uint64_t) raw + UINT64_C(1));
   }
-  bf_delete(&x); bf_context_end(&ctx); return raw;
+  bf_delete(&x); bf_context_end(&ctx);
+  SInt64 result; memcpy(&result, &raw, sizeof result); return result;
 }
 
 
@@ -649,10 +1350,54 @@ SReal fromFP_Float_ToReal(const SFloat sbv_input_0)
 #include "floatCodeGen.h"
 #include <libbf.h>
 
+/* LibBF-backed arbitrary floating-point runtime. */
+#ifndef SBV_CGEN_UNUSED
+#if defined(__GNUC__) || defined(__clang__)
+#define SBV_CGEN_UNUSED __attribute__((unused))
+#else
+#define SBV_CGEN_UNUSED
+#endif
+#endif
+
+static SBV_CGEN_UNUSED inline bf_rnd_t sbv_bf_rounding_mode(int mode)
+{
+  switch (mode) {
+    case 0: return BF_RNDN;
+    case 1: return BF_RNDNA;
+    case 2: return BF_RNDU;
+    case 3: return BF_RNDD;
+    case 4: return BF_RNDZ;
+    default: abort();
+  }
+}
+
+static SBV_CGEN_UNUSED void *sbv_bf_realloc(void *opaque, void *ptr, size_t size)
+{
+  (void) opaque;
+  return realloc(ptr, size);
+}
+
+static SBV_CGEN_UNUSED inline SInt8 sbv_fp_cast_double_s8(SDouble a, bf_rnd_t rnd)
+{
+  bf_context_t ctx; bf_t x; SWord8 raw = (SWord8) 0; limb_t i;
+  bf_context_init(&ctx, sbv_bf_realloc, NULL); bf_init(&ctx, &x); bf_set_float64(&x, (double) a); bf_rint(&x, rnd);
+  if (bf_is_finite(&x) && !bf_is_zero(&x)) {
+    const slimb_t base = (slimb_t) x.len * LIMB_BITS;
+    for (i = 0; i < 8; ++i) {
+      const slimb_t bit = (slimb_t) i - x.expn + base;
+      if (bit >= 0 && bit < base) { raw = (SWord8) ((uint64_t) raw | ((uint64_t) (((x.tab[bit / LIMB_BITS] >> (bit % LIMB_BITS)) & 1) != 0) << (i))); }
+    }
+    if (x.sign) raw = (SWord8) (~(uint64_t) raw + UINT64_C(1));
+  }
+  bf_delete(&x); bf_context_end(&ctx);
+  SInt8 result; memcpy(&result, &raw, sizeof result); return result;
+}
+
+
 SInt8 fromFP_DoubleTo_Int8(const SDouble sbv_input_0)
 {
   const SDouble s0 = sbv_input_0;
-  const SInt8   s2 = (SInt8) rint(s0);
+  const SInt8   s2 = sbv_fp_cast_double_s8(s0, BF_RNDN);
 
   return s2;
 }
@@ -663,10 +1408,54 @@ SInt8 fromFP_DoubleTo_Int8(const SDouble sbv_input_0)
 #include "floatCodeGen.h"
 #include <libbf.h>
 
+/* LibBF-backed arbitrary floating-point runtime. */
+#ifndef SBV_CGEN_UNUSED
+#if defined(__GNUC__) || defined(__clang__)
+#define SBV_CGEN_UNUSED __attribute__((unused))
+#else
+#define SBV_CGEN_UNUSED
+#endif
+#endif
+
+static SBV_CGEN_UNUSED inline bf_rnd_t sbv_bf_rounding_mode(int mode)
+{
+  switch (mode) {
+    case 0: return BF_RNDN;
+    case 1: return BF_RNDNA;
+    case 2: return BF_RNDU;
+    case 3: return BF_RNDD;
+    case 4: return BF_RNDZ;
+    default: abort();
+  }
+}
+
+static SBV_CGEN_UNUSED void *sbv_bf_realloc(void *opaque, void *ptr, size_t size)
+{
+  (void) opaque;
+  return realloc(ptr, size);
+}
+
+static SBV_CGEN_UNUSED inline SInt16 sbv_fp_cast_double_s16(SDouble a, bf_rnd_t rnd)
+{
+  bf_context_t ctx; bf_t x; SWord16 raw = (SWord16) 0; limb_t i;
+  bf_context_init(&ctx, sbv_bf_realloc, NULL); bf_init(&ctx, &x); bf_set_float64(&x, (double) a); bf_rint(&x, rnd);
+  if (bf_is_finite(&x) && !bf_is_zero(&x)) {
+    const slimb_t base = (slimb_t) x.len * LIMB_BITS;
+    for (i = 0; i < 16; ++i) {
+      const slimb_t bit = (slimb_t) i - x.expn + base;
+      if (bit >= 0 && bit < base) { raw = (SWord16) ((uint64_t) raw | ((uint64_t) (((x.tab[bit / LIMB_BITS] >> (bit % LIMB_BITS)) & 1) != 0) << (i))); }
+    }
+    if (x.sign) raw = (SWord16) (~(uint64_t) raw + UINT64_C(1));
+  }
+  bf_delete(&x); bf_context_end(&ctx);
+  SInt16 result; memcpy(&result, &raw, sizeof result); return result;
+}
+
+
 SInt16 fromFP_DoubleTo_Int16(const SDouble sbv_input_0)
 {
   const SDouble s0 = sbv_input_0;
-  const SInt16  s2 = (SInt16) rint(s0);
+  const SInt16  s2 = sbv_fp_cast_double_s16(s0, BF_RNDN);
 
   return s2;
 }
@@ -677,10 +1466,54 @@ SInt16 fromFP_DoubleTo_Int16(const SDouble sbv_input_0)
 #include "floatCodeGen.h"
 #include <libbf.h>
 
+/* LibBF-backed arbitrary floating-point runtime. */
+#ifndef SBV_CGEN_UNUSED
+#if defined(__GNUC__) || defined(__clang__)
+#define SBV_CGEN_UNUSED __attribute__((unused))
+#else
+#define SBV_CGEN_UNUSED
+#endif
+#endif
+
+static SBV_CGEN_UNUSED inline bf_rnd_t sbv_bf_rounding_mode(int mode)
+{
+  switch (mode) {
+    case 0: return BF_RNDN;
+    case 1: return BF_RNDNA;
+    case 2: return BF_RNDU;
+    case 3: return BF_RNDD;
+    case 4: return BF_RNDZ;
+    default: abort();
+  }
+}
+
+static SBV_CGEN_UNUSED void *sbv_bf_realloc(void *opaque, void *ptr, size_t size)
+{
+  (void) opaque;
+  return realloc(ptr, size);
+}
+
+static SBV_CGEN_UNUSED inline SInt32 sbv_fp_cast_double_s32(SDouble a, bf_rnd_t rnd)
+{
+  bf_context_t ctx; bf_t x; SWord32 raw = (SWord32) 0; limb_t i;
+  bf_context_init(&ctx, sbv_bf_realloc, NULL); bf_init(&ctx, &x); bf_set_float64(&x, (double) a); bf_rint(&x, rnd);
+  if (bf_is_finite(&x) && !bf_is_zero(&x)) {
+    const slimb_t base = (slimb_t) x.len * LIMB_BITS;
+    for (i = 0; i < 32; ++i) {
+      const slimb_t bit = (slimb_t) i - x.expn + base;
+      if (bit >= 0 && bit < base) { raw = (SWord32) ((uint64_t) raw | ((uint64_t) (((x.tab[bit / LIMB_BITS] >> (bit % LIMB_BITS)) & 1) != 0) << (i))); }
+    }
+    if (x.sign) raw = (SWord32) (~(uint64_t) raw + UINT64_C(1));
+  }
+  bf_delete(&x); bf_context_end(&ctx);
+  SInt32 result; memcpy(&result, &raw, sizeof result); return result;
+}
+
+
 SInt32 fromFP_DoubleTo_Int32(const SDouble sbv_input_0)
 {
   const SDouble s0 = sbv_input_0;
-  const SInt32  s2 = (SInt32) rint(s0);
+  const SInt32  s2 = sbv_fp_cast_double_s32(s0, BF_RNDN);
 
   return s2;
 }
@@ -691,10 +1524,54 @@ SInt32 fromFP_DoubleTo_Int32(const SDouble sbv_input_0)
 #include "floatCodeGen.h"
 #include <libbf.h>
 
+/* LibBF-backed arbitrary floating-point runtime. */
+#ifndef SBV_CGEN_UNUSED
+#if defined(__GNUC__) || defined(__clang__)
+#define SBV_CGEN_UNUSED __attribute__((unused))
+#else
+#define SBV_CGEN_UNUSED
+#endif
+#endif
+
+static SBV_CGEN_UNUSED inline bf_rnd_t sbv_bf_rounding_mode(int mode)
+{
+  switch (mode) {
+    case 0: return BF_RNDN;
+    case 1: return BF_RNDNA;
+    case 2: return BF_RNDU;
+    case 3: return BF_RNDD;
+    case 4: return BF_RNDZ;
+    default: abort();
+  }
+}
+
+static SBV_CGEN_UNUSED void *sbv_bf_realloc(void *opaque, void *ptr, size_t size)
+{
+  (void) opaque;
+  return realloc(ptr, size);
+}
+
+static SBV_CGEN_UNUSED inline SInt64 sbv_fp_cast_double_s64(SDouble a, bf_rnd_t rnd)
+{
+  bf_context_t ctx; bf_t x; SWord64 raw = (SWord64) 0; limb_t i;
+  bf_context_init(&ctx, sbv_bf_realloc, NULL); bf_init(&ctx, &x); bf_set_float64(&x, (double) a); bf_rint(&x, rnd);
+  if (bf_is_finite(&x) && !bf_is_zero(&x)) {
+    const slimb_t base = (slimb_t) x.len * LIMB_BITS;
+    for (i = 0; i < 64; ++i) {
+      const slimb_t bit = (slimb_t) i - x.expn + base;
+      if (bit >= 0 && bit < base) { raw = (SWord64) ((uint64_t) raw | ((uint64_t) (((x.tab[bit / LIMB_BITS] >> (bit % LIMB_BITS)) & 1) != 0) << (i))); }
+    }
+    if (x.sign) raw = (SWord64) (~(uint64_t) raw + UINT64_C(1));
+  }
+  bf_delete(&x); bf_context_end(&ctx);
+  SInt64 result; memcpy(&result, &raw, sizeof result); return result;
+}
+
+
 SInt64 fromFP_DoubleTo_Int64(const SDouble sbv_input_0)
 {
   const SDouble s0 = sbv_input_0;
-  const SInt64  s2 = (SInt64) rint(s0);
+  const SInt64  s2 = sbv_fp_cast_double_s64(s0, BF_RNDN);
 
   return s2;
 }
@@ -705,10 +1582,54 @@ SInt64 fromFP_DoubleTo_Int64(const SDouble sbv_input_0)
 #include "floatCodeGen.h"
 #include <libbf.h>
 
+/* LibBF-backed arbitrary floating-point runtime. */
+#ifndef SBV_CGEN_UNUSED
+#if defined(__GNUC__) || defined(__clang__)
+#define SBV_CGEN_UNUSED __attribute__((unused))
+#else
+#define SBV_CGEN_UNUSED
+#endif
+#endif
+
+static SBV_CGEN_UNUSED inline bf_rnd_t sbv_bf_rounding_mode(int mode)
+{
+  switch (mode) {
+    case 0: return BF_RNDN;
+    case 1: return BF_RNDNA;
+    case 2: return BF_RNDU;
+    case 3: return BF_RNDD;
+    case 4: return BF_RNDZ;
+    default: abort();
+  }
+}
+
+static SBV_CGEN_UNUSED void *sbv_bf_realloc(void *opaque, void *ptr, size_t size)
+{
+  (void) opaque;
+  return realloc(ptr, size);
+}
+
+static SBV_CGEN_UNUSED inline SWord8 sbv_fp_cast_double_u8(SDouble a, bf_rnd_t rnd)
+{
+  bf_context_t ctx; bf_t x; SWord8 raw = (SWord8) 0; limb_t i;
+  bf_context_init(&ctx, sbv_bf_realloc, NULL); bf_init(&ctx, &x); bf_set_float64(&x, (double) a); bf_rint(&x, rnd);
+  if (bf_is_finite(&x) && !bf_is_zero(&x)) {
+    const slimb_t base = (slimb_t) x.len * LIMB_BITS;
+    for (i = 0; i < 8; ++i) {
+      const slimb_t bit = (slimb_t) i - x.expn + base;
+      if (bit >= 0 && bit < base) { raw = (SWord8) ((uint64_t) raw | ((uint64_t) (((x.tab[bit / LIMB_BITS] >> (bit % LIMB_BITS)) & 1) != 0) << (i))); }
+    }
+    if (x.sign) raw = (SWord8) (~(uint64_t) raw + UINT64_C(1));
+  }
+  bf_delete(&x); bf_context_end(&ctx);
+  return raw;
+}
+
+
 SWord8 fromFP_DoubleTo_Word8(const SDouble sbv_input_0)
 {
   const SDouble s0 = sbv_input_0;
-  const SWord8  s2 = (SWord8) rint(s0);
+  const SWord8  s2 = sbv_fp_cast_double_u8(s0, BF_RNDN);
 
   return s2;
 }
@@ -719,10 +1640,54 @@ SWord8 fromFP_DoubleTo_Word8(const SDouble sbv_input_0)
 #include "floatCodeGen.h"
 #include <libbf.h>
 
+/* LibBF-backed arbitrary floating-point runtime. */
+#ifndef SBV_CGEN_UNUSED
+#if defined(__GNUC__) || defined(__clang__)
+#define SBV_CGEN_UNUSED __attribute__((unused))
+#else
+#define SBV_CGEN_UNUSED
+#endif
+#endif
+
+static SBV_CGEN_UNUSED inline bf_rnd_t sbv_bf_rounding_mode(int mode)
+{
+  switch (mode) {
+    case 0: return BF_RNDN;
+    case 1: return BF_RNDNA;
+    case 2: return BF_RNDU;
+    case 3: return BF_RNDD;
+    case 4: return BF_RNDZ;
+    default: abort();
+  }
+}
+
+static SBV_CGEN_UNUSED void *sbv_bf_realloc(void *opaque, void *ptr, size_t size)
+{
+  (void) opaque;
+  return realloc(ptr, size);
+}
+
+static SBV_CGEN_UNUSED inline SWord16 sbv_fp_cast_double_u16(SDouble a, bf_rnd_t rnd)
+{
+  bf_context_t ctx; bf_t x; SWord16 raw = (SWord16) 0; limb_t i;
+  bf_context_init(&ctx, sbv_bf_realloc, NULL); bf_init(&ctx, &x); bf_set_float64(&x, (double) a); bf_rint(&x, rnd);
+  if (bf_is_finite(&x) && !bf_is_zero(&x)) {
+    const slimb_t base = (slimb_t) x.len * LIMB_BITS;
+    for (i = 0; i < 16; ++i) {
+      const slimb_t bit = (slimb_t) i - x.expn + base;
+      if (bit >= 0 && bit < base) { raw = (SWord16) ((uint64_t) raw | ((uint64_t) (((x.tab[bit / LIMB_BITS] >> (bit % LIMB_BITS)) & 1) != 0) << (i))); }
+    }
+    if (x.sign) raw = (SWord16) (~(uint64_t) raw + UINT64_C(1));
+  }
+  bf_delete(&x); bf_context_end(&ctx);
+  return raw;
+}
+
+
 SWord16 fromFP_DoubleTo_Word16(const SDouble sbv_input_0)
 {
   const SDouble s0 = sbv_input_0;
-  const SWord16 s2 = (SWord16) rint(s0);
+  const SWord16 s2 = sbv_fp_cast_double_u16(s0, BF_RNDN);
 
   return s2;
 }
@@ -733,10 +1698,54 @@ SWord16 fromFP_DoubleTo_Word16(const SDouble sbv_input_0)
 #include "floatCodeGen.h"
 #include <libbf.h>
 
+/* LibBF-backed arbitrary floating-point runtime. */
+#ifndef SBV_CGEN_UNUSED
+#if defined(__GNUC__) || defined(__clang__)
+#define SBV_CGEN_UNUSED __attribute__((unused))
+#else
+#define SBV_CGEN_UNUSED
+#endif
+#endif
+
+static SBV_CGEN_UNUSED inline bf_rnd_t sbv_bf_rounding_mode(int mode)
+{
+  switch (mode) {
+    case 0: return BF_RNDN;
+    case 1: return BF_RNDNA;
+    case 2: return BF_RNDU;
+    case 3: return BF_RNDD;
+    case 4: return BF_RNDZ;
+    default: abort();
+  }
+}
+
+static SBV_CGEN_UNUSED void *sbv_bf_realloc(void *opaque, void *ptr, size_t size)
+{
+  (void) opaque;
+  return realloc(ptr, size);
+}
+
+static SBV_CGEN_UNUSED inline SWord32 sbv_fp_cast_double_u32(SDouble a, bf_rnd_t rnd)
+{
+  bf_context_t ctx; bf_t x; SWord32 raw = (SWord32) 0; limb_t i;
+  bf_context_init(&ctx, sbv_bf_realloc, NULL); bf_init(&ctx, &x); bf_set_float64(&x, (double) a); bf_rint(&x, rnd);
+  if (bf_is_finite(&x) && !bf_is_zero(&x)) {
+    const slimb_t base = (slimb_t) x.len * LIMB_BITS;
+    for (i = 0; i < 32; ++i) {
+      const slimb_t bit = (slimb_t) i - x.expn + base;
+      if (bit >= 0 && bit < base) { raw = (SWord32) ((uint64_t) raw | ((uint64_t) (((x.tab[bit / LIMB_BITS] >> (bit % LIMB_BITS)) & 1) != 0) << (i))); }
+    }
+    if (x.sign) raw = (SWord32) (~(uint64_t) raw + UINT64_C(1));
+  }
+  bf_delete(&x); bf_context_end(&ctx);
+  return raw;
+}
+
+
 SWord32 fromFP_DoubleTo_Word32(const SDouble sbv_input_0)
 {
   const SDouble s0 = sbv_input_0;
-  const SWord32 s2 = (SWord32) rint(s0);
+  const SWord32 s2 = sbv_fp_cast_double_u32(s0, BF_RNDN);
 
   return s2;
 }
@@ -747,10 +1756,54 @@ SWord32 fromFP_DoubleTo_Word32(const SDouble sbv_input_0)
 #include "floatCodeGen.h"
 #include <libbf.h>
 
+/* LibBF-backed arbitrary floating-point runtime. */
+#ifndef SBV_CGEN_UNUSED
+#if defined(__GNUC__) || defined(__clang__)
+#define SBV_CGEN_UNUSED __attribute__((unused))
+#else
+#define SBV_CGEN_UNUSED
+#endif
+#endif
+
+static SBV_CGEN_UNUSED inline bf_rnd_t sbv_bf_rounding_mode(int mode)
+{
+  switch (mode) {
+    case 0: return BF_RNDN;
+    case 1: return BF_RNDNA;
+    case 2: return BF_RNDU;
+    case 3: return BF_RNDD;
+    case 4: return BF_RNDZ;
+    default: abort();
+  }
+}
+
+static SBV_CGEN_UNUSED void *sbv_bf_realloc(void *opaque, void *ptr, size_t size)
+{
+  (void) opaque;
+  return realloc(ptr, size);
+}
+
+static SBV_CGEN_UNUSED inline SWord64 sbv_fp_cast_double_u64(SDouble a, bf_rnd_t rnd)
+{
+  bf_context_t ctx; bf_t x; SWord64 raw = (SWord64) 0; limb_t i;
+  bf_context_init(&ctx, sbv_bf_realloc, NULL); bf_init(&ctx, &x); bf_set_float64(&x, (double) a); bf_rint(&x, rnd);
+  if (bf_is_finite(&x) && !bf_is_zero(&x)) {
+    const slimb_t base = (slimb_t) x.len * LIMB_BITS;
+    for (i = 0; i < 64; ++i) {
+      const slimb_t bit = (slimb_t) i - x.expn + base;
+      if (bit >= 0 && bit < base) { raw = (SWord64) ((uint64_t) raw | ((uint64_t) (((x.tab[bit / LIMB_BITS] >> (bit % LIMB_BITS)) & 1) != 0) << (i))); }
+    }
+    if (x.sign) raw = (SWord64) (~(uint64_t) raw + UINT64_C(1));
+  }
+  bf_delete(&x); bf_context_end(&ctx);
+  return raw;
+}
+
+
 SWord64 fromFP_DoubleTo_Word64(const SDouble sbv_input_0)
 {
   const SDouble s0 = sbv_input_0;
-  const SWord64 s2 = (SWord64) rint(s0);
+  const SWord64 s2 = sbv_fp_cast_double_u64(s0, BF_RNDN);
 
   return s2;
 }
@@ -761,10 +1814,46 @@ SWord64 fromFP_DoubleTo_Word64(const SDouble sbv_input_0)
 #include "floatCodeGen.h"
 #include <libbf.h>
 
+/* LibBF-backed arbitrary floating-point runtime. */
+#ifndef SBV_CGEN_UNUSED
+#if defined(__GNUC__) || defined(__clang__)
+#define SBV_CGEN_UNUSED __attribute__((unused))
+#else
+#define SBV_CGEN_UNUSED
+#endif
+#endif
+
+static SBV_CGEN_UNUSED inline bf_rnd_t sbv_bf_rounding_mode(int mode)
+{
+  switch (mode) {
+    case 0: return BF_RNDN;
+    case 1: return BF_RNDNA;
+    case 2: return BF_RNDU;
+    case 3: return BF_RNDD;
+    case 4: return BF_RNDZ;
+    default: abort();
+  }
+}
+
+static SBV_CGEN_UNUSED void *sbv_bf_realloc(void *opaque, void *ptr, size_t size)
+{
+  (void) opaque;
+  return realloc(ptr, size);
+}
+
+static SBV_CGEN_UNUSED inline SFloat sbv_fp_cast_double_float(SDouble a, bf_rnd_t rnd)
+{
+  bf_context_t ctx; bf_t x; double result;
+  bf_context_init(&ctx, sbv_bf_realloc, NULL); bf_init(&ctx, &x); bf_set_float64(&x, (double) a);
+  bf_round(&x, 24, BF_FLAG_SUBNORMAL | bf_set_exp_bits(8) | (bf_flags_t) rnd); bf_get_float64(&x, &result, rnd);
+  bf_delete(&x); bf_context_end(&ctx); return (SFloat) result;
+}
+
+
 SFloat fromFP_DoubleTo_Float(const SDouble sbv_input_0)
 {
   const SDouble s0 = sbv_input_0;
-  const SFloat  s2 = (SFloat) s0;
+  const SFloat  s2 = sbv_fp_cast_double_float(s0, BF_RNDN);
 
   return s2;
 }
@@ -816,17 +1905,18 @@ static SBV_CGEN_UNUSED void *sbv_bf_realloc(void *opaque, void *ptr, size_t size
 
 static SBV_CGEN_UNUSED inline SInt64 sbv_fp_cast_double_integer(SDouble a, bf_rnd_t rnd)
 {
-  bf_context_t ctx; bf_t x; SInt64 raw = (SInt64) 0; limb_t i;
+  bf_context_t ctx; bf_t x; SWord64 raw = (SWord64) 0; limb_t i;
   bf_context_init(&ctx, sbv_bf_realloc, NULL); bf_init(&ctx, &x); bf_set_float64(&x, (double) a); bf_rint(&x, rnd);
   if (bf_is_finite(&x) && !bf_is_zero(&x)) {
     const slimb_t base = (slimb_t) x.len * LIMB_BITS;
     for (i = 0; i < 64; ++i) {
       const slimb_t bit = (slimb_t) i - x.expn + base;
-      if (bit >= 0 && bit < base) { raw = (SInt64) ((uint64_t) raw | ((uint64_t) (((x.tab[bit / LIMB_BITS] >> (bit % LIMB_BITS)) & 1) != 0) << (i))); }
+      if (bit >= 0 && bit < base) { raw = (SWord64) ((uint64_t) raw | ((uint64_t) (((x.tab[bit / LIMB_BITS] >> (bit % LIMB_BITS)) & 1) != 0) << (i))); }
     }
-    if (x.sign) raw = (SInt64) (~(uint64_t) raw + UINT64_C(1));
+    if (x.sign) raw = (SWord64) (~(uint64_t) raw + UINT64_C(1));
   }
-  bf_delete(&x); bf_context_end(&ctx); return raw;
+  bf_delete(&x); bf_context_end(&ctx);
+  SInt64 result; memcpy(&result, &raw, sizeof result); return result;
 }
 
 

@@ -152,7 +152,8 @@ arbitraryFPRuntime cfg ks asgns
        reinterprets _ = []
 
        casts (_, SBVApp (IEEEFP (FP_Cast fr to _)) _)
-         | supportedCast fr to = [FloatCast fr to]
+         | supportedCast fr to
+         , not (exactNativeFPCast (floatCastKind cfg fr) (floatCastKind cfg to)) = [FloatCast fr to]
        casts (_, SBVApp (KindCast fr to) _)
          | mappedFloatCast cfg fr to = [FloatCast fr to]
        casts _ = []
@@ -187,13 +188,25 @@ arbitraryFPConst _ _ = Nothing
 -- | Lower an operation requiring LibBF-backed floating-point semantics. A
 -- 'Nothing' result delegates native RNE operations, table lookup, and
 -- user-defined functions to the general C renderer.
+-- Numeric floating casts use the bridge unless their native conversion is
+-- provably exact: C casts and @rint@ would otherwise depend on the caller's
+-- hardware rounding mode, even for RNE.
 arbitraryFPExpr :: CgConfig -> [(SV, CV)] -> Op -> [SV] -> Kind -> [Doc] -> Maybe CLowering
 arbitraryFPExpr cfg consts op svs resultKind args
+  | IEEEFP (FP_Cast fr to rm) <- op
+  , let target = floatCastKind cfg to
+  , exactNativeFPCast (floatCastKind cfg fr) target
+  , value:_ <- reverse args
+  , let ignored = maybe [text (show rm)] (const []) (lookup rm consts)
+  , let cast = parens (text (if isFloat target then "SFloat" else "SDouble")) <+> value
+  = Just . expressionLowering CByValue [] $ case ignored of
+      [] -> cast
+      _  -> parens $ fsep (punctuate comma (map (text "(void)" <+>) ignored ++ [cast]))
   | not (isFP resultKind
       || any (isFP . kindOf) svs
       || isExactNativeCast
       || isNativeBitVectorCast
-      || isRoundedNativeFloatCast
+      || isNativeFloatCast
       || isMappedCast)
   = Nothing
   | LkUp{} <- op
@@ -271,29 +284,36 @@ arbitraryFPExpr cfg consts op svs resultKind args
          _                         -> False
 
        isNativeBitVectorCast = case op of
-         IEEEFP (FP_Cast fr to rm) -> (needsAdapter rm || isWideBV fr || isWideBV to)
-                                  && ((isBounded fr     && isNativeFloat to)
-                                   || (isNativeFloat fr && isBounded to))
-         _                          -> False
+         IEEEFP (FP_Cast fr to _) -> (isBounded fr     && isNativeFloat to)
+                                  || (isNativeFloat fr && isBounded to)
+         _                         -> False
 
-       isRoundedNativeFloatCast = case op of
-         IEEEFP (FP_Cast fr to rm) -> needsAdapter rm && isNativeFloat fr && isNativeFloat to
-         _                          -> False
+       isNativeFloatCast = case op of
+         IEEEFP (FP_Cast fr to _) -> isNativeFloat fr && isNativeFloat to
+         _                         -> False
 
        isMappedCast = case op of
          IEEEFP (FP_Cast fr to _) -> mappedFloatCast cfg fr to
          KindCast fr to          -> mappedFloatCast cfg fr to
          _                        -> False
 
-       needsAdapter rm = case rm `lookup` consts of
-         Just (CV k (CADT ("RoundNearestTiesToEven", []))) | isRoundingMode k -> False
-         _                                                                     -> True
-
        isNativeFloat k = k == KFloat || k == KDouble
 
        unsupported = error $ "SBV->C: arbitrary floating-point lowering does not yet support " ++ show op
                           ++ " with argument kinds " ++ show (map kindOf svs)
                           ++ " and result kind " ++ show resultKind
+
+-- | Identify scalar casts whose entire source range is exactly representable
+-- in the destination. No rounding, software adapter, or hardware rounding-mode
+-- change is needed for any valid SBV rounding mode.
+exactNativeFPCast :: Kind -> Kind -> Bool
+exactNativeFPCast from to
+  | to `notElem` [KFloat, KDouble] = False
+  | from == to                   = True
+  | from == KFloat, to == KDouble = True
+  | isBounded from
+  , not (isWideBV from)           = intSizeOf from - (if hasSign from then 1 else 0) <= significandBits to
+  | True                         = False
 
 -- | Emit LibBF adapters for native 'SFloat' and 'SDouble' operations whose
 -- rounding mode cannot safely be expressed as an ordinary C expression.
@@ -608,19 +628,29 @@ castRuntime cfg (FloatCast source target) = case (fr, to) of
        fpToInteger =
          ["static inline " ++ reprCType to ++ " " ++ helperName ++ "(" ++ floatingCType fr ++ " a, bf_rnd_t rnd)"
          , "{"
-         , "  bf_context_t ctx; bf_t x; " ++ reprCType to ++ " raw = " ++ reprZero to ++ "; limb_t i;"
+         , "  bf_context_t ctx; bf_t x; " ++ reprCType integerBits ++ " raw = " ++ reprZero integerBits ++ "; limb_t i;"
          , "  bf_context_init(&ctx, sbv_bf_realloc, NULL); " ++ decodeFloating fr ++ " bf_rint(&x, rnd);"
          , "  if (bf_is_finite(&x) && !bf_is_zero(&x)) {"
          , "    const slimb_t base = (slimb_t) x.len * LIMB_BITS;"
          , "    for (i = 0; i < " ++ show (reprWidth to) ++ "; ++i) {"
          , "      const slimb_t bit = (slimb_t) i - x.expn + base;"
-         , "      if (bit >= 0 && bit < base) { " ++ reprSetBit to "raw" "i" "((x.tab[bit / LIMB_BITS] >> (bit % LIMB_BITS)) & 1) != 0" ++ " }"
+         , "      if (bit >= 0 && bit < base) { " ++ reprSetBit integerBits "raw" "i" "((x.tab[bit / LIMB_BITS] >> (bit % LIMB_BITS)) & 1) != 0" ++ " }"
          , "    }"
-         , "    if (x.sign) raw = " ++ negateRepr to "raw" ++ ";"
+         , "    if (x.sign) raw = " ++ negateRepr integerBits "raw" ++ ";"
          , "  }"
-         , "  bf_delete(&x); bf_context_end(&ctx); return " ++ reprNormalize to "raw" ++ ";"
+         , "  bf_delete(&x); bf_context_end(&ctx);"
+         , if integerBits /= to
+              then "  " ++ reprCType to ++ " result; memcpy(&result, &raw, sizeof result); return result;"
+              else "  return " ++ reprNormalize to "raw" ++ ";"
          , "}"
          , ""]
+
+       -- Reconstruct native signed results through their unsigned object
+       -- representation, avoiding implementation-defined unsigned-to-signed casts.
+       integerBits
+         | KBounded True width <- to
+         , not (isWideBV to) = KBounded False width
+         | True             = to
 
        exactToFP
          | fr == KUnbounded =

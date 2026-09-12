@@ -45,6 +45,9 @@ tests = testGroup "CodeGeneration.ArbitraryFloats"
   , testCase "compile and execute native rounding modes" nativeFloatRoundingModes
   , testCase "convert between native floats and bit-vectors" nativeFloatBitVectorConversions
   , testCase "convert native floats across non-native widths" nativeFloatWidthConversions
+  , testCase "preserve native floating casts under caller rounding modes" nativeFloatCastEnvironment
+  , testCase "totalize exceptional native floating casts without C overflow" nativeFloatExceptionalCasts
+  , testCase "keep exact native floating casts free of LibBF" nativeExactFloatConversions
   , testCase "convert between native floats and exact numbers" nativeFloatExactConversions
   , testCase "convert mapped integers with explicit float rounding" mappedIntegerFloatConversions
   , testCase "convert mapped reals across numeric representations" mappedRealConversions
@@ -346,6 +349,95 @@ nativeFloatWidthConversions = withSystemTempDirectory "sbv-native-float-width-co
       wideKind    = KBounded True 673
       oneBitKind  = KBounded False 1
   compileAndRunLibBF dir "nativeFloatWidthConversions" program "= 1"
+
+-- | A separately compiled caller changes the hardware rounding mode around
+-- explicitly rounded casts. Check halfway values at native and non-native
+-- bit widths, large signed/unsigned integers, and binary64-to-binary32 narrowing.
+nativeFloatCastEnvironment :: Assertion
+nativeFloatCastEnvironment = withSystemTempDirectory "sbv-native-float-cast-environment" $ \dir -> do
+  let program = do
+        cgOverwriteFiles True
+        cgGenerateDriver False
+        floatBits  <- cgInput "floatBits"     :: SBVCodeGen SWord32
+        doubleBits <- cgInput "doubleBits"    :: SBVCodeGen SWord64
+        halfBits   <- cgInput "halfBits"      :: SBVCodeGen SWord32
+        signed     <- cgInput "signedValue"   :: SBVCodeGen SInt64
+        unsigned   <- cgInput "unsignedValue" :: SBVCodeGen SWord64
+        let float    = sWord32AsSFloat floatBits
+            double   = sWord64AsSDouble doubleBits
+            half     = sWord32AsSFloat halfBits
+            modes    = [sRNE, sRNA, sRTP, sRTN, sRTZ]
+            widths   = [1, 7, 8, 9, 16, 32, 64, 65, 673]
+            checks signedKind width = zipWith check modes expected
+              where kind     = KBounded signedKind width
+                    positive = if width == 1 then half else float
+                    value    = if signedKind then negate positive else positive
+                    expected
+                      | width == 1 = if signedKind then [0, -1, 0, -1, 0] else [0, 1, 1, 0, 0]
+                      | signedKind = [-2, -3, -2, -3, -2]
+                      | True       = [2, 3, 3, 2, 2]
+                    check rm result = D.svEqual (D.svCastFromFP kind (unSBV rm) (unSBV value)) (D.svInteger kind result)
+            nativeChecks = sFloatAsSWord32 (toSFloat sRNE double) .== 0x3f800000
+                       .&& toSDouble sRNE signed .== -9007199254740992
+                       .&& toSFloat sRNE signed .== -9007199254740992
+                       .&& toSDouble sRNE unsigned .== 18446744073709551616
+                       .&& toSFloat sRNE unsigned .== 18446744073709551616
+        svCgReturn (foldl D.svAnd (unSBV nativeChecks) (concat [checks sign width | sign <- [False, True], width <- widths]))
+      caller = unlines
+        [ "#include <fenv.h>"
+        , "#include \"nativeFloatCastEnvironment.h\""
+        , "int main(void)"
+        , "{"
+        , "  const int modes[] = { FE_TONEAREST, FE_UPWARD, FE_DOWNWARD, FE_TOWARDZERO };"
+        , "  const int original = fegetround();"
+        , "  for (size_t i = 0; i < sizeof modes / sizeof modes[0]; ++i) {"
+        , "    if (fesetround(modes[i]) != 0) return 1;"
+        , "    if (!nativeFloatCastEnvironment(UINT32_C(0x40200000), UINT64_C(0x3ff0000010000000), UINT32_C(0x3f000000), -INT64_C(9007199254740993), UINT64_MAX)) return 2;"
+        , "    if (fegetround() != modes[i]) return 3;"
+        , "  }"
+        , "  return fesetround(original) != 0;"
+        , "}"
+        ]
+  compileAndRunLibBFCaller dir "nativeFloatCastEnvironment" program caller
+
+-- | SMT leaves non-finite and out-of-range floating-to-bit-vector results
+-- unspecified. The backend chooses zero for non-finite inputs and low bits
+-- for finite ones, without invoking an overflowing native C integer cast.
+nativeFloatExceptionalCasts :: Assertion
+nativeFloatExceptionalCasts = mapM_ check [0x7ff0000000000000, 0xfff0000000000000, 0x7ff8000000000000, 0x8000000000000000, 0x7e70000000000000, 0xfe70000000000000]
+ where check bits = withSystemTempDirectory "sbv-native-float-exceptional-casts" $ \dir -> do
+         let program = do
+               cgOverwriteFiles True
+               cgSetDriverValues [bits]
+               raw <- cgInput "raw" :: SBVCodeGen SWord64
+               let value  = sWord64AsSDouble raw
+                   values = [unSBV value, unSBV (toSFloat sRNE value)]
+                   kinds  = [KBounded sign width | sign <- [False, True], width <- [1, 7, 8, 16, 32, 64, 65, 673]]
+                   checks = [D.svEqual (D.svCastFromFP kind (unSBV sRNE) source) (D.svInteger kind 0) | kind <- kinds, source <- values]
+               svCgReturn (foldl D.svAnd (unSBV sTrue) checks)
+         compileAndRunLibBF dir "nativeFloatExceptionalCasts" program ") = 1"
+
+-- | Exactly representable casts stay native even with symbolic rounding.
+-- Include negative zero so widening cannot accidentally change its sign.
+nativeExactFloatConversions :: Assertion
+nativeExactFloatConversions = withSystemTempDirectory "sbv-exact-native-float-casts" $ \dir -> do
+  let program = do
+        cgOverwriteFiles True
+        cgSetDriverValues [-32768, 4294967295, 0x80000000, 2]
+        small    <- cgInput "small"    :: SBVCodeGen SInt16
+        unsigned <- cgInput "word"     :: SBVCodeGen SWord32
+        zeroRaw  <- cgInput "zeroBits" :: SBVCodeGen SWord32
+        mode     <- cgInput "mode"     :: SBVCodeGen SRoundingMode
+        let checks rm = [ toSFloat rm small .== -32768
+                        , toSDouble rm unsigned .== 4294967295
+                        , sDoubleAsSWord64 (toSDouble rm (sWord32AsSFloat zeroRaw)) .== 0x8000000000000000
+                        ]
+        cgReturn (sAnd (concatMap checks [sRNE, sRNA, sRTP, sRTN, sRTZ, mode]))
+  compileAndRunWith ["-lm"] dir "nativeExactFloatConversions" program ") = 1"
+  source <- readFile (dir </> "nativeExactFloatConversions.c")
+  makefile <- readFile (dir </> "Makefile")
+  assertBool "Exact native conversions must not include LibBF" (not ("<libbf.h>" `isInfixOf` source))
+  assertBool "Exact native conversions must not link LibBF" (not ("-lbf" `isInfixOf` makefile))
 
 -- | Exercise LibBF-mediated conversion between native floats and GMP-backed
 -- exact numbers without introducing an arbitrary floating-point format.
@@ -753,6 +845,25 @@ compileAndRunWith ccOptions dir functionName program expected = do
   (_, cfg, bundle) <- compileToC' functionName program
   renderCgPgmBundle (Just dir) (cfg, bundle)
 
+  out <- compileAndRunGenerated ccOptions dir functionName
+  assertBool ("Expected generated output to contain " ++ expected ++ ", received:\n" ++ out) (expected `isInfixOf` out)
+
+-- | Exercise a generated native ABI from an independent caller, linked with
+-- LibBF. Enable dynamic rounding for callers that modify the floating-point
+-- environment; the caller reports failure through its exit status.
+compileAndRunLibBFCaller :: FilePath -> String -> SBVCodeGen () -> String -> Assertion
+compileAndRunLibBFCaller dir functionName program caller = do
+  (includeDir, archive) <- locateLibBF
+  (_, cfg, bundle) <- compileToC' functionName program
+  renderCgPgmBundle (Just dir) (cfg, bundle)
+  writeFile (dir </> functionName ++ "_driver.c") caller
+  _ <- compileAndRunGenerated ["-frounding-math", "-I" ++ includeDir, archive, "-lm"] dir functionName
+  pure ()
+
+-- | Compile and run an already rendered program and driver. Honor optional
+-- optimization and sanitizer flags supplied by @SBV_C_TEST_FLAGS@.
+compileAndRunGenerated :: [String] -> FilePath -> String -> IO String
+compileAndRunGenerated ccOptions dir functionName = do
   let source = dir </> functionName ++ ".c"
       driver = dir </> functionName ++ "_driver.c"
       exe    = dir </> functionName ++ "_driver"
@@ -762,7 +873,7 @@ compileAndRunWith ccOptions dir functionName program expected = do
 
   (runExit, out, runErr) <- readProcessWithExitCode exe [] ""
   assertEqual runErr ExitSuccess runExit
-  assertBool ("Expected generated output to contain " ++ expected ++ ", received:\n" ++ out) (expected `isInfixOf` out)
+  pure out
 
 -- | Locate the header and static archive installed for the Haskell @libBF@
 -- dependency so integration tests exercise the same C implementation.

@@ -38,6 +38,9 @@
     fail during generation; native long-double arithmetic and native casts remain available.
     Casts between mapped integers and native/arbitrary-width bit-vectors preserve low bits
     and source signedness, including one-bit destinations and sign extension into wide values.
+    Native floating casts use the rounding-aware LibBF bridge even for round-to-nearest,
+    independently of the caller's rounding mode, without changing the native C ABI;
+    provably exact native conversions retain direct C casts.
 
   * Functions defined with `smtFunction` and its variants can now be first encountered after entering
     query mode. SBV sends their definitions and dependencies incrementally, while retaining termination

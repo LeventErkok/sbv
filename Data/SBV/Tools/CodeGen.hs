@@ -93,7 +93,14 @@ Standalone programs and multi-function static libraries share these mappings:
 * 'Data.SBV.SInteger', rational-valued 'Data.SBV.SReal', and
   'Data.SBV.SRational' use GMP unless an applicable native mapping is selected.
 * 'Data.SBV.SFloat' and 'Data.SBV.SDouble' use native C values. Arbitrary
-  floating-point formats and explicitly directed native rounding use LibBF.
+  floating-point formats and explicitly directed native arithmetic rounding
+  use LibBF. Numeric casts between IEEE formats, bit-vectors, and exact GMP
+  numbers use LibBF too, except when a native conversion is provably exact.
+  Casts honor even the default round-to-nearest mode independently of the
+  caller's hardware rounding mode.
+  Floating-to-bit-vector casts round first, then retain the destination's low
+  bits; non-finite inputs produce zero. The latter choices give deterministic
+  results where SMT leaves an out-of-range or non-finite conversion unspecified.
   Arbitrary formats are subject to LibBF's exponent-range limits: the backend
   accepts at most 61 exponent bits and checks the selected C LibBF build too.
 * Strings and lists use length-aware descriptors. Sets use finite/cofinite
