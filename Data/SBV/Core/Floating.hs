@@ -193,14 +193,32 @@ class SymVal a => IEEEFloatConvertible a where
   fromSFloatingPoint :: ValidFloat eb sb => SRoundingMode -> SFloatingPoint eb sb -> SBV a
   fromSFloatingPoint = genericFromFloat
 
-  -- | Convert to an arbitrary floating point.
+  -- | Convert to an arbitrary floating point. Integral literals are rounded
+  -- directly to the target format in the requested rounding mode.
+  --
+  -- >>> unliteral (toSFloatingPoint sRTP (2049 :: SInteger) :: SFPHalf)
+  -- Just 2050.0
+  --
+  -- >>> unliteral (toSFloatingPoint sRTN (-2049 :: SInteger) :: SFPHalf)
+  -- Just -2050.0
   toSFloatingPoint :: ValidFloat eb sb => SRoundingMode -> SBV a -> SFloatingPoint eb sb
 
-  -- -- default definition if we have an integral like
+  -- Default definition for integral sources.
   default toSFloatingPoint :: (Integral a, ValidFloat eb sb) => SRoundingMode -> SBV a -> SFloatingPoint eb sb
-  toSFloatingPoint = genericToFloat (const (Just . fromRational . fromIntegral))
+  toSFloatingPoint = integralToFloatingPoint
 
--- Run the function if the conversion is in RNE. Otherwise return Nothing.
+-- | Convert an integral source without an intermediate floating-point format.
+-- Concrete inputs round the exact integer once; symbolic inputs or rounding
+-- modes retain the ordinary floating-point cast expression.
+integralToFloatingPoint :: forall a eb sb. (Integral a, IEEEFloatConvertible a, ValidFloat eb sb)
+                       => SRoundingMode -> SBV a -> SFloatingPoint eb sb
+integralToFloatingPoint = genericToFloat convert
+ where convert rm value = Just $ FloatingPoint $ FP ei si
+                                $ fst (bfRoundFloat (mkBFOpts ei si (roundingModeToRoundMode rm)) (bfFromInteger (toInteger value)))
+       ei = intOfProxy (Proxy @eb)
+       si = intOfProxy (Proxy @sb)
+
+-- | Run the function if the conversion is in RNE. Otherwise return Nothing.
 onlyWhenRNE :: (a -> Maybe b) -> RoundingMode -> a -> Maybe b
 onlyWhenRNE f RoundNearestTiesToEven v = f v
 onlyWhenRNE _ _                      _ = Nothing
