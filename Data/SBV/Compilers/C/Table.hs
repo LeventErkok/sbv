@@ -13,6 +13,7 @@
 
 module Data.SBV.Compilers.C.Table
   ( tableExpr
+  , tableIndexAndBounds
   , tableMustBeLocal
   ) where
 
@@ -65,7 +66,15 @@ tableExpr cfg renderSV (LkUp (tableId, indexKind, _, tableLength) index defaultV
 
        touchedKinds = concatMap expandKinds [indexKind, resultKind]
 
-       nativeIndex
+       (nativeIndex, outOfRange) = tableIndexAndBounds cfg indexKind tableLength renderedIndex
+tableExpr _ _ _ _ = Nothing
+
+-- | Render a machine index together with its exact out-of-range predicate.
+-- Check the original value before narrowing a wide bit-vector or GMP integer;
+-- otherwise a large index could alias an in-range table entry.
+tableIndexAndBounds :: CgConfig -> Kind -> Int -> Doc -> (Doc, Maybe Doc)
+tableIndexAndBounds cfg indexKind tableLength renderedIndex = (nativeIndex, outOfRange)
+ where nativeIndex
          | isWideBV indexKind              = wideBVLookupIndex indexKind renderedIndex
          | isExactGMPKind cfg indexKind     = namedCall "mpz_get_ui" [renderedIndex]
          | True                             = renderedIndex
@@ -111,7 +120,6 @@ tableExpr cfg renderSV (LkUp (tableId, indexKind, _, tableLength) index defaultV
        maximumSignedIndex width = 2 ^ (width - 1) - 1
 
        namedCall functionName args = text functionName P.<> parens (fsep (punctuate comma args))
-tableExpr _ _ _ _ = Nothing
 
 -- | Test whether a table declaration must be emitted inside the generated
 -- function. Exact GMP values use the function's ownership arena, while

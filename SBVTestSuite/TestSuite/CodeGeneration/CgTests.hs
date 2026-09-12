@@ -21,7 +21,7 @@
 module TestSuite.CodeGeneration.CgTests(tests) where
 
 import Control.Exception (ErrorCall, displayException, evaluate, try)
-import Control.Monad (forM, unless)
+import Control.Monad (forM, unless, when)
 import Data.List (isInfixOf)
 import Data.SBV.Internals
 import Data.SBV.Tools.CodeGen (compileToC, compileToCLib)
@@ -167,6 +167,8 @@ tests = testGroup "CodeGeneration.CgTests"
   , testCase "guard inactive branches in array lambdas" (guardedProgramEvaluation True)
   , testCase "retain checks as demand-driven evaluation roots" guardedRuntimeChecks
   , testCase "preserve sharing across guarded evaluation diamonds" guardedEvaluationSharing
+  , testCase "guard unselected finite-table entries and defaults" guardedTableEvaluation
+  , testCase "check wide and exact indices before guarded table selection" guardedTableIndices
   , testCase "compile structural defined SBV functions" structuralDefinedSBVFunctions
   , testCase "compile managed scalar defined SBV functions" managedScalarDefinedSBVFunctions
   , testCase "compile collection defined SBV functions" collectionDefinedSBVFunctions
@@ -192,7 +194,8 @@ tests = testGroup "CodeGeneration.CgTests"
   , testCase "compile arrays with managed aggregate fields" managedAggregateArrays
   , testCase "return managed aggregate arrays from a library" managedAggregateArrayLibrary
   , testCase "compile managed aggregate lookup tables" managedAggregateTables
-  , testCase "compile array-valued lookup tables" arrayValuedTables
+  , testCase "compile array-valued lookup tables" (arrayValuedTables False)
+  , testCase "retain ready array-valued lookup tables" (arrayValuedTables True)
   , testCase "return managed table values from a library" managedAggregateTableLibrary
   , testCase "compile and execute structural tuples" structuralTuples
   , testCase "compile repeated tuple types into a library" structuralTupleLibrary
@@ -2493,6 +2496,68 @@ guardedEvaluationSharing = withSystemTempDirectory "sbv-guarded-sharing" $ \dir 
   outputText <- compileAndRunGenerated dir "guardedSharing"
   assertBool outputText (") = 43" `isInfixOf` outputText)
 
+-- | Finite selection demands only the chosen entry or the out-of-range
+-- default. Exercise dynamic owned entries and constant-table defaults at all
+-- three lowering sites, with both standalone and library entry points.
+guardedTableEvaluation :: Assertion
+guardedTableEvaluation = mapM_ check [ (library, scope, checked, sample)
+                                   | library <- [False, True]
+                                   , scope   <- [0 :: Int, 1, 2]
+                                   , checked <- [False, True]
+                                   , sample  <- if checked then [0, 1, 2] else [0, 1]
+                                   ]
+ where check (library, scope, checked, sample) = withSystemTempDirectory "sbv-guarded-tables" $ \dir -> do
+         let functionName = "guardedTables"
+             evaluateTable :: SWord8 -> SBV (CodeGenTree, Word8)
+             evaluateTable index =
+               let rootTree = ite (index .== 0) (sCGLeaf 7) (sCGNode (sCGLeaf 7) (sCGLeaf 9))
+                   child    = getCGLeaf_1 (getCGNode_1 rootTree)
+                   selected = select [sCGLeaf (getCGLeaf_1 rootTree), sCGLeaf child] (sCGLeaf (child + 1)) index
+                   constant = select [7, 9] (child + 1) index
+               in tuple (selected, constant)
+             program = do
+               cgOverwriteFiles True
+               cgPerformRTCs checked
+               cgSetDriverValues [sample]
+               index <- cgInput "index" :: SBVCodeGen SWord8
+               let result = case scope of
+                     0 -> evaluateTable index
+                     1 -> smtFunction "C guarded table function" evaluateTable index
+                     _ -> readArray (lambdaArray evaluateTable) index
+                   (selected, constant) = untuple result
+                   expected = ite (index .< 2) 7 8
+               cgOutput "selectedTree" selected
+               cgReturn (getCGLeaf_1 selected .== expected .&& constant .== ite (index .== 1) 9 expected)
+         (_, cfg, bundle) <- if library
+                               then compileToCLib' functionName [("guardedComponent", program)]
+                               else compileToC' functionName ((:[]) <$> program)
+         renderCgPgmBundle (Just dir) (cfg, bundle)
+         outputText <- compileAndRunGenerated dir functionName
+         assertBool outputText (") = 1" `isInfixOf` outputText)
+
+-- | Check the original index before machine-index narrowing. Large exact,
+-- signed-wide, and unsigned-wide indices must select the default, not alias
+-- slot zero; unselected partial entries remain protected in all three cases.
+guardedTableIndices :: Assertion
+guardedTableIndices = mapM_ check [-1, 0, 1, 2, 2 ^ (80 :: Int)]
+ where check sample = withSystemTempDirectory "sbv-guarded-table-indices" $ \dir -> do
+         let program = do
+               cgOverwriteFiles True
+               cgPerformRTCs True
+               cgSetDriverValues [sample]
+               index <- cgInput "index" :: SBVCodeGen SInteger
+               let rootTree = ite (index .== 0) (sCGLeaf 7) (sCGNode (sCGLeaf 7) (sCGLeaf 9))
+                   child    = getCGLeaf_1 (getCGNode_1 rootTree)
+                   entries  = [sCGLeaf (getCGLeaf_1 rootTree), sCGLeaf child]
+                   fallback = sCGLeaf (child + 1)
+                   exact    = select entries fallback index
+                   signed   = select entries fallback (sFromIntegral index :: SInt 673)
+                   unsigned = select entries fallback (sFromIntegral index :: SWord 673)
+                   expected = ite (index .>= 0 .&& index .< 2) 7 8
+               cgReturn $ sAnd [getCGLeaf_1 selected .== expected | selected <- [exact, signed, unsigned]]
+         outputText <- compileProgramAndRunGenerated dir "guardedTableIndices" program
+         assertBool outputText (") = 1" `isInfixOf` outputText)
+
 -- | Exercise self-recursion, mutually recursive Boolean short-circuiting, and
 -- an owned recursive list result. Each base case must avoid evaluating the
 -- recursive branch in the generated C program.
@@ -3159,19 +3224,22 @@ managedAggregateTables = withSystemTempDirectory "sbv-managed-aggregate-tables" 
     , "staticSet ={0x0003U, 0x0004U}"
     , "selectedADT =CGNativeCollections([0x0005U, 0x0006U, 0x0007U, 0x0015U], {0x0016U, 0x0017U})"
     ]
-  assertBool "Expected pointer-backed aggregate tables to use automatic storage"
+  assertBool "Expected ready aggregates to use automatic tables and dynamic entries to remain guarded"
              (    "const SString table" `isInfixOf` sourceText
               && "const SBVList_u16 table" `isInfixOf` sourceText
               && "const SBVSet_u16 table" `isInfixOf` sourceText
-              && "const SBVADT_CodeGenNativeCollections table" `isInfixOf` sourceText
+              && "switch((uint64_t)" `isInfixOf` sourceText
               && not ("static const SString table" `isInfixOf` sourceText)
               && not ("static const SBVList_u16 table" `isInfixOf` sourceText)
               && not ("static const SBVSet_u16 table" `isInfixOf` sourceText)
+              && not ("static const SBVADT_CodeGenNativeCollections table" `isInfixOf` sourceText)
              )
 
--- | Exercise finite tables whose cells and default are retained arrays.
-arrayValuedTables :: Assertion
-arrayValuedTables = withSystemTempDirectory "sbv-array-valued-tables" $ \dir -> do
+-- | Exercise finite tables whose cells and default are retained arrays, both
+-- when entries are already demanded by earlier outputs and when the lookup
+-- must initialize only the selected entry.
+arrayValuedTables :: Bool -> Assertion
+arrayValuedTables readyEntries = withSystemTempDirectory "sbv-array-valued-tables" $ \dir -> do
   let program = do
         cgOverwriteFiles True
         cgPerformRTCs True
@@ -3183,6 +3251,8 @@ arrayValuedTables = withSystemTempDirectory "sbv-array-valued-tables" $ \dir -> 
             fallback  = constArray 30                  :: SArray Word8 Word32
             selected  = select [first, second] fallback selector
             defaulted = select [first, second] fallback (selector + 2)
+        when readyEntries $ do cgOutput "first" first
+                               cgOutput "second" second
         cgOutput "selected" selected
         cgOutput "defaultValue" (readArray defaulted key)
         cgReturn (readArray selected key)
@@ -3191,11 +3261,17 @@ arrayValuedTables = withSystemTempDirectory "sbv-array-valued-tables" $ \dir -> 
   sourceText <- readFile (dir </> "arrayValuedTables.c")
   assertBool ("Expected the selected array value, received:\n" ++ stdoutText) ("0x00000015UL" `isInfixOf` stdoutText)
   assertBool ("Expected the out-of-range default array value, received:\n" ++ stdoutText) ("defaultValue = 0x0000001eUL" `isInfixOf` stdoutText)
-  assertBool ("Expected retained array-valued table storage, received:\n" ++ sourceText)
-             (    "SBVArrayOutput_2_u8_3_u32 * const table" `isInfixOf` sourceText
-              && "sbv_array_stored_export_2_u8_3_u32(&__sbv_array_ctx" `isInfixOf` sourceText
-              && "__sbv_array_descriptor_" `isInfixOf` sourceText
-             )
+  if readyEntries
+     then assertBool ("Expected retained array-valued table storage, received:\n" ++ sourceText)
+                     (    "SBVArrayOutput_2_u8_3_u32 * const table" `isInfixOf` sourceText
+                      && "sbv_array_stored_export_2_u8_3_u32(&__sbv_array_ctx" `isInfixOf` sourceText
+                      && "__sbv_array_descriptor_" `isInfixOf` sourceText
+                     )
+     else assertBool "Expected guarded array initialization followed by an owned output export"
+                     (    "switch((uint64_t)" `isInfixOf` sourceText
+                      && "sbv_array_export_2_u8_3_u32(" `isInfixOf` sourceText
+                      && "__sbv_array_s" `isInfixOf` sourceText
+                     )
 
 -- | Exercise managed finite-table results returned independently from
 -- multiple generated library translation units.

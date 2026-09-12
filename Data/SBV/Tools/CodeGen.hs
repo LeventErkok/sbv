@@ -46,8 +46,8 @@ import Data.SBV.Compilers.C
 import Data.SBV.Compilers.CodeGen
 
 {- $cCodeGeneration
-The SBV library can generate executable C code from symbolic programs. Native
-scalar programs remain straight-line code with predictable storage. Programs
+The SBV library can generate executable C code from symbolic programs. Total
+native bit-vector arithmetic retains compact straight-line code. Programs
 using arbitrary-width bit-vectors, arbitrary floating-point values, or exact
 numbers can additionally contain generated runtime helpers, loops, and managed
 temporary storage appropriate to those representations.
@@ -121,6 +121,13 @@ evaluate its partial ADT selectors or function calls. Total bit-vector work may
 be shared outside branches; dependencies needed by both alternatives are also
 shared. Explicit assertions and hard constraints remain executable checks even
 when the generated function has no outputs.
+
+Finite table selection likewise protects unselected entries and unused defaults.
+Already available entries use direct C-array lookup; entries that require guarded
+evaluation use a switch. Enable 'cgPerformRTCs' to select the default for an
+out-of-range index. With checks disabled (the default), callers must guarantee
+in-range indices; invalid unchecked indices have no defined result and may
+terminate the process. Wide and exact indices are checked before narrowing.
 
 === Floating-point calling convention
 

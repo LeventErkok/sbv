@@ -1517,7 +1517,7 @@ genCProg cfg adts lists sets fn proto
        allConsts = (falseSV, falseCV) : (trueSV, trueCV) : preConsts
        (constantDeclarations, consts) = stabilizeCConstants cfg adts typeWidth (filter ((`Set.member` usedVariables) . fst) allConsts)
 
-       usedVariables = cReachableValues (Map.fromList assignments) tbls (map fst evaluationRoots)
+       usedVariables = cReachableValues cfg (Map.fromList assignments) tbls (map fst evaluationRoots)
 
        isAlive :: (String, CgVal) -> Bool
        isAlive (_, CgAtomic sv) = sv `Set.member` usedVariables
@@ -1866,7 +1866,7 @@ ppDefinedFunction cfg adts functionNames originalName declaredResultKind (SBVTyp
  where (parameterKinds, resultKind) = (init signatureKinds, last signatureKinds)
        assignments                  = F.toList functionProgram
        functionConsts               = (falseSV, falseCV) : (trueSV, trueCV) : constants
-       reachableValues              = cReachableValues (Map.fromList assignments) tables [functionOutput]
+       reachableValues              = cReachableValues cfg (Map.fromList assignments) tables [functionOutput]
        (constantDeclarations, renderingConsts) = stabilizeCConstants cfg adts typeWidth (filter ((`Set.member` reachableValues) . fst) functionConsts)
        functionValues               = functionOutput : map snd parameters ++ map fst assignments ++ map fst constants
        typeWidth                    = maximum (0 : map (length . showCType) functionValues)
@@ -1981,22 +1981,24 @@ ppDefinedFunction cfg adts functionNames originalName declaredResultKind (SBVTyp
 
 -- | Collect every operand, including values retained inside an operator
 -- instead of its ordinary argument list and the entries of referenced tables.
-cExpressionDependencies :: [((Int, Kind, Kind), [SV])] -> SBVExpr -> [SV]
-cExpressionDependencies tables (SBVApp op arguments) = arguments ++ case op of
-  LkUp (tableIndex, _, _, _) index defaultValue
-    -> index : defaultValue : [value | ((candidateIndex, _, _), values) <- tables, candidateIndex == tableIndex, value <- values]
+-- Defaults omitted by unchecked or provably in-range lookups are not live.
+cExpressionDependencies :: CgConfig -> [((Int, Kind, Kind), [SV])] -> SBVExpr -> [SV]
+cExpressionDependencies cfg tables (SBVApp op arguments) = arguments ++ case op of
+  LkUp (tableIndex, indexKind, _, tableLength) index defaultValue
+    -> index : [defaultValue | cgRTC cfg, isJust (snd (tableIndexAndBounds cfg indexKind tableLength empty))]
+            ++ [value | ((candidateIndex, _, _), values) <- tables, candidateIndex == tableIndex, value <- values]
   IEEEFP (FP_Cast _ _ rmSV) -> [rmSV]
   _                       -> []
 
 -- | Find the complete demand closure of a collection of roots. Inputs and
 -- constants are included, so declaration liveness and evaluation scheduling
 -- use the same dependency graph.
-cReachableValues :: Map.Map SV SBVExpr -> [((Int, Kind, Kind), [SV])] -> [SV] -> Set.Set SV
-cReachableValues assignments tables = foldl reach Set.empty
+cReachableValues :: CgConfig -> Map.Map SV SBVExpr -> [((Int, Kind, Kind), [SV])] -> [SV] -> Set.Set SV
+cReachableValues cfg assignments tables = foldl reach Set.empty
  where reach visited sv
          | sv `Set.member` visited = visited
          | True = foldl reach (Set.insert sv visited)
-                        (maybe [] (cExpressionDependencies tables) (Map.lookup sv assignments))
+                        (maybe [] (cExpressionDependencies cfg tables) (Map.lookup sv assignments))
 
 -- | Give managed constants function-wide backing storage. Rendering compound
 -- literals inside a conditional would otherwise leave dangling pointers when
@@ -2078,7 +2080,7 @@ scheduleC cfg adts functionNames lambdaNames constants initialValues assignments
                    $$ vcat (nubBy (\left right -> render left == render right) extraDeclarations)
 
        assignmentMap   = Map.fromList assignments
-       reachableValues = cReachableValues assignmentMap tables (map fst roots)
+       reachableValues = cReachableValues cfg assignmentMap tables (map fst roots)
 
        (eagerValues, eagerReversed) = foldl speculate (Set.fromList initialValues, []) assignments
        eagerLowerings = [ppExpr cfg adts functionNames lambdaNames constants expression sv
@@ -2090,7 +2092,7 @@ scheduleC cfg adts functionNames lambdaNames constants initialValues assignments
        speculate available@(values, emitted) assignment@(sv, expression)
          | sv `Set.member` reachableValues
          , cSpeculatable sv expression
-         , all (`Set.member` values) (cExpressionDependencies tables expression)
+         , all (`Set.member` values) (cExpressionDependencies cfg tables expression)
          = (Set.insert sv values, assignment : emitted)
          | True
          = available
@@ -2110,6 +2112,8 @@ scheduleC cfg adts functionNames lambdaNames constants initialValues assignments
          = (available, empty, Set.empty, [])
          | Just expression@(SBVApp op arguments) <- Map.lookup sv assignmentMap
          = case (op, arguments) of
+             (LkUp tableInfo index defaultValue, [])
+               -> tableLookup available sv expression tableInfo index defaultValue
              (Ite, [condition, trueValue, falseValue])
                -> conditional available sv condition trueValue falseValue
              (And, [left, right])
@@ -2122,7 +2126,7 @@ scheduleC cfg adts functionNames lambdaNames constants initialValues assignments
                | kindOf sv == KBool
                -> conditional available sv left right trueSV
              _ -> let (withArguments, argumentDocs, argumentRequirements, argumentDeclarations) = emitMany available
-                                                                                                           (cExpressionDependencies tables expression)
+                                                                                                           (cExpressionDependencies cfg tables expression)
                       (withTable, tableDocs) = emitTable withArguments op
                       (assignmentDoc, assignmentRequirements, assignmentDeclarations) =
                         ppExpr cfg adts functionNames lambdaNames constants expression sv (text (show sv))
@@ -2153,6 +2157,77 @@ scheduleC cfg adts functionNames lambdaNames constants initialValues assignments
              _       -> die "Missing table while scheduling C evaluation"
          | True
          = (available, empty)
+
+       tableLookup available result expression (tableIndex, indexKind, _, tableLength) index defaultValue =
+         let (withIndex, indexDocs, indexRequirements, indexDeclarations) = emit available index
+             (afterLookup, lookupDocs, lookupRequirements, lookupDeclarations) = selectValue withIndex
+         in ( afterLookup
+            , indexDocs $$ lookupDocs
+            , Set.union indexRequirements lookupRequirements
+            , indexDeclarations ++ lookupDeclarations
+            )
+         where elements = case [values | ((candidateIndex, _, _), values) <- tables, candidateIndex == tableIndex] of
+                            [values] | length values == tableLength -> values
+                            _ -> die "Missing or inconsistent table while scheduling C evaluation"
+               (nativeIndex, outOfRange) = tableIndexAndBounds cfg indexKind tableLength (showSV cfg constants index)
+               checkedBounds = if cgRTC cfg then outOfRange else Nothing
+               entriesReady (values, _) = all (`Set.member` values) elements
+
+               selectValue current
+                 | entriesReady current
+                 , not (isJust checkedBounds) || defaultValue `Set.member` fst current
+                 = renderLookup cfg current
+                 | Just check <- checkedBounds
+                 = let (withDefault, defaultDocs, defaultRequirements, defaultDeclarations) = emitChoice current defaultValue
+                       (withEntry, entryDocs, entryRequirements, entryDeclarations) = selectEntry current
+                   in ( insertAvailableValue result (Set.intersection (fst withDefault) (fst withEntry), snd current)
+                      , text "if" P.<> parens check
+                     $$ text "{" $$ nest 2 defaultDocs $$ text "}"
+                     $$ text "else"
+                     $$ text "{" $$ nest 2 entryDocs $$ text "}"
+                      , Set.union defaultRequirements entryRequirements
+                      , defaultDeclarations ++ entryDeclarations
+                      )
+                 | True
+                 = selectEntry current
+
+               selectEntry current
+                 | entriesReady current
+                 = renderLookup (cfg {cgRTC = False}) current
+                 | True
+                 = let cases = [(position, emitChoice current value) | (position, value) <- zip [0 :: Int ..] elements]
+                       renderCase (position, (_, docs, _, _)) = text "case" <+> int position P.<> colon
+                                                           $$ text "{"
+                                                           $$ nest 2 (docs $$ text "break;")
+                                                           $$ text "}"
+                       availableAfter = case [fst values | (_, (values, _, _, _)) <- cases] of
+                                          []     -> fst current
+                                          (v:vs) -> foldl Set.intersection v vs
+                   in ( insertAvailableValue result (availableAfter, snd current)
+                      , text "switch" P.<> parens (text "(uint64_t)" <+> parens nativeIndex)
+                     $$ text "{"
+                     $$ nest 2 (vcat (map renderCase cases)
+                             $$ text "default:"
+                             $$ nest 2 (text "/* Unreachable for checked indices; invalid unchecked index. */" $$ text "abort();"))
+                     $$ text "}"
+                      , Set.unions [needed | (_, (_, _, needed, _)) <- cases]
+                      , concat [decls | (_, (_, _, _, decls)) <- cases]
+                      )
+
+               emitChoice current value =
+                 let (withValue, docs, needed, decls) = emit current value
+                 in ( insertAvailableValue result withValue
+                    , docs $$ text (show result) <+> text "=" <+> showSV cfg constants value P.<> semi
+                    , needed
+                    , decls
+                    )
+
+               renderLookup loweringConfig current =
+                 let SBVApp op _ = expression
+                     (withTable, tableDocs) = emitTable current op
+                     (docs, needed, decls) = ppExpr loweringConfig adts functionNames lambdaNames constants expression result
+                                                   (text (show result)) (declSVNoConst typeWidth result) False
+                 in (insertAvailableValue result withTable, tableDocs $$ docs, needed, decls)
 
        conditional available result condition trueValue falseValue =
          let (withCondition, conditionDocs, conditionRequirements, conditionDeclarations) = emit available condition
@@ -2188,9 +2263,10 @@ scheduleC cfg adts functionNames lambdaNames constants initialValues assignments
                  | True = foldl walk (Set.insert sv visited) dependencies
                  where dependencies = case Map.lookup sv assignmentMap of
                          Just (SBVApp Ite (condition:_)) -> [condition]
+                         Just (SBVApp (LkUp _ index _) _) -> [index]
                          Just (SBVApp op (left:_))
                            | kindOf sv == KBool, op `elem` [And, Or, Implies] -> [left]
-                         Just expression -> cExpressionDependencies tables expression
+                         Just expression -> cExpressionDependencies cfg tables expression
                          Nothing         -> []
 
        insertAvailableValue value (values, availableTables) = (Set.insert value values, availableTables)
@@ -2246,7 +2322,7 @@ ppArrayLambda cfg adts functionNames callbackName arraySV lambdaInfo@LambdaInfo{
       (kind, _)     -> die $ "Expected an array-valued lambda node, received " ++ show kind
  where assignments = F.toList lambdaPgm
        lambdaConsts = (falseSV, falseCV) : (trueSV, trueCV) : constants
-       reachableValues = cReachableValues (Map.fromList assignments) tables [lambdaOutput]
+       reachableValues = cReachableValues cfg (Map.fromList assignments) tables [lambdaOutput]
        (constantDeclarations, renderingConsts) = stabilizeCConstants cfg adts typeWidth (filter ((`Set.member` reachableValues) . fst) lambdaConsts)
        lambdaValues = lambdaOutput : map snd parameters ++ map fst assignments ++ map fst constants ++ concatMap snd tables
        typeWidth    = maximum (0 : map (length . showCType) lambdaValues)
