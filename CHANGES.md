@@ -42,6 +42,10 @@
     and productivity checks. Calling `registerFunction` before the query is no longer required for this case.
     Thanks to David Van Balen for reporting [issue #815](https://github.com/LeventErkok/sbv/issues/815).
 
+  * Fix constant folding of integral literals converted with `toSFloatingPoint`: all five
+    rounding modes are now honored, including directed overflow. Previously these conversions
+    always used round-nearest-ties-to-even, regardless of the requested mode.
+
 ### Version 14.7, 2026-08-31
 
   * Fix https://github.com/LeventErkok/sbv/issues/813. Thanks to David van Balen for reporting.
