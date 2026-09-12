@@ -217,6 +217,8 @@ arrayTypeDecls kinds = text . unlines $
      , "/* Input contexts are borrowed unless an escaping result invokes their retain */"
      , "/* callback. Owned outputs must be released with the generated release helper. */"
      , "/* Callback results borrow their context; aggregate reads borrow the array owner. */"
+     , "/* Clone a managed read result to outlive its owner. The as_input helper only borrows. */"
+     , "/* Lookups must be stable; escaping non-null contexts require both retain and release. */"
      ]
   ++ concatMap declaration kinds
  where declaration kind@(KArray keyKind valueKind)

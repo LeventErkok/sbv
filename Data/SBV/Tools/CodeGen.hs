@@ -108,6 +108,35 @@ their storage for the call; owned outputs must be released with the appropriate
 generated helper. Escaping callback contexts additionally require retain and
 release callbacks. See each generated header for its representation contract.
 
+=== Calling and owning generated values
+
+Input storage, including reachable aggregate fields and callback contexts, must
+remain valid and unchanged throughout the call. Pointer parameters must address
+valid objects; fixed-size groups require the declared number of elements.
+Outputs must not overlap other outputs or storage reachable through an input.
+In-place calls are not part of the supported ABI.
+
+Scalar GMP output parameters, including each element of a GMP output group,
+must be initialized with @mpz_init@ or @mpq_init@ before the call. They can be
+reused across calls and must eventually be cleared by the caller. This also
+applies to the extra output parameter used for a single exact-number return.
+
+In contrast, managed string, list, set, tuple, ADT, and array output slots receive
+fresh owned values. They need no initialization, even when an aggregate contains
+GMP fields. Release an old owned value before reusing its slot; the generated
+entry point does not release the previous contents. Each output and return is
+an independent owner. Plain C assignment does not create another owner: use the
+generated clone or retain helper when both copies must survive independently.
+Never release borrowed input storage with an ownership helper.
+
+Reading an owned array can return a borrowed managed value. Clone that value
+before releasing the array if it must survive. Likewise, the generated
+@sbv_array_output_as_input_...@ helper borrows its array owner; it does not retain
+it. A callback's returned storage must remain valid while its context is alive.
+Callbacks must implement a stable, immutable lookup. When a non-null context
+escapes in a result, both retain and release hooks are required; retaining must
+preserve the lookup's meaning and give the result an independent lifetime.
+
 'Data.SBV.smtFunction' definitions and firstified higher-order specializations
 can compile to private C functions, including recursive definitions. Explicit
 closure environments remain SBV values; this is not an ABI for runtime Haskell

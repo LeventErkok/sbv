@@ -70,7 +70,9 @@ gmpTypeDecls :: CgConfig -> Set.Set Kind -> Doc
 gmpTypeDecls cfg kinds
   | not needsExactInteger && not needsExactQuotient = empty
   | True                                            = text . unlines $
-      ["/* Exact integers, reals, and rationals. Inputs are borrowed; outputs are caller-initialized. */"
+      ["/* Exact integers, reals, and rationals. Inputs are borrowed; scalar outputs are caller-initialized. */"
+      , "/* Initialize each scalar/group output with mpz_init or mpq_init; clear it after its last use. */"
+      , "/* Aggregate outputs instead receive fresh owned values, including any embedded GMP fields. */"
       , "#include <gmp.h>"
       , "#ifndef SBV_CGEN_UNUSED"
       , "#if defined(__GNUC__) || defined(__clang__)"

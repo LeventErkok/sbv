@@ -130,6 +130,7 @@ tests = testGroup "CodeGeneration.CgTests"
   , testCase "preserve public C names without local collisions" privateCBindings
   , testCase "preserve case through ADTs and structural type guards" caseSensitiveCKinds
   , testCase "frame nested array key and value type names" structuralCNameFraming
+  , testCase "honor ownership across independent C library calls" libraryOwnershipContract
   , testCase "compare finite ADT set universes" finiteADTSetUniverses
   , testCase "compile exact symbolic rationals" exactSymbolicRationals
   , testCase "compile rationals with mapped integers" mappedIntegerRationals
@@ -494,6 +495,95 @@ structuralCNameFraming = withSystemTempDirectory "sbv-structural-c-names" $ \dir
     ]
   outputText <- compileAndRunGenerated dir "structuralNames"
   assertBool outputText (") = 1" `isInfixOf` outputText)
+
+-- | Use a hand-written caller to check output reuse, independent ownership,
+-- borrowed array reads, and balanced callback lifetimes across library calls.
+libraryOwnershipContract :: Assertion
+libraryOwnershipContract = withSystemTempDirectory "sbv-library-ownership" $ \dir -> do
+  let component program = do
+        cgOverwriteFiles True
+        cgGenerateDriver False
+        program
+  _ <- compileToCLib (Just dir) "ownershipLibrary"
+    [("copyLists", component $ do
+        values <- cgInput "values" :: SBVCodeGen (SList Word16)
+        cgOutput "copy" values
+        cgReturn values)
+    , ("listArray", component $ do
+        values <- cgInput "values" :: SBVCodeGen (SList Word16)
+        cgReturn (constArray values :: SArray Word8 [Word16]))
+    , ("retainArray", component $ do
+        values <- cgInput "values" :: SBVCodeGen (SArray Word8 Word16)
+        cgReturn (writeArray values 0 42))
+    , ("readArrayValue", component $ do
+        values <- cgInput "values" :: SBVCodeGen (SArray Word8 Word16)
+        cgReturn (readArray values 1))
+    , ("exactOutputs", component $ do
+        value <- cgInput "value" :: SBVCodeGen SInteger
+        cgOutput "copy" (value + 1)
+        cgReturn (value + 2))
+    ]
+  compileAndRunCaller dir "ownershipLibrary" $ unlines
+    ["#include \"ownershipLibrary.h\""
+    , "#include <assert.h>"
+    , "typedef struct { unsigned references; SWord16 value; } Context;"
+    , "static unsigned live_contexts;"
+    , "static SWord16 lookup(const void *opaque, SWord8 key)"
+    , "{ const Context *context = opaque; return context->value + key; }"
+    , "static const void *retain(const void *opaque)"
+    , "{ Context *context = (Context *) opaque; ++context->references; return context; }"
+    , "static void release(const void *opaque)"
+    , "{ Context *context = (Context *) opaque; if (--context->references == 0) { --live_contexts; free(context); } }"
+    , "int main(void)"
+    , "{"
+    , "  mpz_t input, first, second; mpz_inits(input, first, second, NULL);"
+    , "  for (unsigned i = 0; i < 32; ++i) {"
+    , "    SWord16 data[] = {7, 11}; SBVList_u16 borrowed = {data, 2}, copy;"
+    , "    SBVList_u16 result = copyLists(borrowed, &copy);"
+    , "    data[0] = 99;"
+    , "    assert(copy.data[0] == 7 && result.data[0] == 7);"
+    , "    sbv_list_release_u16(&copy);"
+    , "    assert(result.data[1] == 11);"
+    , "    copy = copyLists(result, &borrowed);"
+    , "    sbv_list_release_u16(&result); sbv_list_release_u16(&borrowed);"
+    , "    SBVArrayOutput_2_u8_10_list_3_u16 array = listArray(copy);"
+    , "    sbv_list_release_u16(&copy);"
+    , "    SBVList_u16 read = sbv_array_output_read_2_u8_10_list_3_u16(array, 3);"
+    , "    SBVList_u16 saved = sbv_list_clone_u16(read);"
+    , "    sbv_array_output_release_2_u8_10_list_3_u16(&array);"
+    , "    assert(saved.length == 2 && saved.data[0] == 7); sbv_list_release_u16(&saved);"
+    , "    Context *context = malloc(sizeof *context); assert(context != NULL);"
+    , "    *context = (Context) {1, 17}; ++live_contexts;"
+    , "    SBVArrayInput_2_u8_3_u16 source = {lookup, context, retain, release};"
+    , "    assert(readArrayValue(source) == 18 && context->references == 1);"
+    , "    SBVArrayOutput_2_u8_3_u16 owned = retainArray(source);"
+    , "    release(context);"
+    , "    SBVArrayOutput_2_u8_3_u16 retained = sbv_array_output_retain_2_u8_3_u16(owned);"
+    , "    sbv_array_output_release_2_u8_3_u16(&owned);"
+    , "    assert(readArrayValue(sbv_array_output_as_input_2_u8_3_u16(retained)) == 18);"
+    , "    assert(sbv_array_output_read_2_u8_3_u16(retained, 0) == 42);"
+    , "    sbv_array_output_release_2_u8_3_u16(&retained); assert(live_contexts == 0);"
+    , "    mpz_set_ui(input, i); exactOutputs(input, first, second);"
+    , "    assert(mpz_cmp_ui(first, i + 1) == 0 && mpz_cmp_ui(second, i + 2) == 0);"
+    , "  }"
+    , "  mpz_clears(input, first, second, NULL); return 0;"
+    , "}"
+    ]
+
+-- | Compile and execute an independent C caller against a generated library.
+-- Use its Makefile so compiler overrides, dependencies, and runtime link flags
+-- match those used for the generated translation units.
+compileAndRunCaller :: FilePath -> String -> String -> Assertion
+compileAndRunCaller dir libraryName source = do
+  writeFile (dir </> "caller.c") source
+  writeFile (dir </> "caller.mk") $ unlines
+    ["caller: caller.c " ++ libraryName ++ ".h " ++ libraryName ++ ".a"
+    , "\t${CC} ${CCFLAGS} ${GMP_CFLAGS} caller.c " ++ libraryName ++ ".a ${LDFLAGS} -o $@"
+    ]
+  (makeExit, _, makeError) <- readProcessWithExitCode "make" ["-C", dir, "CCFLAGS=-std=c11 -Wall -Werror -O2", "caller"] ""
+  assertEqual makeError ExitSuccess makeExit
+  (runExit, _, runError) <- readProcessWithExitCode (dir </> "caller") [] ""
+  assertEqual runError ExitSuccess runExit
 
 -- | Library calls share the standalone fail-fast contract. Exercise both
 -- executable hard constraints and explicit assertions in separate processes.

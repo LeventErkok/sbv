@@ -29,6 +29,8 @@
     and `TREE` can coexist, including through collections and repeated library components.
     Array type/helper names now length-prefix their key and value tags; regenerate headers
     and update callers using the previous generated array names.
+    The C ownership contract distinguishes initialized scalar GMP outputs from fresh aggregate
+    outputs, and documents borrowed array reads, callback lifetimes, and non-overlapping output storage.
 
   * Functions defined with `smtFunction` and its variants can now be first encountered after entering
     query mode. SBV sends their definitions and dependencies incrementally, while retaining termination
