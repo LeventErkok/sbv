@@ -140,7 +140,9 @@ tests = testGroup "CodeGeneration.CgTests"
   , testCase "compile collection defined SBV functions" collectionDefinedSBVFunctions
   , testCase "compile persistent-array defined SBV functions" persistentArrayDefinedSBVFunctions
   , testCase "compile owned-ADT defined SBV functions" ownedADTDefinedSBVFunctions
-  , testCase "reject recursive defined SBV functions" recursiveDefinedSBVFunction
+  , testCase "compile recursive defined SBV functions" recursiveDefinedSBVFunctions
+  , testCase "compile recursive defined SBV functions in a library" recursiveDefinedSBVFunctionLibrary
+  , testCase "reject deferred recursive function storage" recursiveDefinedSBVFunctionDiagnostics
   , testCase "compile explicit hard constraints" explicitHardConstraints
   , testCase "reject solver-only constraint features" unsupportedConstraintFeatures
   , testCase "reject solver-only expression operations" unsupportedExpressionFeatures
@@ -1825,23 +1827,134 @@ ownedADTDefinedSBVFunctions = withSystemTempDirectory "sbv-owned-adt-defined-fun
   assertBool "Expected private owned ADT result storage to be released"
              ("sbv_function_result_ctx_end(&__sbv_function_result_ctx);" `isInfixOf` sourceText)
 
--- | Check that allowing acyclic composition does not admit recursive
--- 'smtFunction' components, whose eager expression DAGs require control-flow
--- reconstruction before they can be lowered safely.
-recursiveDefinedSBVFunction :: Assertion
-recursiveDefinedSBVFunction = do
-  recursiveResult <- try (do
-    (_, _, bundle) <- compileToC' "recursiveDefinedSBVFunction" $ do
+-- | Exercise self-recursion, mutually recursive Boolean short-circuiting, and
+-- an owned recursive list result. Each base case must avoid evaluating the
+-- recursive branch in the generated C program.
+recursiveDefinedSBVFunctions :: Assertion
+recursiveDefinedSBVFunctions = withSystemTempDirectory "sbv-recursive-defined-functions" $ \dir -> do
+  let program = do
+        cgOverwriteFiles True
+        cgSetDriverValues [5]
+        input <- cgInput "input" :: SBVCodeGen SWord8
+        let countdown :: SWord8 -> SWord8
+            countdown = smtFunctionNoTermination "C recursive countdown" $ \value ->
+                          ite (value .== 0) 0 (1 + countdown (value - 1))
+
+            isEven :: SWord8 -> SBool
+            isEven = smtFunctionNoTermination "C mutually recursive even" $ \value ->
+                       value .== 0 .|| isOdd (value - 1)
+
+            isOdd :: SWord8 -> SBool
+            isOdd = smtFunctionNoTermination "C mutually recursive odd" $ \value ->
+                      value ./= 0 .&& isEven (value - 1)
+
+            implicationChain :: SWord8 -> SBool
+            implicationChain = smtFunctionNoTermination "C recursive implication" $ \value ->
+                                 value ./= 0 .=> implicationChain (value - 1)
+
+            countdownList :: SWord8 -> SList Word8
+            countdownList = smtFunctionNoTermination "C recursive list" $ \value ->
+                              ite (value .== 0)
+                                  (literal [] :: SList Word8)
+                                  (value SL..: countdownList (value - 1))
+
+            factorial :: SInteger -> SInteger
+            factorial = smtFunctionNoTermination "C recursive exact factorial" $ \value ->
+                          ite (value .<= 1) 1 (value * factorial (value - 1))
+
+            mcCarthy91 :: SInteger -> SInteger
+            mcCarthy91 = smtFunctionNoTermination "C nested recursive McCarthy 91" $ \value ->
+                           ite (value .> 100) (value - 10) (mcCarthy91 (mcCarthy91 (value + 11)))
+        cgOutput "steps"       (countdown input)
+        cgOutput "even"        (isEven input)
+        cgOutput "odd"         (isOdd input)
+        cgOutput "implication" (implicationChain input)
+        cgOutput "factorial"   (factorial 5)
+        cgOutput "mcCarthy91"  (mcCarthy91 87)
+        cgReturn (countdownList input)
+
+  stdoutText <- compileProgramAndRunGenerated dir "recursiveDefinedSBVFunctions" program
+  sourceText <- readFile (dir </> "recursiveDefinedSBVFunctions.c")
+  mapM_ (\fragment -> assertBool ("Expected recursive defined-function output to contain " ++ fragment ++ ", received:\n" ++ stdoutText)
+                                 (fragment `isInfixOf` stdoutText))
+    [ ") =[5, 4, 3, 2, 1]"
+    , "steps = 5"
+    , "even = 0"
+    , "odd = 1"
+    , "implication = 1"
+    , "factorial =120"
+    , "mcCarthy91 =91"
+    ]
+  assertBool ("Expected recursive calls to remain inside generated control flow, received:\n" ++ sourceText)
+             ("if(" `isInfixOf` sourceText
+           && length (filter ("/* Uninterpreted function */ sbv_function_" `isInfixOf`) (lines sourceText)) >= 4)
+
+-- | Exercise recursive private functions in independent translation units of
+-- a generated static library.
+recursiveDefinedSBVFunctionLibrary :: Assertion
+recursiveDefinedSBVFunctionLibrary = withSystemTempDirectory "sbv-recursive-defined-function-library" $ \dir -> do
+  let component :: Word16 -> SBVCodeGen ()
+      component offset = do
+        cgOverwriteFiles True
+        let sumTo :: SWord8 -> SWord16
+            sumTo = smtFunctionNoTermination "C library recursive sum" $ \value ->
+                      ite (value .== 0) 0 (sFromIntegral value + sumTo (value - 1))
+        cgReturn (literal offset + sumTo 4)
+
+  (_, cfg, bundle) <- compileToCLib' "recursiveDefinedSBVFunctionLibrary"
+    [ ("firstRecursive",  component 10)
+    , ("secondRecursive", component 20)
+    ]
+  renderCgPgmBundle (Just dir) (cfg, bundle)
+  stdoutText <- compileAndRunGenerated dir "recursiveDefinedSBVFunctionLibrary"
+  mapM_ (\fragment -> assertBool ("Expected recursive library output to contain " ++ fragment ++ ", received:\n" ++ stdoutText)
+                                 (fragment `isInfixOf` stdoutText))
+    [ "firstRecursive() = 0x0014U"
+    , "secondRecursive() = 0x001eU"
+    ]
+
+-- | Keep recursive arrays and lambda-local tables behind focused diagnostics
+-- until their automatic-storage lifetimes can be reconstructed safely.
+recursiveDefinedSBVFunctionDiagnostics :: Assertion
+recursiveDefinedSBVFunctionDiagnostics = do
+  arrayResult <- try (do
+    (_, _, bundle) <- compileToC' "recursiveArrayFunction" $ do
       input <- cgInput "input" :: SBVCodeGen SWord8
-      let countdown :: SWord8 -> SWord8
-          countdown = smtFunctionNoTermination "C recursive countdown" $ \value ->
-                        ite (value .== 0) 0 (1 + countdown (value - 1))
-      cgReturn (countdown input)
+      let build :: SWord8 -> SArray Word8 Word8
+          build = smtFunctionNoTermination "C recursive array" $ \value ->
+                    ite (value .== 0) (constArray 0) (writeArray (build (value - 1)) value value)
+      cgReturn (readArray (build input) input)
     evaluate (length (show bundle))) :: IO (Either ErrorCall Int)
-  case recursiveResult of
-    Left exception -> assertBool ("Expected a recursive-function diagnostic, received:\n" ++ displayException exception)
-                                 ("Recursive or mutually recursive defined functions" `isInfixOf` displayException exception)
-    Right _        -> assertBool "Expected C generation to reject a recursive defined function" False
+  case arrayResult of
+    Left exception -> assertBool ("Expected a recursive-array diagnostic, received:\n" ++ displayException exception)
+                                 ("Arrays in recursive defined function" `isInfixOf` displayException exception)
+    Right _        -> assertBool "Expected C generation to reject an array-valued recursive function" False
+
+  tableResult <- try (do
+    (_, _, bundle) <- compileToC' "recursiveTableFunction" $ do
+      input <- cgInput "input" :: SBVCodeGen SWord8
+      let count :: SWord8 -> SWord8
+          count = smtFunctionNoTermination "C recursive table" $ \value ->
+                    ite (value .== 0) 0 (select [1, 2] 3 value + count (value - 1))
+      cgReturn (count input)
+    evaluate (length (show bundle))) :: IO (Either ErrorCall Int)
+  case tableResult of
+    Left exception -> assertBool ("Expected a recursive-table diagnostic, received:\n" ++ displayException exception)
+                                 ("Tables in recursive defined function" `isInfixOf` displayException exception)
+    Right _        -> assertBool "Expected C generation to reject a table-backed recursive function" False
+
+  adtResult <- try (do
+    (_, _, bundle) <- compileToC' "recursiveADTFunction" $ do
+      input <- cgInput "input" :: SBVCodeGen SWord8
+      let build :: SWord8 -> SCodeGenTree
+          build = smtFunctionNoTermination "C recursive ADT function" $ \value ->
+                    ite (value .== 0) (sCGLeaf 0) (sCGNode (build (value - 1)) (sCGLeaf value))
+      cgReturn (build input)
+    evaluate (length (show bundle))) :: IO (Either ErrorCall Int)
+  case adtResult of
+    Left exception -> assertBool ("Expected a recursive-ADT function diagnostic, received:\n" ++ displayException exception)
+                                 ("Recursive ADTs in recursive defined function" `isInfixOf` displayException exception)
+    Right _        -> assertBool "Expected C generation to reject a recursive-ADT recursive function" False
 
 -- | Exercise unnamed and named hard constraints as generated-C precondition
 -- checks, including a Boolean input used only by a constraint and an escaped

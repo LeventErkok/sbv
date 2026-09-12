@@ -304,7 +304,8 @@ listExpr cfg op svs resultSV args
       (Equal _                   , [a, b]   )                    -> lower $ call (helper "equal") [a, b]
       (NotEqual                  , as       )                    -> lower $ distinctLists as
       (SeqOp (SeqLen kind)       , [a]      ) | kind /= KChar   -> lowerInteger False $ call (helperFor kind "length") [a]
-      (SeqOp (SeqConcat kind)    , as       ) | kind /= KChar   -> lower $ foldLists kind as
+      (SeqOp (SeqConcat _)       , as       )
+        | KList elementKind <- resultKind                       -> lower $ foldLists elementKind as
       (SeqOp (SeqNth kind)       , [a, i]   ) | kind /= KChar   -> loadArray $ indexed kind "nth" [a] i
       (SeqOp (SeqUnit kind)      , [a]      ) | kind /= KChar   -> lower $ call (helperFor kind "unit") [text "&__sbv_list_ctx", arrayStoredValue kind a]
       (SeqOp (SeqSubseq kind)    , [a, i, n]) | kind /= KChar   -> lower $ indexed2 kind "substring" a i n

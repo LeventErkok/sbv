@@ -33,6 +33,7 @@ module Data.SBV.Compilers.C.ADT
   , adtExpr
   , adtUsesExact
   , adtNeedsOwnership
+  , adtIsRecursive
   , adtDriverValue
   , adtPrint
   , adtPrintHelpers

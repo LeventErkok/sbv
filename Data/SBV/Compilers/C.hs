@@ -26,9 +26,9 @@
 --   algebraic datatypes, including recursive datatypes.
 -- * Finite lookup tables and persistent arrays created from constants,
 --   writes, retained lambdas, or caller-provided lookup callbacks.
--- * Acyclic first-order @smtFunction@ definitions, hard constraints as
---   executable preconditions, scalar and grouped results, and multi-function
---   static libraries.
+-- * First-order @smtFunction@ definitions, including recursive and mutually
+--   recursive groups, hard constraints as executable preconditions, scalar
+--   and grouped results, and multi-function static libraries.
 --
 -- Numeric lowering includes exact-width arithmetic, comparisons, shifts,
 -- rotations, joins and extractions, overflow predicates, conversions,
@@ -42,8 +42,9 @@
 -- Quantifiers, special solver relations, uninterpreted sorts,
 -- regular-expression language operations, soft constraints, and general
 -- extensional array equality require solver semantics and are rejected with
--- focused diagnostics. Recursive @smtFunction@ definitions, nested lambdas,
--- and higher-order function values are retained for later compiler stages.
+-- focused diagnostics. Recursive functions containing persistent arrays,
+-- recursive algebraic datatypes, or local tables, nested lambdas, and
+-- higher-order function values are retained for later compiler stages.
 --
 -- Import "Data.SBV.Compilers.C.Legacy" to retain the previous compiler while
 -- migrating code that encounters one of these boundaries.

@@ -22,7 +22,7 @@ import qualified Data.Foldable         as F (toList)
 import qualified Data.Graph            as DG
 import Data.List                       (intercalate, intersperse, nub, nubBy)
 import Data.Maybe                      (fromJust, fromMaybe, isJust)
-import qualified Data.Set              as Set (Set, empty, fromList, insert, map, member, null, singleton, toList, union, unions)
+import qualified Data.Set              as Set (Set, empty, fromList, insert, intersection, map, member, null, singleton, toList, union, unions)
 import qualified Data.Text             as T
 import qualified Data.Text.Encoding    as TE
 import Numeric                         (showOct)
@@ -1042,8 +1042,6 @@ genCProg cfg adts lists sets fn proto
   = error "SBV->C: Cannot compile in the presence of special relations."
   | not (null unstructuredDefinitions)
   = error $ "SBV->C: Cannot compile SMT-text-only function definitions: " ++ intercalate ", " unstructuredDefinitions
-  | not (null recursiveDefinitions)
-  = tbd $ "Recursive or mutually recursive defined functions: " ++ intercalate ", " recursiveDefinitions
   | not (null softConstraints)
   = tbd "Soft constraints"
   | not (null unsupportedConstraintAttributes)
@@ -1154,7 +1152,7 @@ genCProg cfg adts lists sets fn proto
                                 [ (functionName, functionName, filter (`Set.member` definitionNames) dependencies)
                                 | (functionName, (SMTDef _ dependencies _ _, _)) <- definitions
                                 ]
-       recursiveDefinitions = concat [functionGroup | DG.CyclicSCC functionGroup <- definitionComponents]
+       recursiveDefinitionNames = Set.fromList (concat [functionGroup | DG.CyclicSCC functionGroup <- definitionComponents])
 
        arrayLambdaDefinitions = [ (sv, lambdaInfo)
                                 | (sv, SBVApp (ArrayInit (Right lambdaDef)) []) <- assignments
@@ -1170,9 +1168,12 @@ genCProg cfg adts lists sets fn proto
                              | (functionName, resultKind, _, _, lambdaInfo) <- structuredDefinitions
                              ]
 
-       generatedFunctions  = [ ppDefinedFunction cfg adts functionNames functionName resultKind functionType lambdaInfo
-                             | (functionName, resultKind, _, functionType, lambdaInfo) <- structuredDefinitions
-                             ]
+       generatedFunctions =
+         [ ppDefinedFunction cfg adts functionNames
+                             (functionName `Set.member` recursiveDefinitionNames)
+                             functionName resultKind functionType lambdaInfo
+         | (functionName, resultKind, _, functionType, lambdaInfo) <- structuredDefinitions
+         ]
        functionDocs        = map fst generatedFunctions
 
        functionResultKinds = nub $
@@ -1449,7 +1450,7 @@ genCProg cfg adts lists sets fn proto
 
        genAsgn :: (SV, SBVExpr) -> (Int, Doc, Set.Set CRequirement)
        genAsgn (sv, n) = (cLocation consts sv, doc, needed)
-         where (doc, needed) = ppExpr cfg adts functionNames consts n sv (declSV typeWidth sv) (declSVNoConst typeWidth sv)
+         where (doc, needed) = ppExpr cfg adts functionNames consts n sv (declSV typeWidth sv) (declSVNoConst typeWidth sv) True
 
        -- merge tables intermixed with assignments and assertions, paying attention to putting tables as
        -- early as possible and tables right after.. Note that the assignment list (second argument) is sorted on its order
@@ -1714,11 +1715,20 @@ definedFunctionSignature originalName resultKind parameters
            text "sbv_function_ctx *const __sbv_parent_function_ctx"
          : [text "const" <+> text (showCType parameter) <+> text (show parameter) | (_, parameter) <- parameters]
 
--- | Lower one non-recursive, first-order SBV function definition from its
--- retained expression DAG. Nested lambdas and higher-order callbacks are
--- handled by a later lowering stage.
-ppDefinedFunction :: CgConfig -> [Kind] -> [(T.Text, String)] -> String -> Kind -> SBVType -> LambdaInfo -> (Doc, Set.Set CRequirement)
-ppDefinedFunction cfg adts functionNames originalName declaredResultKind (SBVType signatureKinds)
+-- | Lower one first-order SBV function definition from its retained expression
+-- DAG. Recursive definitions use demand-driven control flow so calls protected
+-- by conditionals and short-circuiting Boolean operations remain protected in
+-- C. Nested lambdas and higher-order callbacks are handled by a later stage.
+ppDefinedFunction :: CgConfig
+                  -> [Kind]
+                  -> [(T.Text, String)]
+                  -> Bool
+                  -> String
+                  -> Kind
+                  -> SBVType
+                  -> LambdaInfo
+                  -> (Doc, Set.Set CRequirement)
+ppDefinedFunction cfg adts functionNames isRecursive originalName declaredResultKind (SBVType signatureKinds)
                   LambdaInfo{ liAssignments = functionProgram
                             , liParams      = parameters
                             , liOutput      = functionOutput
@@ -1737,6 +1747,12 @@ ppDefinedFunction cfg adts functionNames originalName declaredResultKind (SBVTyp
   = die $ "Output-kind mismatch in defined function " ++ show originalName
   | not (null nestedLambdas)
   = tbd $ "Nested lambdas in defined function " ++ show originalName
+  | isRecursive && not (null tables)
+  = tbd $ "Tables in recursive defined function " ++ show originalName
+  | isRecursive && any isArray expandedFunctionKinds
+  = tbd $ "Arrays in recursive defined function " ++ show originalName
+  | isRecursive && any recursiveADTKind expandedFunctionKinds
+  = tbd $ "Recursive ADTs in recursive defined function " ++ show originalName
   | not (null unsupportedManagedKinds)
   = tbd $ "Managed values in defined function " ++ show originalName ++ ": " ++ intercalate ", " (map show unsupportedManagedKinds)
   | True
@@ -1763,15 +1779,21 @@ ppDefinedFunction cfg adts functionNames originalName declaredResultKind (SBVTyp
          | isConcreteADTKind kind  = False
          | True                    = valueNeedsOwnership cfg kind
 
+       recursiveADTKind kind
+         | isConcreteADTKind kind = adtIsRecursive adts (resolveADTReferences adts kind)
+         | True                   = False
+
        generatedTables = map (ppTable cfg False functionConsts) tables
 
        generatedAssignments = [(cLocation functionConsts sv, doc, needed)
                               | (sv, expression) <- assignments
                               , let (doc, needed) = ppExpr cfg adts functionNames functionConsts expression sv
-                                                         (declSV typeWidth sv) (declSVNoConst typeWidth sv)
+                                                         (declSV typeWidth sv) (declSVNoConst typeWidth sv) True
                               ]
 
        assignmentDocs = [(location, doc) | (location, doc, _) <- generatedAssignments]
+
+       (scheduledAssignments, scheduledRequirements) = schedule functionOutput
 
        functionRequirements = Set.unions
          [ Set.fromList $ [CRequiresGMP             | any (isExactGMPKind cfg) expandedFunctionKinds]
@@ -1780,7 +1802,8 @@ ppDefinedFunction cfg adts functionNames originalName declaredResultKind (SBVTyp
                        ++ [CRequiresSets            | any isSet expandedFunctionKinds]
                        ++ [CRequiresArrays          | any isArray expandedFunctionKinds]
                        ++ [CRequiresFunctionResults | definedFunctionResultNeedsClone cfg adts resultKind]
-         , Set.unions [needed | (_, _, needed) <- generatedAssignments]
+         , if isRecursive then scheduledRequirements
+                          else Set.unions [needed | (_, _, needed) <- generatedAssignments]
          , Set.unions [operationRequirements cfg (op, kindOf sv) | (sv, SBVApp op _) <- assignments]
          ]
 
@@ -1832,13 +1855,97 @@ ppDefinedFunction cfg adts functionNames originalName declaredResultKind (SBVTyp
          = definedFunctionSignature originalName resultKind parameters
           $$ text "{"
           $$ nest 2 (   contextSetup
-                     $$ vcat (map snd (mergeLocated generatedTables assignmentDocs))
+                     $$ functionAssignments
                      $$ text "const" <+> text functionResultType <+> text "__sbv_function_result =" <+> functionResult P.<> semi
                      $$ contextCommit
                      $$ text "return __sbv_function_result;"
                     )
           $$ text "}"
           $$ text ""
+
+       functionAssignments
+         | isRecursive
+         =  vcat [typ <+> var P.<> semi
+                 | (sv, _) <- assignments
+                 , sv `Set.member` reachableValues
+                 , let (typ, var) = declSVNoConst typeWidth sv
+                 ]
+         $$ scheduledAssignments
+         | True
+         = vcat (map snd (mergeLocated generatedTables assignmentDocs))
+
+       -- Recursive calls must remain under the control-flow nodes that guard
+       -- them. Declare their reachable values once, then initialize each value
+       -- only along paths that demand it.
+       reachableValues = reach Set.empty functionOutput
+
+       reach visited sv
+         | sv `Set.member` visited
+         = visited
+         | Just (SBVApp op arguments) <- lookup sv assignments
+         = foldl reach (Set.insert sv visited) (operationDependencies op arguments)
+         | True
+         = visited
+
+       schedule resultValue = let (_, docs, needed) = emit initialValues resultValue
+                              in (docs, needed)
+
+       initialValues = Set.fromList (map fst functionConsts ++ map snd parameters)
+
+       emit available sv
+         | sv `Set.member` available
+         = (available, empty, Set.empty)
+         | Just expression@(SBVApp op arguments) <- lookup sv assignments
+         = case (op, arguments) of
+             (Ite, [condition, trueValue, falseValue])
+               -> conditional available sv condition trueValue falseValue
+             (And, [left, right])
+               | kindOf sv == KBool
+               -> conditional available sv left right falseSV
+             (Or, [left, right])
+               | kindOf sv == KBool
+               -> conditional available sv left trueSV right
+             (Implies, [left, right])
+               | kindOf sv == KBool
+               -> conditional available sv left right trueSV
+             _ -> let (withArguments, argumentDocs, argumentRequirements) = emitMany available
+                                                                                            (operationDependencies op arguments)
+                      (assignmentDoc, assignmentRequirements) = ppExpr cfg adts functionNames functionConsts
+                                                                       expression sv (text (show sv))
+                                                                       (declSVNoConst typeWidth sv) False
+                  in ( Set.insert sv withArguments
+                     , argumentDocs $$ assignmentDoc
+                     , Set.union argumentRequirements assignmentRequirements
+                     )
+         | True
+         = die $ "Missing assignment while lowering recursive defined function " ++ show originalName ++ ": " ++ show sv
+
+       emitMany available [] = (available, empty, Set.empty)
+       emitMany available (sv:svs) =
+         let (withValue, valueDocs, valueRequirements) = emit available sv
+             (withRest, restDocs, restRequirements) = emitMany withValue svs
+         in (withRest, valueDocs $$ restDocs, Set.union valueRequirements restRequirements)
+
+       conditional available result condition trueValue falseValue =
+         let (withCondition, conditionDocs, conditionRequirements) = emit available condition
+             (withTrue, trueDocs, trueRequirements) = emit withCondition trueValue
+             (withFalse, falseDocs, falseRequirements) = emit withCondition falseValue
+             branch label branchDocs branchValue = text label
+                                                $$ text "{"
+                                                $$ nest 2 (branchDocs $$ assign branchValue)
+                                                $$ text "}"
+             assign value = text (show result) <+> text "=" <+> showSV cfg functionConsts value P.<> semi
+             docs = conditionDocs
+                 $$ text "if" P.<> parens (showSV cfg functionConsts condition)
+                 $$ branch "" trueDocs trueValue
+                 $$ branch "else" falseDocs falseValue
+             needed = Set.unions [conditionRequirements, trueRequirements, falseRequirements]
+         in (Set.insert result (Set.intersection withTrue withFalse), docs, needed)
+
+       operationDependencies op arguments = arguments ++ case op of
+         LkUp _ index defaultValue  -> [index, defaultValue]
+         IEEEFP (FP_Cast _ _ rmSV) -> [rmSV]
+         _                           -> []
 
        functionResult
          | isArray resultKind
@@ -1891,7 +1998,7 @@ ppArrayLambda cfg adts functionNames arraySV LambdaInfo{ liAssignments = lambdaP
        generatedAssignments = [(cLocation lambdaConsts sv, doc, needed)
                               | (sv, expression) <- assignments
                               , let (doc, needed) = ppExpr cfg adts functionNames lambdaConsts expression sv
-                                                         (declSV typeWidth sv) (declSVNoConst typeWidth sv)
+                                                         (declSV typeWidth sv) (declSVNoConst typeWidth sv) True
                               ]
 
        assignmentDocs = [(location, doc) | (location, doc, _) <- generatedAssignments]
@@ -2091,8 +2198,17 @@ handleIEEE w consts as var = cvt w
 
 -- | Lower and render one symbolic assignment together with the facilities it
 -- requires from the generated C translation unit.
-ppExpr :: CgConfig -> [Kind] -> [(T.Text, String)] -> [(SV, CV)] -> SBVExpr -> SV -> Doc -> (Doc, Doc) -> (Doc, Set.Set CRequirement)
-ppExpr cfg adts functionNames consts (SBVApp op opArgs) resultSV lhs (typ, var)
+ppExpr :: CgConfig
+       -> [Kind]
+       -> [(T.Text, String)]
+       -> [(SV, CV)]
+       -> SBVExpr
+       -> SV
+       -> Doc
+       -> (Doc, Doc)
+       -> Bool
+       -> (Doc, Set.Set CRequirement)
+ppExpr cfg adts functionNames consts (SBVApp op opArgs) resultSV lhs (typ, var) declareResult
   = ( vcat $ loweringSetup selected
           ++ [assignment]
           ++ loweringCleanup selected
@@ -2128,8 +2244,10 @@ ppExpr cfg adts functionNames consts (SBVApp op opArgs) resultSV lhs (typ, var)
         rhs = loweringExpression selected
 
         assignment
-          | doNotAssign op = typ <+> var P.<> semi <+> rhs P.<> semi
-          | True           = lhs <+> text "=" <+> rhs P.<> semi
+          | doNotAssign op
+          = (if declareResult then typ <+> var P.<> semi else empty) <+> rhs P.<> semi
+          | True
+          = lhs <+> text "=" <+> rhs P.<> semi
 
         rtc = cgRTC cfg
 
