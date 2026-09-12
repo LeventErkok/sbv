@@ -36,6 +36,8 @@
     Floating conversions honor mapped integer widths and float/double real mappings, including
     explicit rounding and flooring back to integers. Unsupported long-double GMP/LibBF bridges
     fail during generation; native long-double arithmetic and native casts remain available.
+    Casts between mapped integers and native/arbitrary-width bit-vectors preserve low bits
+    and source signedness, including one-bit destinations and sign extension into wide values.
 
   * Functions defined with `smtFunction` and its variants can now be first encountered after entering
     query mode. SBV sends their definitions and dependencies incrementally, while retaining termination

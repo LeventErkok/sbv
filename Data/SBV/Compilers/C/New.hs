@@ -2429,6 +2429,7 @@ ppExpr cfg adts functionNames structuredLambdaNames consts (SBVApp op opArgs) re
           , adtExpr cfg adts op opArgs resultSV renderedArgs
           , tupleExpr cfg op opArgs resultSV renderedArgs
           , gmpExpr cfg op opArgs (kindOf resultSV) renderedArgs
+          , bitVectorCastExpr (cgInteger cfg) op opArgs (kindOf resultSV) renderedArgs
           , arbitraryFPExpr cfg consts op opArgs (kindOf resultSV) renderedArgs
           , nativeFPExpr consts op opArgs (kindOf resultSV) renderedArgs
           , nativeBVExpr (cgInteger cfg) op opArgs (kindOf resultSV) renderedArgs

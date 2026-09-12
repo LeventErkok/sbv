@@ -18,6 +18,7 @@ module Data.SBV.Compilers.C.BV
   , bitVectorRuntime
   , wideBVConst
   , wideBVExpr
+  , bitVectorCastExpr
   , nativeBVExpr
   , mappedIntegerKind
   , nativeBVOverflowExpr
@@ -125,7 +126,9 @@ bitVectorRuntime integerWidth ks asgns
          ZeroExtend _                   -> [SpecialConvert False (kindOf (headArg "ZeroExtend" args)) (kindOf sv)]
          SignExtend _                   -> [SpecialConvert True  (kindOf (headArg "SignExtend" args)) (kindOf sv)]
          KindCast fr to
-           | isBounded fr && isBounded to -> [SpecialConvert (hasSign fr) fr to]
+           | let source = mappedIntegerKind integerWidth fr
+           , let target = mappedIntegerKind integerWidth to
+           , isBounded source && isBounded target -> [SpecialConvert (hasSign source) source target]
          IEEEFP (FP_Reinterpret fr to)
            | isBounded fr && isBounded to -> [SpecialConvert False fr to]
          _                              -> []
@@ -200,7 +203,6 @@ wideBVExpr op svs resultKind args
       (Join                          , [a, b]   , [x, y]) -> namedCall (joinName (kindOf x) (kindOf y) resultKind) [a, b]
       (ZeroExtend _                  , [a]      , x:_)    -> namedCall (convertName False (kindOf x) resultKind) [a]
       (SignExtend _                  , [a]      , x:_)    -> namedCall (convertName True  (kindOf x) resultKind) [a]
-      (KindCast fr to                , [a]      , _)      -> namedCall (convertName (hasSign fr) fr to) [a]
       (OverflowOp ov                 , as       , x:_)    -> argCall x (overflowName ov) as
       (IEEEFP (FP_Reinterpret fr to) , [a]      , _)
           | isBounded fr || isBounded to                  -> namedCall (convertName False fr to) [a]
@@ -209,6 +211,21 @@ wideBVExpr op svs resultKind args
                                                                   ++ " and result kind " ++ show resultKind
  where call suffix       = namedCall (prefix resultKind ++ "_" ++ suffix)
        argCall sv suffix = namedCall (prefix (kindOf sv) ++ "_" ++ suffix)
+
+-- | Lower casts between native or limb-backed bit-vectors, including explicit
+-- native integer mappings. Resolve only the representations: the source's
+-- signedness controls extension, and narrowing preserves the target's low bits.
+bitVectorCastExpr :: Maybe Int -> Op -> [SV] -> Kind -> [Doc] -> Maybe CLowering
+bitVectorCastExpr integerWidth (KindCast fr to) [source] resultKind [value]
+  | fr == kindOf source
+  , to == resultKind
+  , isBounded from
+  , isBounded target
+  = Just $ expressionLowering CByValue [CRequiresWideBV | isWideBV from || isWideBV target]
+         $ namedCall (convertName (hasSign from) from target) [value]
+ where from   = mappedIntegerKind integerWidth fr
+       target = mappedIntegerKind integerWidth to
+bitVectorCastExpr _ _ _ _ _ = Nothing
 
 -- | Lower native-width arithmetic, conversion, and bit manipulation through
 -- exact bit-vector helpers. This avoids C's signed-overflow, promotion,
@@ -234,12 +251,6 @@ nativeBVExpr integerWidth op svs resultKind args = case (op, svs, args) of
     | isNativeBV source
     , isNativeBVKind resultKind
     -> lower $ namedCall (convertName True (kindOf source) resultKind) [renderedSource]
-  (KindCast fr to, [source]   , [renderedSource])
-    | isNativeBV source
-    , isNativeBVKind resultKind
-    , fr == kindOf source
-    , to == resultKind
-    -> lower $ namedCall (convertName (hasSign fr) fr to) [renderedSource]
   (Plus            , [left, right]   , [renderedLeft, renderedRight])
     | nativeBinary left right
     -> arithmetic SpecialAdd [renderedLeft, renderedRight]

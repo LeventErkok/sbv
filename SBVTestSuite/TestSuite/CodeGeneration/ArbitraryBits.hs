@@ -19,6 +19,7 @@ module TestSuite.CodeGeneration.ArbitraryBits (tests) where
 import Data.List                 (isInfixOf)
 import Data.Proxy                (Proxy(..))
 import Numeric                   (showHex)
+import System.Environment        (lookupEnv)
 import System.Exit               (ExitCode(..))
 import System.FilePath           ((</>))
 import System.IO.Temp            (withSystemTempDirectory)
@@ -42,6 +43,7 @@ tests = testGroup "CodeGeneration.ArbitraryBits"
   , testCase "compile and execute one-bit overflow predicates" oneBitOverflow
   , testCase "compile and execute exact native bit operations" nativeBitOperations
   , testCase "compile and execute exact native arithmetic" nativeArithmetic
+  , testCase "convert mapped integers and arbitrary-width bit-vectors" mappedIntegerBitVectorCasts
   , testCase "compile and execute checked wide table lookup" wideLookup
   , testCase "compile and execute wide array keys and values" wideArray
   , testCase "compile and execute a wide callback-backed array" wideArrayInput
@@ -49,6 +51,37 @@ tests = testGroup "CodeGeneration.ArbitraryBits"
   , testCase "compile and execute a wide structured lambda table" wideLambdaTable
   , testCase "compile and execute arithmetic boundary cases" arithmeticBoundaries
   ]
+
+-- | Mapped integers sign-extend from their selected representation and reduce
+-- incoming bit-vectors modulo that width. One-bit targets must retain bit 0,
+-- not C's nonzero-to-Boolean interpretation.
+mappedIntegerBitVectorCasts :: Assertion
+mappedIntegerBitVectorCasts = mapM_ check [(width, sample) | width <- [8, 16, 32, 64], sample <- [-2, negate (2 ^ (width - 1)), 2 ^ (width - 1) - 1]]
+ where check (width, sample) = withSystemTempDirectory "sbv-mapped-integer-bit-vectors" $ \dir -> do
+         let signedSample   = negate (2 ^ (670 :: Int)) - 129
+             unsignedSample = 2 ^ (672 :: Int) + 131
+             program = do
+               cgOverwriteFiles True
+               cgIntegerSize width
+               cgSetDriverValues [sample, signedSample, unsignedSample, 2 ^ (64 :: Int) - 1, -3]
+               value    <- cgInput "value"         :: SBVCodeGen SInteger
+               signed   <- cgInput "signedValue"   :: SBVCodeGen (SInt 673)
+               unsigned <- cgInput "unsignedValue" :: SBVCodeGen (SWord 673)
+               native   <- cgInput "native"        :: SBVCodeGen SWord64
+               small    <- cgInput "small"         :: SBVCodeGen SInt8
+               cgReturn $ sAnd
+                 [ (sFromIntegral value :: SWord 1)     .== fromInteger sample
+                 , (sFromIntegral value :: SInt 7)      .== fromInteger sample
+                 , (sFromIntegral value :: SWord 9)     .== fromInteger sample
+                 , (sFromIntegral value :: SInt 65)     .== fromInteger sample
+                 , (sFromIntegral value :: SWord 673)   .== fromInteger sample
+                 , (sFromIntegral value :: SInt64)      .== fromInteger sample
+                 , (sFromIntegral signed :: SInteger)   .== fromInteger signedSample
+                 , (sFromIntegral unsigned :: SInteger) .== fromInteger unsignedSample
+                 , (sFromIntegral native :: SInteger)   .== -1
+                 , (sFromIntegral small :: SInteger)    .== -3
+                 ]
+         compileAndRun dir "mappedIntegerBitVectors" program ") = 1"
 
 -- | Exercise unsigned 673-bit arithmetic, shifts, rotation, and division.
 wide673 :: Assertion
@@ -394,6 +427,7 @@ arithmeticBoundaries = withSystemTempDirectory "sbv-arithmetic-boundaries" $ \di
        pack flags = sum (zipWith (\flag weight -> ite flag weight 0) flags [1, 2, 4, 8, 16, 32, 64])
 
 -- | Generate, compile, and execute a C program, checking its encoded result.
+-- @SBV_C_TEST_FLAGS@ supplies extra flags for optimization and sanitizer runs.
 compileAndRun :: FilePath -> String -> SBVCodeGen () -> String -> Assertion
 compileAndRun dir functionName program expected = do
   (_, cfg, bundle) <- compileToC' functionName program
@@ -402,7 +436,8 @@ compileAndRun dir functionName program expected = do
   let source = dir </> functionName ++ ".c"
       driver = dir </> functionName ++ "_driver.c"
       exe    = dir </> functionName ++ "_driver"
-  (ccExit, _, ccErr) <- readProcessWithExitCode "cc" ["-std=c11", "-Wall", "-Werror", source, driver, "-o", exe] ""
+  extraFlags <- maybe [] words <$> lookupEnv "SBV_C_TEST_FLAGS"
+  (ccExit, _, ccErr) <- readProcessWithExitCode "cc" (["-std=c11", "-Wall", "-Werror", source, driver, "-o", exe] ++ extraFlags) ""
   assertEqual ccErr ExitSuccess ccExit
 
   (runExit, out, runErr) <- readProcessWithExitCode exe [] ""
