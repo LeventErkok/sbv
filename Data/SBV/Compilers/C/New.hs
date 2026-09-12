@@ -48,7 +48,7 @@ import Data.SBV.Compilers.C.NonLinear
 import Data.SBV.Compilers.C.Set
 import Data.SBV.Compilers.C.Table
 import Data.SBV.Compilers.C.Text
-import qualified Data.SBV.Compilers.C.Types as CTypes (arrayStoredReleaseName, definedFunctionCName, elementCType, kindTag)
+import qualified Data.SBV.Compilers.C.Types as CTypes (arrayStoredReleaseName, constElementCType, definedFunctionCName, elementCType, kindTag)
 import Data.SBV.Compilers.C.Tuple
 import Data.SBV.Compilers.C.Value (managedValueClone, managedValueRelease, valueNeedsOwnership)
 import Data.SBV.Compilers.CodeGen
@@ -102,37 +102,44 @@ compileToCLib mbDirName libName comps = do (retVal, cfg, pgm) <- compileToCLib' 
 
 -- | Lower level version of 'compileToCLib', producing a t'CgPgmBundle'
 compileToCLib' :: String -> [(String, SBVCodeGen a)] -> IO ([a], CgConfig, CgPgmBundle)
-compileToCLib' libName comps = do resCfgBundles <- mapM (uncurry compileToC') comps
+compileToCLib' libName comps = do resCfgBundles <- mapM component comps
                                   let (finalCfg, finalPgm) = mergeToLib libName [(c, b) | (_, c, b) <- resCfgBundles]
                                   pure ([r | (r, _, _) <- resCfgBundles], finalCfg, finalPgm)
+ where component (componentName, program) = do
+         rands <- randoms <$> newStdGen
+         codeGen SBVToCLibraryComponent (defaultCgConfig { cgDriverVals = rands }) componentName program
 
 ---------------------------------------------------------------------------
 -- * Implementation
 ---------------------------------------------------------------------------
 
--- token for the target language
-data SBVToC = SBVToC
+-- | C targets differ only in whether optional build metadata must survive
+-- until library merging. The user's requested output configuration is retained.
+data SBVToC = SBVToC | SBVToCLibraryComponent
 
 instance CgTarget SBVToC where
-  targetName _ = "C"
-  translate  _ = cgen
+  targetName _                       = "C"
+  translate SBVToC                   = cgen False
+  translate SBVToCLibraryComponent   = cgen True
 
--- Unexpected input, or things we will probably never support
+-- | Report an unexpected compiler input or violated internal invariant.
 die :: String -> a
 die msg = error $ "SBV->C: Unexpected: " ++ msg
 
--- Unsupported features, or features TBD
+-- | Report an operation without an executable lowering.
 tbd :: String -> a
 tbd msg = error $ "SBV->C: Not yet supported: " ++ msg
 
-cgen :: CgConfig -> String -> CgState -> Result -> CgPgmBundle
-cgen cfg nm st sbvProg
+-- | Assemble the generated translation unit, public header, and optional
+-- driver and build instructions from the symbolic result.
+cgen :: Bool -> CgConfig -> String -> CgState -> Result -> CgPgmBundle
+cgen retainBuildMetadata cfg nm st sbvProg
    -- Force type declarations, the signature, and the main program so any
    -- type-conversion exceptions appear while constructing the bundle.
    = rnf (render extraTypes) `seq` rnf (render sig) `seq` rnf (render (vcat body)) `seq` result
   where result = CgPgmBundle bundleKind
                         $ filt [ ("Makefile"   , (CgMakefile flags          , [genMake (cgGenDriver cfg) nm nmd flags]))
-                               , (nm  ++ ".h"  , (CgHeader [extraTypes, sig] , [genHeader bundleKind nm [sig] extProtos extraTypes]))
+                               , (nm  ++ ".h"  , (CgHeader [extraTypes, sig, extProtos] , [genHeader bundleKind nm [sig] extProtos extraTypes]))
                                , (nmd ++ ".c"  , (CgDriver                  , driver))
                                , (nm  ++ ".c"  , (CgSource                  , body))
                                ]
@@ -178,27 +185,14 @@ cgen cfg nm st sbvProg
 
         hasRequirement requirement = requirement `Set.member` requirements
 
-        usesRoundingModeType =  any (isRoundingMode . kindOf) roundingModeValues
-                             || any tableUsesRoundingMode (resTables sbvProg)
-                             || any arrayUsesRoundingMode arrays
-                             || any (any isRoundingMode . expandKinds) tuples
-                             || any (any isRoundingMode . expandKinds) adts
-          where roundingModeValues =  concatMap cgValSVs (map snd ins ++ map snd outs ++ cgReturns st)
-                                   ++ roundingModeAssignments
-                roundingModeAssignments = case resAsgns sbvProg of
-                                            SBVPgm asgns -> [sv | (sv, _) <- F.toList asgns]
-                cgValSVs (CgAtomic sv) = [sv]
-                cgValSVs (CgArray svs) = svs
-                tableUsesRoundingMode ((_, indexKind, resultKind), _) = isRoundingMode indexKind || isRoundingMode resultKind
-                arrayUsesRoundingMode (KArray indexKind resultKind) = isRoundingMode indexKind || isRoundingMode resultKind
-                arrayUsesRoundingMode _                              = False
+        usesRoundingModeType = any (any isRoundingMode . expandKinds) kinds
 
         randVals = cgDriverVals cfg
         driver   = genDriver cfg adts randVals nm ins allOuts mbRet
 
         filt xs  = [c | c@(_, (k, _)) <- xs, need k]
           where need k | isCgDriver   k = cgGenDriver cfg
-                       | isCgMakefile k = cgGenMakefile cfg
+                       | isCgMakefile k = retainBuildMetadata || cgGenMakefile cfg
                        | True           = True
 
         nmd      = nm ++ "_driver"
@@ -420,6 +414,7 @@ mkConst _   cv@(CV KString       CString{})     = fromJust (textConst cv)
 mkConst _   cv@(CV KChar         CChar{})       = fromJust (textConst cv)
 mkConst _   cv                                 = die $ "mkConst: " ++ show cv
 
+-- | Render a bounded literal using its signedness, width, and display mode.
 showSizedConst :: Bool -> Integer -> (Bool, Int) -> Doc
 showSizedConst _   i   (False,  1) = text (if i == 0 then "false" else "true")
 showSizedConst u8h i t@(False,  8)
@@ -544,6 +539,7 @@ genHeader (ik, rk) fn sigs protos extraTypes =
                                $$ text ("typedef " ++ show t ++ " SReal;")
                                $$ text ""
 
+-- | Insert an empty separating line when the condition holds.
 sepIf :: Bool -> Doc
 sepIf b = if b then text "" else empty
 
@@ -766,10 +762,10 @@ genDriver cfg adts randVals fn inps outs mbRet
                                                        <+> text "=" <+> fcall P.<> semi
                   | isOwnedADT cfg adts sv              -> text (adtCType (kindOf sv)) <+> resultVar
                                                        <+> text "=" <+> fcall P.<> semi
-                  | kindOf sv == KString                -> text "const SString" <+> resultVar <+> text "=" <+> fcall P.<> semi
-                  | isList sv                           -> text "const" <+> text (listCType (kindOf sv)) <+> resultVar
+                  | kindOf sv == KString                -> text "SString" <+> resultVar <+> text "=" <+> fcall P.<> semi
+                  | isList sv                           -> text (listCType (kindOf sv)) <+> resultVar
                                                        <+> text "=" <+> fcall P.<> semi
-                  | isSet sv                            -> text "const" <+> text (setCType (kindOf sv)) <+> resultVar
+                  | isSet sv                            -> text (setCType (kindOf sv)) <+> resultVar
                                                        <+> text "=" <+> fcall P.<> semi
                   | True                                -> pprCWord True sv <+> resultVar <+> text "=" <+> fcall P.<> semi
        fcall = nm P.<> parens (fsep (punctuate comma (map mkCVal pairedInputs ++ map mkOVal outs ++ exactResultArg)))
@@ -1028,6 +1024,10 @@ genCProg cfg adts lists sets fn proto
          inVars outVars mbRet extDecls
   | not (null unsupportedSets)
   = notyet $ "Sets with element kinds " ++ intercalate ", " (map (show . setElementKind) unsupportedSets)
+  | any (requiresExtensionalEquality adts (Equal True) . pure . setElementKind) sets
+  = error "SBV->C: Set elements require general extensional array equality."
+  | any (\(KArray keyKind _) -> requiresExtensionalEquality adts (Equal True) [keyKind]) arrays
+  = error "SBV->C: Array keys require general extensional array equality."
   | any containsNestedSet kindInfo
   = notyet "Sets nested in arrays or unsupported aggregate types"
   | not (null unsupportedLists)
@@ -1079,7 +1079,7 @@ genCProg cfg adts lists sets fn proto
              $$ (if requires CRequiresLists            then listRuntimeDecls cfg lists else empty)
              $$ (if requires CRequiresSets             then setRuntimeDecls cfg sets else empty)
              $$ (if requires CRequiresLists            then listRuntime cfg usesExactInteger lists else empty)
-             $$ (if requires CRequiresSets             then setRuntime cfg sets else empty)
+             $$ (if requires CRequiresSets             then setRuntime cfg (map snd . adtConstructors adts . resolveADTReferences adts) sets else empty)
              $$ (if requires CRequiresArrays           then arrayRuntime cfg arrays else empty)
              $$ adtEqualityRuntime cfg adts
              $$ definedFunctionResultRuntime functionResultKinds
@@ -1483,15 +1483,20 @@ genCProg cfg adts lists sets fn proto
        merge tables asgnments asrts = map snd $ mergeLocated asrts (mergeLocated tables asgnments)
 
        genAssert (msg, cs, sv) = (cLocation consts sv, doc)
-         where doc =     text "/* ASSERTION:" <+> text msg
-                     $$  maybe empty (vcat . map text) (locInfo (getCallStack <$> cs))
+         where doc =     text "/* ASSERTION:" <+> cCommentText msg
+                     $$  maybe empty (vcat . map cCommentText) (locInfo (getCallStack <$> cs))
                      $$  text " */"
                      $$  text "if" P.<> parens (showSV cfg consts sv)
                      $$  text "{"
                      $+$ nest 2 (vcat [errOut, text "exit(-1);"])
                      $$  text "}"
                      $$  text ""
-               errOut = text $ "fprintf(stderr, \"%s:%d:ASSERTION FAILED: " ++ msg ++ "\\n\", __FILE__, __LINE__);"
+               errOut = text "fprintf" P.<> parens (fsep (punctuate comma [ text "stderr"
+                                                                          , cStringLiteral "%s:%d:ASSERTION FAILED: %s\n"
+                                                                          , text "__FILE__"
+                                                                          , text "__LINE__"
+                                                                          , cStringLiteral msg
+                                                                          ])) P.<> semi
                locInfo (Just ps) = let loc (f, sl) = concat [srcLocFile sl, ":", show (srcLocStartLine sl), ":", show (srcLocStartCol sl), ":", f ]
                                    in case map loc ps of
                                          []     -> Nothing
@@ -1527,14 +1532,14 @@ cLocation constants sv@(SV _ (NodeId (_, _, nodeIndex)))
 -- tables always use automatic storage so their entries may depend on parameters.
 ppTable :: CgConfig -> Bool -> [(SV, CV)] -> ((Int, Kind, Kind), [SV]) -> (Int, Doc)
 ppTable cfg allowStatic constants ((tableIndex, _, resultKind), elements)
-  = (location, storage <+> text "const" <+> text tableElementType <+> tableName P.<> text "[] = {"
+  = (location, storage <+> text tableElementType <+> tableName P.<> text "[] = {"
               $$ nest 4 (fsep (punctuate comma (align (map renderElement elements))))
               $$ text "};")
  where location = maximum (-1 : map (cLocation constants) elements)
        renderElement element = arrayStoredValue resultKind (showSV cfg constants element)
        tableElementType
-         | isArray resultKind = CTypes.elementCType resultKind
-         | True               = showCType resultKind
+         | isArray resultKind = CTypes.constElementCType resultKind
+         | True               = "const " ++ showCType resultKind
        storage
          | allowStatic && location == -1 && not (tableMustBeLocal cfg resultKind) = text "static"
          | True                                                                  = empty
@@ -1549,6 +1554,15 @@ mergeLocated left             []                          = left
 mergeLocated left@((i, x):xs) right@((j, y):ys)
   | i < j = (i, x) : mergeLocated xs right
   | True  = (j, y) : mergeLocated left ys
+
+-- | Render comment contents without allowing terminators, line splices, or
+-- trigraphs to change the surrounding C program during preprocessing.
+cCommentText :: String -> Doc
+cCommentText = text . concatMap escape
+ where escape '*'  = "* "
+       escape '\\' = "\\134"
+       escape '?'  = "\\077"
+       escape c    = [c]
 
 -- | Render arbitrary text as a UTF-8 C string literal, using fixed-width
 -- octal escapes where a byte cannot safely appear verbatim.
@@ -1839,7 +1853,7 @@ ppDefinedFunction cfg adts functionNames isRecursive originalName declaredResult
          $$ setupContext CRequiresSets            "sbv_set_ctx"             "set"
          $$ setupContext CRequiresArrays          "sbv_array_ctx"           "array"
          $$ setupContext CRequiresFunctionResults "sbv_function_result_ctx" "function_result"
-         $$ text "sbv_function_ctx __sbv_function_ctx = *__sbv_parent_function_ctx;"
+         $$ text "sbv_function_ctx __sbv_function_ctx = *__sbv_parent_function_ctx; (void) __sbv_function_ctx;"
          $$ bindContext CRequiresGMP             "gmp"
          $$ bindContext CRequiresText            "text"
          $$ bindContext CRequiresLists           "list"
@@ -2139,7 +2153,7 @@ ppArrayLambda cfg adts functionNames callbackName arraySV lambdaInfo@LambdaInfo{
          $$ setupContext CRequiresSets            "sbv_set_ctx"             "set"
          $$ setupContext CRequiresArrays          "sbv_array_ctx"           "array"
          $$ setupContext CRequiresFunctionResults "sbv_function_result_ctx" "function_result"
-         $$ text "sbv_function_ctx __sbv_function_ctx = *__sbv_parent_function_ctx;"
+         $$ text "sbv_function_ctx __sbv_function_ctx = *__sbv_parent_function_ctx; (void) __sbv_function_ctx;"
          $$ bindContext CRequiresGMP             "gmp"
          $$ bindContext CRequiresText            "text"
          $$ bindContext CRequiresLists           "list"
@@ -2182,6 +2196,7 @@ isConcreteADTKind :: Kind -> Bool
 isConcreteADTKind KApp{} = True
 isConcreteADTKind kind   = isADT kind && not (isRoundingMode kind) && not (isUninterpreted kind)
 
+-- | Lower a pseudo-Boolean relation to a weighted sum of Boolean indicators.
 handlePB :: PBOp -> [Doc] -> Doc
 handlePB o args = case o of
                     PB_AtMost  k -> addIf (repeat 1) <+> text "<=" <+> int k
@@ -2194,6 +2209,7 @@ handlePB o args = case o of
   where addIf :: [Int] -> Doc
         addIf cs = parens $ fsep $ intersperse (text "+") [parens (a <+> text "?" <+> int c <+> text ":" <+> int 0) | (a, c) <- zip args cs]
 
+-- | Lower native IEEE operations not handled by the explicit LibBF adapters.
 handleIEEE :: FPOp -> [(SV, CV)] -> [(SV, Doc)] -> Doc -> Doc
 handleIEEE w consts as var = cvt w
   where same f                   = (f, f)
@@ -2228,7 +2244,7 @@ handleIEEE w consts as var = cvt w
         cvt FP_Div               = dispatch $ same $ \_ [a, b] -> a <+> text "/" <+> b
         cvt FP_FMA               = dispatch $ named "fmaf"  "fma"  $ \nm _ [a, b, c] -> text nm P.<> parens (fsep (punctuate comma [a, b, c]))
         cvt FP_Sqrt              = dispatch $ named "sqrtf" "sqrt" $ \nm _ [a]       -> text nm P.<> parens a
-        cvt FP_Rem               = dispatch $ named "fmodf" "fmod" $ \nm _ [a, b]    -> text nm P.<> parens (fsep (punctuate comma [a, b]))
+        cvt FP_Rem               = dispatch $ named "remainderf" "remainder" $ \nm _ [a, b] -> text nm P.<> parens (fsep (punctuate comma [a, b]))
         cvt FP_RoundToIntegral   = dispatch $ named "rintf" "rint" $ \nm _ [a]       -> text nm P.<> parens a
         cvt FP_Min               = dispatch $ named "fminf" "fmin" $ \nm k [a, b]    -> wrapMinMax k a b (text nm P.<> parens (fsep (punctuate comma [a, b])))
         cvt FP_Max               = dispatch $ named "fmaxf" "fmax" $ \nm k [a, b]    -> wrapMinMax k a b (text nm P.<> parens (fsep (punctuate comma [a, b])))
@@ -2251,9 +2267,8 @@ handleIEEE w consts as var = cvt w
                                              Just (Right msg) -> tbd msg
                      | True              -> as
 
-        -- Check that the RM is RoundNearestTiesToEven.
-        -- If we start supporting other rounding-modes, this would be the point where we'd insert the rounding-mode set/reset code
-        -- instead of merely returning OK or not
+        -- Explicit non-default and symbolic rounding modes are handled by the
+        -- LibBF adapters before this native fallback is selected.
         checkRM (Just cv@(CV k v))
           | k == kRoundingMode = case v of
                                    CADT ("RoundNearestTiesToEven", []) -> Nothing
@@ -2295,6 +2310,9 @@ ppExpr :: CgConfig
        -> Bool
        -> (Doc, Set.Set CRequirement, [Doc])
 ppExpr cfg adts functionNames structuredLambdaNames consts (SBVApp op opArgs) resultSV lhs (typ, var) declareResult
+  | requiresExtensionalEquality adts op (map kindOf opArgs)
+  = error $ "SBV->C: " ++ show op ++ " requires general extensional array equality, including array-valued elements or fields."
+  | True
   = ( vcat $ declarations
           ++ loweringSetup selected
           ++ [assignment]
@@ -2349,7 +2367,7 @@ ppExpr cfg adts functionNames structuredLambdaNames consts (SBVApp op opArgs) re
           | isJust (lookup symbol functionNames) = text "&__sbv_function_ctx" : arguments
           | True                                 = arguments
 
-        cBinOps = [ (Plus, "+"),  (Times, "*"), (Minus, "-")
+        cBinOps = [ (Plus, "+"), (Times, "*"), (Minus, "-")
                   , (Equal False, "==")  -- no strong equality!
                   , (NotEqual, "!="), (LessThan, "<"), (GreaterThan, ">"), (LessEq, "<="), (GreaterEq, ">=")
                   , (And, "&"), (Or, "|"), (XOr, "^")
@@ -2370,9 +2388,9 @@ ppExpr cfg adts functionNames structuredLambdaNames consts (SBVApp op opArgs) re
         p ArrayInit{}          _   = die "Array initialization escaped the persistent-array lowering pipeline"
         p QuantifiedBool{}     _   = solverOnly "quantified Boolean expressions"
         p SpecialRelOp{}       _   = solverOnly "special relations"
-        p RegExOp{}            _   = solverOnly "regular-expression language equality"
-        p (StrOp StrInRe{})    _   = solverOnly "regular-expression membership"
-        p (Label s)           [a]  = a <+> text "/*" <+> text s <+> text "*/"
+        p RegExOp{}            _   = unsupportedRegularExpression "regular-expression language equality"
+        p (StrOp StrInRe{})    _   = unsupportedRegularExpression "regular-expression membership"
+        p (Label s)           [a]  = a <+> text "/*" <+> cCommentText s <+> text "*/"
         p (IEEEFP w)            as = handleIEEE w consts (zip opArgs as) var
         p (PseudoBoolean pb)    as = handlePB pb as
         p OverflowOp{}         _   = die "Overflow operation escaped the exact bit-vector lowering pipeline"
@@ -2487,6 +2505,8 @@ ppExpr cfg adts functionNames structuredLambdaNames consts (SBVApp op opArgs) re
 
         solverOnly feature = error $ "SBV->C: " ++ feature ++ " has solver-only semantics and cannot be compiled to executable C"
 
+        unsupportedRegularExpression feature = error $ "SBV->C: " ++ feature ++ " is not yet implemented by the C backend"
+
         mappedIntegerDivides divisor value
           | divisor > maximumMagnitude = parens (value <+> text "==" <+> text "0")
           | True = parens $ magnitude <+> text "%" <+> uint64 divisor <+> text "==" <+> uint64 0
@@ -2526,20 +2546,43 @@ ppExpr cfg adts functionNames structuredLambdaNames consts (SBVApp op opArgs) re
           where cop | toLeft = "<<"
                     | True   = ">>"
 
--- same as doubleQuotes, except we have to make sure there are no line breaks..
--- Otherwise breaks the generated code.. sigh
+-- | Detect comparisons that transitively require array equality, resolving
+-- recursive ADT references without revisiting already inspected definitions.
+-- Array-valued data can still be constructed, selected, and transported.
+requiresExtensionalEquality :: [Kind] -> Op -> [Kind] -> Bool
+requiresExtensionalEquality adts op kinds = comparesElements op && any (containsArray Set.empty) kinds
+ where comparesElements Equal{}                = True
+       comparesElements NotEqual               = True
+       comparesElements (SeqOp SeqIndexOf{})   = True
+       comparesElements (SeqOp SeqContains{})  = True
+       comparesElements (SeqOp SeqPrefixOf{})  = True
+       comparesElements (SeqOp SeqSuffixOf{})  = True
+       comparesElements (SeqOp SeqReplace{})   = True
+       comparesElements _                      = False
+
+       containsArray _       KArray{}             = True
+       containsArray visited (KList elementKind)  = containsArray visited elementKind
+       containsArray visited (KSet elementKind)   = containsArray visited elementKind
+       containsArray visited (KTuple fields)      = any (containsArray visited) fields
+       containsArray visited kind
+         | isConcreteADTKind kind
+         , kind `Set.notMember` visited
+         = any (any (containsArray (Set.insert kind visited)) . snd) (adtConstructors adts kind)
+         | True
+         = False
+
+-- | Quote a document after removing line breaks, for generated format strings.
 printQuotes :: Doc -> Doc
 printQuotes d = text $ '"' : ppSameLine d ++ "\""
 
--- Remove newlines.. Useful when generating Makefile and such
+-- | Flatten a document onto one line for generated build commands and labels.
 ppSameLine :: Doc -> String
 ppSameLine = trim . render
  where trim ""        = ""
        trim ('\n':cs) = ' ' : trim (dropWhile isSpace cs)
        trim (c:cs)    = c   : trim cs
 
--- Align a bunch of docs to occupy the exact same length by padding in the left by space
--- this is ugly and inefficient, but easy to code..
+-- | Left-pad documents so their rendered representations have equal width.
 align :: [Doc] -> [Doc]
 align ds = map (text . pad) ss
   where ss    = map render ds
@@ -2564,18 +2607,23 @@ mergeToLib libName cfgBundles
         files       = concat [fs | CgPgmBundle _ fs <- bundles]
         headerMeta  = [ss | (_, (CgHeader ss, _)) <- files]
         typeDecls   = nubBy sameDoc [t | t:_ <- headerMeta]
-        sigs        = concat [ss | _:ss <- headerMeta]
-        anyMake     = not (null [() | (_, (CgMakefile{}, _)) <- files])
-        drivers     = [ds | (_, (CgDriver, ds)) <- files]
+        sigs        = [signature | _:signature:_ <- headerMeta]
+        extProtos   = vcat $ nubBy sameDoc [prototypes | _:_:prototypes:_ <- headerMeta]
+        anyMake     = any (cgGenMakefile . fst) cfgBundles
+        drivers     = [(takeBaseName sourceName, ds)
+                      | (_, CgPgmBundle _ componentFiles) <- cfgBundles
+                      , (sourceName, (CgSource, _)) <- componentFiles
+                      , (_, (CgDriver, ds)) <- componentFiles
+                      ]
         anyDriver   = not (null drivers)
         mkFlags     = nub (concat [xs | (_, (CgMakefile xs, _)) <- files])
         sources     = [(f, (CgSource, [pre, libHInclude, post])) | (f, (CgSource, [pre, _, post])) <- files]
         sourceNms   = map fst sources
-        libHeader   = (libName ++ ".h", (CgHeader (vcat typeDecls : sigs), [genHeader bundleKind libName sigs empty (vcat typeDecls)]))
+        libHeader   = (libName ++ ".h", (CgHeader (vcat typeDecls : sigs), [genHeader bundleKind libName sigs extProtos (vcat typeDecls)]))
         libHInclude =  text "#include" <+> text (show (libName ++ ".h"))
                     $$ if "-lbf" `elem` mkFlags then text "#include <libbf.h>" else empty
         libMake     = ("Makefile", (CgMakefile mkFlags, [genLibMake anyDriver libName sourceNms mkFlags]))
-        libDriver   = (libName ++ "_driver.c", (CgDriver, mergeDrivers libName libHInclude (zip (map takeBaseName sourceNms) drivers)))
+        libDriver   = (libName ++ "_driver.c", (CgDriver, mergeDrivers libName libHInclude drivers))
         finalCfg    = case cfgBundles of
                         []         -> defaultCgConfig
                         ((c, _):_) -> c
@@ -2612,7 +2660,7 @@ genLibMake ifdr libName fs ldFlags = foldr1 ($$) [l | (True, l) <- lns]
              , (True,  text liba P.<> text (": " ++ unwords os))
              , (True,  text "\t${AR} ${ARFLAGS} $@ $^")
              , (True,  text "")
-             , (ifdr,  text libd P.<> text (": " ++ unwords [libd ++ ".c", libh]))
+             , (ifdr,  text libd P.<> text (": " ++ unwords [libd ++ ".c", libh, liba]))
              , (ifdr,  text ("\t${CC} ${CCFLAGS}" ++ gmpCFlags ++ " $< -o $@ " ++ liba) <+> ld)
              , (ifdr,  text "")
              , (True,  vcat (zipWith mkObj os fs))

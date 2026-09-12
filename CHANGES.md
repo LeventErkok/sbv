@@ -13,6 +13,11 @@
     Existing code importing `Data.SBV.Tools.CodeGen` selects the new backend. The original compiler
     remains available as an escape hatch by importing `Data.SBV.Tools.CodeGen.Legacy` instead.
 
+    The new backend also corrects native IEEE remainder semantics, safely escapes assertion text,
+    and preserves external prototypes and runtime dependencies when combining library components.
+    Finite/cofinite set comparisons account for finite ADTs with fields. Unsupported comparisons
+    involving array-valued aggregates are rejected during generation instead of aborting at runtime.
+
   * Functions defined with `smtFunction` and its variants can now be first encountered after entering
     query mode. SBV sends their definitions and dependencies incrementally, while retaining termination
     and productivity checks. Calling `registerFunction` before the query is no longer required for this case.

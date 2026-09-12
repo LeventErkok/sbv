@@ -55,6 +55,50 @@ temporary storage appropriate to those representations.
 The original, native-scalar-only implementation remains available from
 "Data.SBV.Tools.CodeGen.Legacy" for compatibility during the transition to the
 new backend.
+
+== Representations and execution
+
+Generated code evaluates the symbolic computation without an SMT solver.
+Standalone programs and multi-function static libraries share these mappings:
+
+* Booleans use C @bool@. Native-width bit-vectors use fixed-width C integers;
+  other widths use generated limb structures. Arithmetic, shifts, joins, and
+  extractions preserve the declared bit width; 673 bits is only one example.
+* 'Data.SBV.SInteger', rational-valued 'Data.SBV.SReal', and
+  'Data.SBV.SRational' use GMP unless an applicable native mapping is selected.
+* 'Data.SBV.SFloat' and 'Data.SBV.SDouble' use native C values. Arbitrary
+  floating-point formats and explicitly directed native rounding use LibBF.
+  Arbitrary formats are subject to LibBF's exponent-range limits: the backend
+  accepts at most 61 exponent bits and checks the selected C LibBF build too.
+* Strings and lists use length-aware descriptors. Sets use finite/cofinite
+  descriptors. Tuples and concrete ADTs use generated structures, including
+  tagged constructors and managed storage for recursive ADTs.
+* Symbolic arrays use persistent descriptors supporting constant arrays,
+  writes, retained lambdas, and caller-provided lookup callbacks. They are
+  distinct from finite lookup tables and 'cgInputArr'/'cgOutputArr' groups.
+
+Generated headers supply ownership helpers for managed values. Inputs borrow
+their storage for the call; owned outputs must be released with the appropriate
+generated helper. Escaping callback contexts additionally require retain and
+release callbacks. See each generated header for its representation contract.
+
+'Data.SBV.smtFunction' definitions and firstified higher-order specializations
+can compile to private C functions, including recursive definitions. Explicit
+closure environments remain SBV values; this is not an ABI for runtime Haskell
+function values. Hard constraints become executable preconditions.
+
+== Boundaries
+
+General extensional array equality and regular-expression operations are not
+implemented. Quantifiers, special solver relations, uninterpreted sorts, and
+soft constraints are also rejected. Finite-domain array equality and regex
+matching are possible future extensions, not inherently solver-only tasks.
+
+Exact GMP reals represent rational values, not arbitrary algebraic or
+transcendental values. Select 'cgSRealType' for native approximations and
+@libm@ transcendental operations when rounding is acceptable. The fixed-size
+input/output/return group APIs require at least one element; symbolic lists
+can be empty.
 -}
 
 {- $unboundedCGen

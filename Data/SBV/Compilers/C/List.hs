@@ -45,7 +45,7 @@ import qualified Text.PrettyPrint.HughesPJ as P ((<>))
 import Data.SBV.Compilers.C.Array      (arrayStoredLoad, arrayStoredValue)
 import Data.SBV.Compilers.C.GMP        (isExactGMPKind)
 import Data.SBV.Compilers.C.Lowering   (CLowering, CRequirement(..), CStorage(..), expressionLowering)
-import Data.SBV.Compilers.C.Types      (elementCType, kindTag)
+import Data.SBV.Compilers.C.Types      (constElementCType, elementCType, kindTag)
 import Data.SBV.Compilers.C.Value      ( byValueEqual
                                        , managedValueClone
                                        , managedValueRelease
@@ -142,12 +142,11 @@ listTypeDecls cfg kinds
  where declaration kind@(KList elementKind)
          | listSupported cfg kind
          = let cType       = listCType kind
-               elementType = listElementCType elementKind
                cloneName    = listCloneName kind
                releaseName  = listReleaseName kind
            in [ "#ifndef " ++ listGuard kind
               , "#define " ++ listGuard kind
-              , "struct " ++ cType ++ " { const " ++ elementType ++ " *data; size_t length; };"
+              , "struct " ++ cType ++ " { " ++ constElementCType elementKind ++ " *data; size_t length; };"
               , "static inline SBV_CGEN_UNUSED " ++ cType ++ " " ++ cloneName ++ "(" ++ cType ++ " value);"
               , "static inline SBV_CGEN_UNUSED void " ++ releaseName ++ "(" ++ cType ++ " *value);"
               , "#endif"
@@ -285,7 +284,7 @@ listConst renderElement (CV kind@(KList elementKind) (CList values))
        P.<> text "})"
  where elements
          | null values = text "NULL"
-         | True        = text "(const" <+> text (listElementCType elementKind) P.<> text "[]) {"
+         | True        = text "(" P.<> text (constElementCType elementKind) P.<> text "[]) {"
                       P.<> fsep (punctuate comma (map (arrayStoredValue elementKind . renderElement . CV elementKind) values))
                       P.<> text "}"
 listConst _ _ = Nothing
@@ -409,7 +408,7 @@ listRelease kind value = call (listReleaseName kind) [text "&" P.<> value] P.<> 
 listDriverValue :: (Kind -> Integer -> Doc) -> Kind -> Integer -> Doc
 listDriverValue renderValue kind@(KList elementKind) seed
   = text "((" P.<> text (listCType kind) P.<> text ") {"
-       P.<> text "(const" <+> text (listElementCType elementKind) P.<> text "[]) {"
+       P.<> text "(" P.<> text (constElementCType elementKind) P.<> text "[]) {"
        P.<> fsep (punctuate comma [renderValue elementKind seed, renderValue elementKind (seed + 1), renderValue elementKind (seed + 2)])
        P.<> text "}, 3})"
 listDriverValue _ kind _ = error $ "SBV->C: Expected a list kind, received " ++ show kind

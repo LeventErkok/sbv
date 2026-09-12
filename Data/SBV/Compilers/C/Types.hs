@@ -21,6 +21,7 @@ module Data.SBV.Compilers.C.Types
   , arrayStoredReleaseName
   , tupleFieldName
   , elementCType
+  , constElementCType
   , kindTag
   ) where
 
@@ -87,6 +88,13 @@ elementCType (KList elementKind) = "SBVList_" ++ kindTag elementKind
 elementCType (KSet elementKind)  = "SBVSet_" ++ kindTag elementKind
 elementCType kind@KArray{}       = arrayOutputCTypeName kind ++ " *"
 elementCType kind                = error $ "SBV->C: Unsupported structural kind: " ++ show kind
+
+-- | Qualify a stored value itself. Array values are spelled as pointers, so
+-- their const qualifier belongs after the pointer, not on its pointee.
+constElementCType :: Kind -> String
+constElementCType kind
+  | isArray kind = elementCType kind ++ " const"
+  | True         = "const " ++ elementCType kind
 
 -- | Return the collision-free suffix used by a generated structural C type.
 kindTag :: Kind -> String

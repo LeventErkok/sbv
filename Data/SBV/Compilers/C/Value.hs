@@ -27,7 +27,7 @@ import qualified Text.PrettyPrint.HughesPJ as P ((<>))
 import Data.SBV.Compilers.C.BV         (isWideBV, wideBVEqual)
 import Data.SBV.Compilers.C.FP         (arbitraryFPEqual, arbitraryFPObjectEqual, nativeFPObjectEqual)
 import Data.SBV.Compilers.C.GMP        (gmpDriverClear, gmpDriverInit, gmpEqual, isExactGMPKind)
-import Data.SBV.Compilers.C.Types      (adtCType, arrayStoredCloneName, arrayStoredReleaseName, elementCType, kindTag, tupleCType, tupleFieldName)
+import Data.SBV.Compilers.C.Types      (adtCType, arrayStoredCloneName, arrayStoredReleaseName, constElementCType, elementCType, kindTag, tupleCType, tupleFieldName)
 import Data.SBV.Compilers.CodeGen      (CgConfig)
 import Data.SBV.Core.Data
 
@@ -61,7 +61,8 @@ valueDriverNeedsInitialization _   _                    = False
 
 -- | Render equality for a scalar or recursively nested aggregate. The Boolean
 -- flag selects object equality for floating-point values. Array-valued fields
--- abort if reached because their extensional equality is not executable in C.
+-- carry an unreachable abort sentinel: operation validation rejects consumers
+-- requiring extensional equality, while unused aggregate helpers may be emitted.
 byValueEqual :: CgConfig -> Bool -> Kind -> Doc -> Doc -> Doc
 byValueEqual cfg strong kind left right
   | isWideBV kind                              = wideBVEqual kind left right
@@ -199,7 +200,7 @@ valueDriverClear _   _                   _            = empty
 collectionDriverInit :: CgConfig -> (Kind -> Integer -> Doc) -> (Kind -> String -> Integer -> Doc) -> Kind -> Kind -> String -> Integer -> Bool -> Doc
 collectionDriverInit cfg renderValue initializeValue kind elementKind externalName seed isComplemented
   =  vcat (zipWith initializeElement elementNames [seed ..])
-  $$ text "const" <+> text (elementCType elementKind) <+> text dataName P.<> brackets (int collectionElementCount)
+  $$ text (constElementCType elementKind) <+> text dataName P.<> brackets (int collectionElementCount)
        <+> text "=" <+> braces (fsep (punctuate comma (map text elementNames))) P.<> semi
   $$ text "const" <+> text (elementCType kind) <+> text externalName <+> text "="
        <+> braces (fsep (punctuate comma descriptorFields)) P.<> semi

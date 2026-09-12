@@ -254,14 +254,14 @@ setRuntimeDecls cfg kinds = text . unlines $
   ]
 
 -- | Emit the shared set arena and one operation family per element kind.
-setRuntime :: CgConfig -> [Kind] -> Doc
-setRuntime cfg kinds = text . unlines . map markUnused $ commonRuntime ++ concatMap specializedRuntime kinds
+setRuntime :: CgConfig -> (Kind -> [[Kind]]) -> [Kind] -> Doc
+setRuntime cfg constructorsOf kinds = text . unlines . map markUnused $ commonRuntime ++ concatMap specializedRuntime kinds
  where markUnused line = case stripPrefix "static " line of
                            Just rest -> "static SBV_CGEN_UNUSED " ++ rest
                            Nothing   -> line
 
        specializedRuntime kind
-         | setSupported cfg kind = setKindRuntime cfg kind
+         | setSupported cfg kind = setKindRuntime cfg constructorsOf kind
          | True                  = error $ "SBV->C: Unsupported set kind: " ++ show kind
 
 -- | Render a regular or complemented set constant.
@@ -477,8 +477,8 @@ commonRuntime =
   ]
 
 -- | Emit all set helpers for one supported element kind.
-setKindRuntime :: CgConfig -> Kind -> [String]
-setKindRuntime cfg kind@(KSet elementKind) =
+setKindRuntime :: CgConfig -> (Kind -> [[Kind]]) -> Kind -> [String]
+setKindRuntime cfg constructorsOf kind@(KSet elementKind) =
   [ ""
   , "static bool " ++ equalElement ++ "(" ++ elementType ++ " left, " ++ elementType ++ " right)"
   , "{ return " ++ elementEqual ++ "; }"
@@ -570,7 +570,7 @@ setKindRuntime cfg kind@(KSet elementKind) =
          [ "static bool " ++ helper "domain_covered" ++ "(" ++ setType ++ " left, " ++ setType ++ " right)"
          , "{"
          ]
-         ++ case elementDomainSize elementKind of
+         ++ case elementDomainSize constructorsOf elementKind of
               Nothing -> [ "  (void) left; (void) right; return false;" ]
               Just domainSize ->
                 [ "  const uint64_t domain_size = UINT64_C(" ++ show domainSize ++ ");"
@@ -630,7 +630,7 @@ setKindRuntime cfg kind@(KSet elementKind) =
          , "  return result;"
          , "}"
          ]
-setKindRuntime _ kind = error $ "SBV->C: Expected a set kind, received " ++ show kind
+setKindRuntime _ _ kind = error $ "SBV->C: Expected a set kind, received " ++ show kind
 
 -- | Test whether a kind is a concrete user ADT supported as a collection
 -- element.
@@ -638,26 +638,34 @@ isConcreteADT :: Kind -> Bool
 isConcreteADT kind = isADT kind && not (isRoundingMode kind) && not (isUninterpreted kind)
 
 -- | Return the number of distinct SMT objects when the domain cardinality fits
--- in a C @uint64_t@. 'Nothing' means opposite finite/cofinite forms cannot be
--- proven equal from a representable C descriptor.
-elementDomainSize :: Kind -> Maybe Integer
-elementDomainSize KBool              = Just 2
-elementDomainSize (KBounded _ width)
-  | width < 64                       = Just (2 ^ width)
-  | True                             = Nothing
-elementDomainSize KFloat             = Just (2 ^ (32 :: Int) - 2 ^ (24 :: Int) + 3)
-elementDomainSize KDouble            = Just (2 ^ (64 :: Int) - 2 ^ (53 :: Int) + 3)
-elementDomainSize KChar              = Just 0x30000
-elementDomainSize (KFP eb sb)
-  | eb + sb <= 64                    = Just (2 ^ (eb + sb) - 2 ^ sb + 3)
-  | True                             = Nothing
-elementDomainSize (KTuple kinds)     = do
-  sizes <- mapM elementDomainSize kinds
-  let total = product sizes
-  if total <= 2 ^ (64 :: Int) - 1 then Just total else Nothing
-elementDomainSize kind@(KADT _ _ constructors)
-  | isConcreteADT kind
-  , all (null . snd) constructors     = Just (fromIntegral (length constructors))
-elementDomainSize kind
-  | isRoundingMode kind              = Just 5
-  | True                             = Nothing
+-- in a C @uint64_t@. The callback supplies resolved ADT constructor fields,
+-- allowing finite sums of products without importing the ADT lowering module.
+-- Recursive domains and domains too large for a descriptor return 'Nothing'.
+elementDomainSize :: (Kind -> [[Kind]]) -> Kind -> Maybe Integer
+elementDomainSize constructorsOf = domainSize Set.empty
+ where domainSize _ KBool             = Just 2
+       domainSize _ (KBounded _ width)
+         | width < 64                 = Just (2 ^ width)
+         | True                       = Nothing
+       domainSize _ KFloat            = Just (2 ^ (32 :: Int) - 2 ^ (24 :: Int) + 3)
+       domainSize _ KDouble           = Just (2 ^ (64 :: Int) - 2 ^ (53 :: Int) + 3)
+       domainSize _ KChar             = Just 0x30000
+       domainSize _ (KFP eb sb)
+         | eb + sb <= 64              = Just (2 ^ (eb + sb) - 2 ^ sb + 3)
+         | True                       = Nothing
+       domainSize visited (KTuple fields) = productSize visited fields
+       domainSize visited kind
+         | isRoundingMode kind        = Just 5
+         | isConcreteADT kind || isReference kind
+         , kind `Set.notMember` visited
+         = mapM (productSize (Set.insert kind visited)) (constructorsOf kind) >>= boundedSize . sum
+         | True                       = Nothing
+
+       productSize visited fields = mapM (domainSize visited) fields >>= boundedSize . product
+
+       boundedSize total
+         | total <= 2 ^ (64 :: Int) - 1 = Just total
+         | True                         = Nothing
+
+       isReference KApp{} = True
+       isReference _      = False

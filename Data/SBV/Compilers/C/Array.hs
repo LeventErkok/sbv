@@ -45,7 +45,8 @@ import qualified Text.PrettyPrint.HughesPJ as P ((<>), render)
 import Data.SBV.Compilers.C.BV         (isWideBV)
 import Data.SBV.Compilers.C.GMP        (isExactGMPKind)
 import Data.SBV.Compilers.C.Lowering   (CLowering(..), CRequirement(..), CStorage(..), expressionLowering)
-import Data.SBV.Compilers.C.Types      ( arrayKindTag
+import Data.SBV.Compilers.C.Types      ( constElementCType
+                                       , arrayKindTag
                                        , arrayOutputCTypeName
                                        , arrayStoredCloneName
                                        , arrayStoredReleaseName
@@ -564,7 +565,7 @@ arrayDriverCallback cfg kind@(KArray keyKind valueKind)
        releaseName  = arrayDriverReleaseName kind
        result
          | isExactGMPKind cfg valueKind = parens (text (elementCType valueKind)) <+> text "context"
-         | True                          = text "*" P.<> parens (parens (text "const" <+> text (elementCType valueKind) <+> text "*") <+> text "context")
+         | True                          = text "*" P.<> parens (parens (text (constElementCType valueKind) <+> text "*") <+> text "context")
 
        retainContext
          | isExactGMPKind cfg valueKind
@@ -604,7 +605,7 @@ arrayDriverCallback cfg kind@(KArray keyKind valueKind)
                      )
            $$ text "}"
 
-       managedContextValue = text "*" P.<> parens (parens (text "const" <+> text (elementCType valueKind) <+> text "*") <+> text "context")
+       managedContextValue = text "*" P.<> parens (parens (text (constElementCType valueKind) <+> text "*") <+> text "context")
 
        managedClear
          | arrayFieldNeedsOwnership cfg valueKind

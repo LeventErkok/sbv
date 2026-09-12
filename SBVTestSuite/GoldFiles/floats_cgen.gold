@@ -895,7 +895,7 @@ SFloat f_FP_Rem(const SFloat a, const SFloat b)
 {
   const SFloat s0 = a;
   const SFloat s1 = b;
-  const SFloat s2 = fmodf(s0, s1);
+  const SFloat s2 = remainderf(s0, s1);
 
   return s2;
 }
@@ -909,7 +909,7 @@ SDouble d_FP_Rem(const SDouble a, const SDouble b)
 {
   const SDouble s0 = a;
   const SDouble s1 = b;
-  const SDouble s2 = fmod(s0, s1);
+  const SDouble s2 = remainder(s0, s1);
 
   return s2;
 }
@@ -1252,6 +1252,13 @@ typedef SInt64 SInteger;
 /* User requested mapping for SReal.                          */
 /* NB. Loss of precision: Target type is subject to rounding. */
 typedef long double SReal;
+
+/* IEEE-754 rounding modes. */
+#ifndef SBV_ROUNDING_MODE_DEFINED
+#define SBV_ROUNDING_MODE_DEFINED
+typedef enum { SBV_RM_RNE = 0, SBV_RM_RNA = 1, SBV_RM_RTP = 2, SBV_RM_RTN = 3, SBV_RM_RTZ = 4 } RoundingMode;
+#endif
+
 
 /* Entry point prototypes: */
 SFloat toFP_Int8_ToFloat(const SInt8 a);
@@ -2501,7 +2508,7 @@ all: floatCodeGen.a floatCodeGen_driver
 floatCodeGen.a: toFP_Int8_ToFloat.o toFP_Int16_ToFloat.o toFP_Int32_ToFloat.o toFP_Int64_ToFloat.o toFP_Word8_ToFloat.o toFP_Word16_ToFloat.o toFP_Word32_ToFloat.o toFP_Word64_ToFloat.o toFP_Float_ToFloat.o toFP_Double_ToFloat.o toFP_Integer_ToFloat.o toFP_Real_ToFloat.o toFP_Int8_ToDouble.o toFP_Int16_ToDouble.o toFP_Int32_ToDouble.o toFP_Int64_ToDouble.o toFP_Word8_ToDouble.o toFP_Word16_ToDouble.o toFP_Word32_ToDouble.o toFP_Word64_ToDouble.o toFP_Float_ToDouble.o toFP_Double_ToDouble.o toFP_Integer_ToDouble.o toFP_Real_ToDouble.o fromFP_Float_ToInt8.o fromFP_Float_ToInt16.o fromFP_Float_ToInt32.o fromFP_Float_ToInt64.o fromFP_Float_ToWord8.o fromFP_Float_ToWord16.o fromFP_Float_ToWord32.o fromFP_Float_ToWord64.o fromFP_Float_ToFloat.o fromFP_Float_ToDouble.o fromFP_Float_ToInteger.o fromFP_Float_ToReal.o fromFP_DoubleTo_Int8.o fromFP_DoubleTo_Int16.o fromFP_DoubleTo_Int32.o fromFP_DoubleTo_Int64.o fromFP_DoubleTo_Word8.o fromFP_DoubleTo_Word16.o fromFP_DoubleTo_Word32.o fromFP_DoubleTo_Word64.o fromFP_DoubleTo_Float.o fromFP_DoubleTo_Double.o fromFP_DoubleTo_Integer.o fromFP_DoubleTo_Real.o fromFP_SWord32_SFloat.o fromFP_SWord64_SDouble.o fromFP_SFloat_SWord32.o fromFP_SDouble_SWord64.o f_FP_Abs.o d_FP_Abs.o f_FP_Neg.o d_FP_Neg.o f_FP_Add.o d_FP_Add.o f_FP_Sub.o d_FP_Sub.o f_FP_Mul.o d_FP_Mul.o f_FP_Div.o d_FP_Div.o f_FP_FMA.o d_FP_FMA.o f_FP_Sqrt.o d_FP_Sqrt.o f_FP_Rem.o d_FP_Rem.o f_FP_RoundToIntegral.o d_FP_RoundToIntegral.o f_FP_Min.o d_FP_Min.o f_FP_Max.o d_FP_Max.o f_FP_IsEqualObject.o d_FP_IsEqualObject.o f_FP_IsNormal.o d_FP_IsNormal.o f_FP_IsZero.o d_FP_IsZero.o f_FP_IsSubnormal.o d_FP_IsSubnormal.o f_FP_IsInfinite.o d_FP_IsInfinite.o f_FP_IsNaN.o d_FP_IsNaN.o f_FP_IsNegative.o d_FP_IsNegative.o f_FP_IsPositive.o d_FP_IsPositive.o
 	${AR} ${ARFLAGS} $@ $^
 
-floatCodeGen_driver: floatCodeGen_driver.c floatCodeGen.h
+floatCodeGen_driver: floatCodeGen_driver.c floatCodeGen.h floatCodeGen.a
 	${CC} ${CCFLAGS} $< -o $@ floatCodeGen.a ${LDFLAGS}
 
 toFP_Int8_ToFloat.o: toFP_Int8_ToFloat.c floatCodeGen.h

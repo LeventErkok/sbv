@@ -41,10 +41,10 @@
 --
 -- == Deliberate boundaries
 --
--- Quantifiers, special solver relations, uninterpreted sorts,
--- regular-expression language operations, soft constraints, and general
--- extensional array equality require solver semantics and are rejected with
--- focused diagnostics. The C backend compiles higher-order uses after SBV has
+-- Quantifiers, special solver relations, uninterpreted sorts, and soft
+-- constraints are rejected. Regular-expression operations and general
+-- extensional array equality are also not implemented; restricted executable
+-- implementations are possible future extensions. The C backend compiles higher-order uses after SBV has
 -- firstified them; it does not expose symbolic functions as runtime C values.
 --
 -- Import "Data.SBV.Compilers.C.Legacy" to retain the previous compiler while

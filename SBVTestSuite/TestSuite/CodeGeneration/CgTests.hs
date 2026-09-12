@@ -23,6 +23,7 @@ module TestSuite.CodeGeneration.CgTests(tests) where
 import Control.Exception (ErrorCall, displayException, evaluate, try)
 import Data.List (isInfixOf)
 import Data.SBV.Internals
+import Data.SBV.Tools.CodeGen (compileToC, compileToCLib)
 import qualified Data.SBV.Char as SC
 import qualified Data.SBV.List as SL
 import qualified Data.SBV.RegExp as RE
@@ -108,6 +109,13 @@ tests = testGroup "CodeGeneration.CgTests"
   , goldenVsStringShow "codeGen1"       foo
   , testCase "compile through the public legacy facade" legacyPublicFacade
   , testCase "collect C runtime requirements" dependencyRequirements
+  , testCase "escape assertion messages in generated C" escapedAssertionMessages
+  , testCase "execute IEEE native floating-point remainders" nativeFloatingRemainders
+  , testCase "declare rounding modes in nested collections" collectionRoundingModes
+  , testCase "relink library drivers after component changes" libraryDriverDependencies
+  , testCase "reject comparisons of array-valued collections" arrayCollectionComparisons
+  , testCase "preserve external prototypes in libraries" libraryExternalPrototypes
+  , testCase "compare finite ADT set universes" finiteADTSetUniverses
   , testCase "compile exact symbolic rationals" exactSymbolicRationals
   , testCase "compile rationals with mapped integers" mappedIntegerRationals
   , testCase "compile divisibility with mapped integers" mappedIntegerDivisibility
@@ -151,7 +159,7 @@ tests = testGroup "CodeGeneration.CgTests"
   , testCase "compile higher-order list functions in a library" higherOrderListFunctionLibrary
   , testCase "compile explicit hard constraints" explicitHardConstraints
   , testCase "reject solver-only constraint features" unsupportedConstraintFeatures
-  , testCase "reject solver-only expression operations" unsupportedExpressionFeatures
+  , testCase "reject unimplemented regular-expression operations" unsupportedExpressionFeatures
   , testCase "return a non-atomic value group" nonAtomicReturnGroup
   , testCase "return multiple value groups" multipleReturnGroups
   , testCase "return managed non-atomic value groups" managedReturnGroups
@@ -232,6 +240,115 @@ tests = testGroup "CodeGeneration.CgTests"
                         cgOutputArr "yArr" ys
                         cgReturn (x*2)
 
+-- | Preserve diagnostic text literally, both in C comments and as a printf
+-- argument, including characters that could otherwise alter the generated C.
+escapedAssertionMessages :: Assertion
+escapedAssertionMessages = withSystemTempDirectory "sbv-assertion-escaping" $ \dir -> do
+  let message = "must be \"small\"; 100% %n */\n\\\n??/"
+  compileToC (Just dir) "escapedAssertion" $ do
+    cgOverwriteFiles True
+    cgSetDriverValues [7]
+    value <- cgInput "value" :: SBVCodeGen SWord8
+    cgReturn (sAssert Nothing message (value .< 5) value)
+  (makeExit, _, makeError) <- readProcessWithExitCode "make" ["-C", dir, "CCFLAGS=-std=c11 -Wall -Werror -O2"] ""
+  assertEqual makeError ExitSuccess makeExit
+  (runExit, _, runError) <- readProcessWithExitCode (dir </> "escapedAssertion_driver") [] ""
+  assertBool "Expected the violated assertion to terminate the driver" (runExit /= ExitSuccess)
+  assertBool ("Assertion text was changed: " ++ runError) (("ASSERTION FAILED: " ++ message) `isInfixOf` runError)
+
+-- | Compare executed native remainders against constant SBV evaluation,
+-- including quotient ties, negative operands, and a negative divisor.
+nativeFloatingRemainders :: Assertion
+nativeFloatingRemainders = mapM_ check [(7, 4), (6, 4), (-7, 4), (7, -4)]
+ where check (left, right) = withSystemTempDirectory "sbv-native-remainder" $ \dir -> do
+         let program = do
+               cgOverwriteFiles True
+               cgSetDriverValues [left, right, left, right]
+               leftFloat   <- cgInput "leftFloat"   :: SBVCodeGen SFloat
+               rightFloat  <- cgInput "rightFloat"  :: SBVCodeGen SFloat
+               leftDouble  <- cgInput "leftDouble"  :: SBVCodeGen SDouble
+               rightDouble <- cgInput "rightDouble" :: SBVCodeGen SDouble
+               let expectedFloat  = fpRem (fromInteger left) (fromInteger right) :: SFloat
+                   expectedDouble = fpRem (fromInteger left) (fromInteger right) :: SDouble
+               cgReturn ((fpRem leftFloat rightFloat .== expectedFloat) .&& (fpRem leftDouble rightDouble .== expectedDouble))
+         outputText <- compileProgramAndRunGenerated dir "nativeRemainder" program
+         assertBool ("Incorrect native remainder: " ++ outputText) ("= 1" `isInfixOf` outputText)
+
+-- | Discover rounding-mode declarations through collection element kinds,
+-- and compile their borrowed/owned interfaces with strict C warnings.
+collectionRoundingModes :: Assertion
+collectionRoundingModes = withSystemTempDirectory "sbv-collection-rounding" $ \dir -> do
+  compileToC (Just dir) "collectionRounding" $ do
+    cgOverwriteFiles True
+    values <- cgInput "values" :: SBVCodeGen (SList RoundingMode)
+    modes  <- cgInput "modes"  :: SBVCodeGen (SList [RoundingMode])
+    cgOutput "modesResult" modes
+    cgReturn values
+  (makeExit, _, makeError) <- readProcessWithExitCode "make" ["-C", dir, "CCFLAGS=-std=c11 -Wall -Werror -O2"] ""
+  assertEqual makeError ExitSuccess makeExit
+  _ <- compileAndRunGenerated dir "collectionRounding"
+  pure ()
+
+-- | The driver must wait for its archive in parallel builds and become stale
+-- whenever a component source changes, even if the public header is unchanged.
+libraryDriverDependencies :: Assertion
+libraryDriverDependencies = withSystemTempDirectory "sbv-library-dependencies" $ \dir -> do
+  _ <- compileToCLib (Just dir) "dependencyLibrary"
+    [("component", do cgOverwriteFiles True
+                      value <- cgInput "value" :: SBVCodeGen SWord8
+                      cgReturn (value + 1))]
+  (makeExit, _, makeError) <- readProcessWithExitCode "make" ["-j2", "-C", dir] ""
+  assertEqual makeError ExitSuccess makeExit
+  (queryExit, _, queryError) <- readProcessWithExitCode "make" ["-q", "-C", dir, "-W", "component.c", "dependencyLibrary_driver"] ""
+  assertEqual queryError (ExitFailure 1) queryExit
+
+-- | Reject both direct and nested array comparisons before emitting runtime
+-- helpers, while retaining support for transporting the same collection kinds.
+arrayCollectionComparisons :: Assertion
+arrayCollectionComparisons = mapM_ check [(.==), (./=), (.===)]
+ where check comparison = do
+         result <- try (do
+           (_, _, bundle) <- compileToC' "arrayComparison" $ do
+             left  <- cgInput "left"  :: SBVCodeGen (SList (ArrayModel Word8 Word8))
+             right <- cgInput "right" :: SBVCodeGen (SList (ArrayModel Word8 Word8))
+             cgReturn (comparison left right)
+           evaluate (length (show bundle))) :: IO (Either ErrorCall Int)
+         case result of
+           Left exception -> assertBool (displayException exception) ("extensional array equality" `isInfixOf` displayException exception)
+           Right _        -> assertBool "Expected generation to reject array-element comparison" False
+
+-- | A library header must retain user prototypes needed by its translation
+-- units, even when the external implementation is supplied at final linking.
+libraryExternalPrototypes :: Assertion
+libraryExternalPrototypes = withSystemTempDirectory "sbv-library-prototypes" $ \dir -> do
+  _ <- compileToCLib (Just dir) "prototypeLibrary"
+    [("externalCall", do cgOverwriteFiles True
+                         cgAddPrototype ["SWord8 external(SWord8);"]
+                         value <- cgInput "value" :: SBVCodeGen SWord8
+                         cgReturn (uninterpret "external" value :: SWord8))]
+  (makeExit, _, makeError) <- readProcessWithExitCode "make" ["-C", dir, "CCFLAGS=-std=c11 -Wall -Werror -O2", "externalCall.o"] ""
+  assertEqual makeError ExitSuccess makeExit
+
+-- | Finite sums and products have complete universes even when constructors
+-- carry fields. Dynamic inputs prevent constant folding from hiding the C
+-- finite/cofinite comparison; both regular and complemented inputs are tested.
+finiteADTSetUniverses :: Assertion
+finiteADTSetUniverses = mapM_ check [1, 2]
+ where check seed = withSystemTempDirectory "sbv-finite-adt-sets" $ \dir -> do
+         let program = do
+               cgOverwriteFiles True
+               cgSetDriverValues [seed, seed]
+               simple <- cgInput "simple" :: SBVCodeGen (SSet (Maybe Bool))
+               nested <- cgInput "nested" :: SBVCodeGen (SSet (Maybe (Either Bool Bool), Bool))
+               let simpleUniverse = SS.fromList [Nothing, Just False, Just True]
+                   alternatives   = [Nothing, Just (Left False), Just (Left True), Just (Right False), Just (Right True)]
+                   nestedUniverse = SS.fromList [(value, flag) | value <- alternatives, flag <- [False, True]]
+                   simpleFull     = simple `SS.union` simpleUniverse
+                   nestedFull     = nested `SS.union` nestedUniverse
+               cgReturn (simpleFull .== SS.full .&& nestedFull .== SS.full .&& SS.full `SS.isSubsetOf` nestedFull)
+         outputText <- compileProgramAndRunGenerated dir "finiteADTUniverses" program
+         assertBool outputText ("= 1" `isInfixOf` outputText)
+
 -- | Compile and execute a scalar program using only the public compatibility
 -- module's code-generation interface.
 legacyPublicFacade :: Assertion
@@ -262,10 +379,11 @@ legacyPublicFacade = withSystemTempDirectory "sbv-legacy-c-backend" $ \dir -> do
   let expectedLibrary = ["0x0000002aUL", "0x00000052UL"]
   mapM_ (\expected -> assertBool ("Expected legacy library output to contain " ++ expected ++ ", received:\n" ++ libraryOutput) (expected `isInfixOf` libraryOutput)) expectedLibrary
 
--- | Build and execute a generated C program or library driver.
+-- | Build and execute a generated C program or library driver with strict
+-- warnings so representation and ownership qualifier errors cannot pass silently.
 compileAndRunGenerated :: FilePath -> String -> IO String
 compileAndRunGenerated dir executableName = do
-  (makeExit, _, makeError) <- readProcessWithExitCode "make" ["-C", dir] ""
+  (makeExit, _, makeError) <- readProcessWithExitCode "make" ["-C", dir, "CCFLAGS=-std=c11 -Wall -Werror -O2"] ""
   assertEqual makeError ExitSuccess makeExit
   (runExit, outputText, runError) <- readProcessWithExitCode (dir </> executableName ++ "_driver") [] ""
   assertEqual runError ExitSuccess runExit
@@ -2259,8 +2377,8 @@ unsupportedConstraintFeatures = do
                                  ("Constraint attributes: :weight" `isInfixOf` displayException exception)
     Right _        -> assertBool "Expected C generation to reject an SMT-only constraint attribute" False
 
--- | Check that regular-expression membership and language equality receive
--- focused solver-only diagnostics instead of reaching the generic renderer.
+-- | Check that unimplemented regular-expression operations receive focused
+-- diagnostics without claiming that executable implementations are impossible.
 unsupportedExpressionFeatures :: Assertion
 unsupportedExpressionFeatures = do
   membershipResult <- try (do
@@ -2271,7 +2389,7 @@ unsupportedExpressionFeatures = do
   case membershipResult of
     Left exception -> assertBool ("Expected a regular-expression membership diagnostic, received:\n" ++ displayException exception)
                                  ("regular-expression membership" `isInfixOf` displayException exception
-                               && "solver-only semantics" `isInfixOf` displayException exception)
+                               && "not yet implemented" `isInfixOf` displayException exception)
     Right _        -> assertBool "Expected C generation to reject regular-expression membership" False
 
   equalityResult <- try (do
@@ -2281,7 +2399,7 @@ unsupportedExpressionFeatures = do
   case equalityResult of
     Left exception -> assertBool ("Expected a regular-expression language-equality diagnostic, received:\n" ++ displayException exception)
                                  ("regular-expression language equality" `isInfixOf` displayException exception
-                               && "solver-only semantics" `isInfixOf` displayException exception)
+                               && "not yet implemented" `isInfixOf` displayException exception)
     Right _        -> assertBool "Expected C generation to reject regular-expression language equality" False
 
 -- | Exercise a sole 'cgReturnArr' group through the generated output-parameter
@@ -2617,7 +2735,7 @@ arrayValuedTables = withSystemTempDirectory "sbv-array-valued-tables" $ \dir -> 
   assertBool ("Expected the selected array value, received:\n" ++ stdoutText) ("0x00000015UL" `isInfixOf` stdoutText)
   assertBool ("Expected the out-of-range default array value, received:\n" ++ stdoutText) ("defaultValue = 0x0000001eUL" `isInfixOf` stdoutText)
   assertBool ("Expected retained array-valued table storage, received:\n" ++ sourceText)
-             (    "const SBVArrayOutput_u8_u32 * table" `isInfixOf` sourceText
+             (    "SBVArrayOutput_u8_u32 * const table" `isInfixOf` sourceText
               && "sbv_array_stored_export_u8_u32(&__sbv_array_ctx" `isInfixOf` sourceText
               && "__sbv_array_descriptor_" `isInfixOf` sourceText
              )

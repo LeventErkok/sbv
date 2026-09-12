@@ -55,7 +55,46 @@ tests = testGroup "CodeGeneration.ArbitraryFloats"
   , testCase "compile and execute a mixed repeated-type library" mixedRepeatedTypeLibrary
   , testCase "compile a repeated-type library without a driver" repeatedTypeLibraryWithoutDriver
   , testCase "compile a wide arbitrary-float tuple" wideFloatingTuple
+  , testCase "preserve dependencies with optional library files" optionalLibraryFiles
   ]
+
+-- | Keep LibBF requirements when its component disables Makefile generation,
+-- and associate an enabled driver with its own component after a disabled one.
+optionalLibraryFiles :: Assertion
+optionalLibraryFiles = mapM_ check [False, True]
+ where check generateMakefile = withSystemTempDirectory "sbv-optional-library-files" $ \dir -> do
+         (includeDir, archive) <- locateLibBF
+         (_, cfg, bundle) <- compileToCLib' "optionalLibrary"
+           [ ("scalar", do
+                 cgOverwriteFiles True
+                 cgGenerateDriver False
+                 cgGenerateMakefile generateMakefile
+                 value <- cgInput "value" :: SBVCodeGen SWord8
+                 cgReturn (value + 1))
+           , ("half", do
+                 cgOverwriteFiles True
+                 cgGenerateMakefile False
+                 cgSetDriverValues [1]
+                 value <- cgInput "value" :: SBVCodeGen SFPHalf
+                 cgReturn (value + 1))
+           ]
+         renderCgPgmBundle (Just dir) (cfg, bundle)
+         hasMakefile <- doesFileExist (dir </> "Makefile")
+         assertEqual "Unexpected optional Makefile" generateMakefile hasMakefile
+         if generateMakefile
+           then do makefile <- readFile (dir </> "Makefile")
+                   assertBool "Hidden component lost its LibBF link dependency" ("-lbf" `isInfixOf` makefile)
+           else pure ()
+         let driverPath = dir </> "driver"
+         (buildExit, _, buildError) <- readProcessWithExitCode "cc"
+           [ "-std=c11", "-Wall", "-Werror", "-I" ++ includeDir
+           , dir </> "scalar.c", dir </> "half.c", dir </> "optionalLibrary_driver.c"
+           , archive, "-lm", "-o", driverPath
+           ] ""
+         assertEqual buildError ExitSuccess buildExit
+         (runExit, outputText, runError) <- readProcessWithExitCode driverPath [] ""
+         assertEqual runError ExitSuccess runExit
+         assertBool outputText ("Driver run for half:" `isInfixOf` outputText && asHex 1 0x4000 `isInfixOf` outputText)
 
 -- | Exercise tuple fields whose value representations are generated wide
 -- bit-vector and arbitrary floating-point structures.
