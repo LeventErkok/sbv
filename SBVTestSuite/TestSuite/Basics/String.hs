@@ -26,7 +26,7 @@ import qualified Data.SBV.List   as S
 import qualified Data.SBV.Char   as SC
 import qualified Data.SBV.RegExp as R
 
-import Control.Monad (forM, forM_, replicateM, unless)
+import Control.Monad (forM, forM_, replicateM, unless, void)
 import Control.Exception (ErrorCall, displayException, evaluate, try)
 import Data.List (isInfixOf, nub, sort)
 import Test.Tasty.HUnit (assertBool, assertEqual)
@@ -139,13 +139,13 @@ regexInvalidBounds = forM_ invalid $ \(regex, diagnostic) ->
   forM_ wrappers $ \wrap -> do
     let r = wrap regex
     forM_ ["", "aa"] $ \sample ->
-      rejects diagnostic $ evaluate (unliteral ((literal sample :: SString) `R.match` r)) >> pure ()
-    rejects diagnostic $ evaluate (length (show r)) >> pure ()
+      rejects diagnostic $ void $ evaluate (unliteral ((literal sample :: SString) `R.match` r))
+    rejects diagnostic $ void $ evaluate (length (show r))
     rejects diagnostic $ runSMT $ do
       input <- sString "input"
       constrain (input `R.match` r)
     -- Language equality bypasses match and exercises SMT serialization itself.
-    rejects diagnostic $ sat (r .== R.All) >> pure ()
+    rejects diagnostic $ void $ sat (r .== R.All)
  where invalid = [ (R.Loop 2 1 "a", "Loop with arguments: (2,1)")
                  , (R.Loop (-1) 2 "a", "Loop with arguments: (-1,2)")
                  , (R.Loop 0 (-1) "a", "Loop with arguments: (0,-1)")
