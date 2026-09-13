@@ -3,6 +3,13 @@
 
 ### Version 14.8, Not yet released
 
+  * The current C backend supports dependency-free regex membership and generation-time
+    language equality/inequality, including Boolean regex operations and nullable repetition.
+    Generated matchers use static automaton tables and accept arbitrary-length canonical SBV
+    strings, including embedded NULs and numeric surrogate characters. `cgRegexLimits` bounds
+    automaton states, expression size, and generation work; exceeding a limit fails during
+    generation without approximating semantics. Non-regex programs gain no regex code or dependencies.
+
   * Replace the default SBV-to-C compiler with a comprehensive backend. Generated programs and
     static libraries now support arbitrary-width signed and unsigned bit-vectors, native and
     arbitrary-format floating point with explicit rounding modes, exact GMP-backed integers and

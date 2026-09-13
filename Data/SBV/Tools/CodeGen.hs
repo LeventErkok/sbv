@@ -20,7 +20,7 @@ module Data.SBV.Tools.CodeGen (
           SBVCodeGen, cgSym
 
         -- ** Setting code-generation options
-        , cgPerformRTCs, cgSetDriverValues, cgArrayEqualityLimit, cgGenerateDriver, cgGenerateMakefile, cgOverwriteFiles, cgShowU8UsingHex
+        , cgPerformRTCs, cgSetDriverValues, cgArrayEqualityLimit, cgRegexLimits, cgGenerateDriver, cgGenerateMakefile, cgOverwriteFiles, cgShowU8UsingHex
 
         -- ** Designating inputs
         , cgInput, cgInputArr
@@ -247,13 +247,56 @@ let compareArrays = do
 >>> (_, _, generated) <- compileToC' "compareArrays" compareArrays
 >>> length (show generated) `seq` pure ()
 
+== Regular expressions
+
+Regex membership compiles to a bounded deterministic automaton: function-local
+static tables and an allocation-free C loop. All 'Data.SBV.RegExp.RegExp'
+constructors are supported, including complement, intersection, difference,
+and nullable repetitions. Matching consumes the entire string, preserves
+embedded NULs, and uses SBV's character domain @0..0x2ffff@, including numeric
+surrogate values. The normal canonical string-encoding ABI still applies.
+Regex language equality and inequality are decided during generation and
+produce Boolean constants, not runtime comparisons.
+
+There are no additional packages, generation tools, headers, or linker flags.
+Non-regex programs acquire no regex runtime code. Tables are private to each
+generated function and work inside defined functions and closed array lambdas.
+
+'cgRegexLimits' bounds compilation independently per regex operation: maximum
+explored automaton states (default 1024), expression nodes (4096), and charged
+generation work (1000000). Language comparison counts pairs of residual states.
+Expression limits also bound literal/list lengths and repetition expansion;
+work accounts for traversals, construction, normalization, and state comparisons.
+These are conservative implementation budgets, not time or memory guarantees.
+They can reject even a regex whose minimal automaton would be small; this
+initial implementation does not minimize automata or optimize large repetitions.
+
+Exceeding a budget fails during generation with a diagnostic naming the limit.
+No language approximation or fallback matcher is used. Zero in any limit
+disables regex compilation; negative limits are invalid. Successful generation
+supports inputs of any length, independently of these limits. Each library
+component can choose its own limits. Already folded or dead operations need
+no regex compilation.
+
+For example, permit a larger automaton when generating a suffix matcher:
+
+>>> import qualified Data.SBV.RegExp as RE
+>>> :{
+let suffixMatcher = do
+      cgRegexLimits 4096 8192 4000000
+      input <- cgInput "input" :: SBVCodeGen SString
+      cgReturn (input `RE.match` RE.Conc [RE.All, RE.Literal "done"])
+:}
+
+>>> (_, _, regexCode) <- compileToC' "suffixMatcher" suffixMatcher
+>>> length (show regexCode) `seq` pure ()
+
 == Boundaries
 
 Array comparisons with infinite or unsupported key domains, or values that
 themselves contain arrays, are rejected during generation. Comparing arrays
-nested inside collections or aggregates is also not implemented. Regular-expression
-operations, quantifiers, special solver relations, uninterpreted sorts, and
-soft constraints are rejected. Regex matching remains a possible executable extension.
+nested inside collections or aggregates is also not implemented. Quantifiers,
+special solver relations, uninterpreted sorts, and soft constraints are rejected.
 
 Exact GMP reals represent rational values, not arbitrary algebraic or
 transcendental values. Select 'cgSRealType' for native approximations and

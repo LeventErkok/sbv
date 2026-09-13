@@ -28,7 +28,7 @@ module Data.SBV.Compilers.CodeGen (
         , svCgReturn, svCgReturnArr
 
         -- * Settings
-        , cgPerformRTCs, cgSetDriverValues, cgArrayEqualityLimit
+        , cgPerformRTCs, cgSetDriverValues, cgArrayEqualityLimit, cgRegexLimits
         , cgAddPrototype, cgAddDecl, cgAddLDFlags, cgIgnoreSAssert, cgOverwriteFiles, cgShowU8UsingHex
         , cgIntegerSize, cgSRealType, CgSRealType(..)
 
@@ -74,6 +74,9 @@ data CgConfig = CgConfig {
         , cgOverwriteGenerated   :: Bool              -- ^ If 'True', will overwrite the generated files without prompting.
         , cgShowU8InHex          :: Bool              -- ^ If 'True', then 8-bit unsigned values will be shown in hex as well, otherwise decimal. (Other types always shown in hex.)
         , cgArrayEqualityMaxKeys :: Integer           -- ^ Maximum key-domain size for exhaustive array equality in the current C backend.
+        , cgRegexMaxStates       :: Integer           -- ^ Maximum states explored per regex membership or language comparison.
+        , cgRegexMaxNodes        :: Integer           -- ^ Maximum nodes in a regex expression, including intermediate derivatives.
+        , cgRegexMaxWork         :: Integer           -- ^ Maximum charged generation work per regex operation; not a runtime input bound.
         }
 
 -- | Default options for code generation. Run-time checks are disabled, driver
@@ -90,6 +93,9 @@ defaultCgConfig = CgConfig { cgRTC                  = False
                           , cgOverwriteGenerated   = False
                           , cgShowU8InHex          = False
                           , cgArrayEqualityMaxKeys = 256
+                          , cgRegexMaxStates       = 1024
+                          , cgRegexMaxNodes        = 4096
+                          , cgRegexMaxWork         = 1000000
                           }
 
 -- | Abstraction of target language values
@@ -177,6 +183,24 @@ cgArrayEqualityLimit :: Integer -> SBVCodeGen ()
 cgArrayEqualityLimit limit
   | limit < 0 = error "SBV.cgArrayEqualityLimit: The limit must be nonnegative."
   | True      = modify' (\s -> s { cgFinalConfig = (cgFinalConfig s) { cgArrayEqualityMaxKeys = limit } })
+
+-- | Bound dependency-free C regex compilation: maximum explored states,
+-- expression nodes, and generation work, respectively. Defaults are 1024,
+-- 4096, and 1000000. Exceeding a budget fails during generation, never by
+-- approximating the language or limiting runtime input length. Zero disables
+-- regex compilation; negative limits are invalid. Limits apply independently
+-- to each operation, also inside defined functions and library components.
+--
+-- For example, @cgRegexLimits 4096 8192 4000000@ permits larger automata and
+-- intermediate expressions, at the cost of more generation time and memory.
+-- See "Data.SBV.Tools.CodeGen" for an executable generation example.
+cgRegexLimits :: Integer -> Integer -> Integer -> SBVCodeGen ()
+cgRegexLimits states nodes work
+  | any (< 0) [states, nodes, work] = error "SBV.cgRegexLimits: Limits must be nonnegative."
+  | True = modify' (\s -> s { cgFinalConfig = (cgFinalConfig s) { cgRegexMaxStates = states
+                                                              , cgRegexMaxNodes  = nodes
+                                                              , cgRegexMaxWork   = work
+                                                              } })
 
 -- | Sets number of bits to be used for representing the 'SInteger' type in the generated C code.
 -- The argument must be one of @8@, @16@, @32@, or @64@. Note that this is essentially unsafe as

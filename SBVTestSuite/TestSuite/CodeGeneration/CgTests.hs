@@ -21,14 +21,13 @@
 module TestSuite.CodeGeneration.CgTests(tests) where
 
 import Control.Exception (ErrorCall, displayException, evaluate, try)
-import Control.Monad (forM, unless, when)
+import Control.Monad (forM, unless, void, when)
 import Data.List (isInfixOf)
 import Data.Proxy (Proxy(..))
 import Data.SBV.Internals
 import Data.SBV.Tools.CodeGen (compileToC, compileToCLib)
 import qualified Data.SBV.Char as SC
 import qualified Data.SBV.List as SL
-import qualified Data.SBV.RegExp as RE
 import qualified Data.SBV.Set as SS
 import Data.SBV.Tuple (tuple, untuple)
 import qualified Data.SBV.Tools.CodeGen.Legacy as PublicLegacy
@@ -191,7 +190,6 @@ tests = testGroup "CodeGeneration.CgTests"
   , testCase "compile higher-order list functions in a library" higherOrderListFunctionLibrary
   , testCase "compile explicit hard constraints" explicitHardConstraints
   , testCase "reject solver-only constraint features" unsupportedConstraintFeatures
-  , testCase "reject unimplemented regular-expression operations" unsupportedExpressionFeatures
   , testCase "return a non-atomic value group" nonAtomicReturnGroup
   , testCase "return multiple value groups" multipleReturnGroups
   , testCase "return managed non-atomic value groups" managedReturnGroups
@@ -615,8 +613,8 @@ publicCNameValidation = do
     values <- cgInputArr 2 "my-values" :: SBVCodeGen [SWord8]
     cgReturnArr values
   rejects $ \dir -> compileToC (Just dir) "badOutputGroup" $ cgOutputArr "int" [literal (3 :: Word8)]
-  rejects $ \dir -> () <$ compileToCLib (Just dir) "my-library" [("component", scalar)]
-  rejects $ \dir -> () <$ compileToCLib (Just dir) "validLibrary" [("my-component", scalar)]
+  rejects $ \dir -> void $ compileToCLib (Just dir) "my-library" [("component", scalar)]
+  rejects $ \dir -> void $ compileToCLib (Just dir) "validLibrary" [("my-component", scalar)]
  where scalar = do
          value <- cgInput "value" :: SBVCodeGen SWord8
          cgReturn value
@@ -3115,31 +3113,6 @@ unsupportedConstraintFeatures = do
     Left exception -> assertBool ("Expected a constraint-attribute diagnostic, received:\n" ++ displayException exception)
                                  ("Constraint attributes: :weight" `isInfixOf` displayException exception)
     Right _        -> assertBool "Expected C generation to reject an SMT-only constraint attribute" False
-
--- | Check that unimplemented regular-expression operations receive focused
--- diagnostics without claiming that executable implementations are impossible.
-unsupportedExpressionFeatures :: Assertion
-unsupportedExpressionFeatures = do
-  membershipResult <- try (do
-    (_, _, bundle) <- compileToC' "regularExpressionMembership" $ do
-      value <- cgInput "value" :: SBVCodeGen SString
-      cgReturn (value `RE.match` RE.exactly "abc")
-    evaluate (length (show bundle))) :: IO (Either ErrorCall Int)
-  case membershipResult of
-    Left exception -> assertBool ("Expected a regular-expression membership diagnostic, received:\n" ++ displayException exception)
-                                 ("regular-expression membership" `isInfixOf` displayException exception
-                               && "not yet implemented" `isInfixOf` displayException exception)
-    Right _        -> assertBool "Expected C generation to reject regular-expression membership" False
-
-  equalityResult <- try (do
-    (_, _, bundle) <- compileToC' "regularExpressionEquality" $
-      cgReturn (RE.exactly "a" .== RE.exactly "a")
-    evaluate (length (show bundle))) :: IO (Either ErrorCall Int)
-  case equalityResult of
-    Left exception -> assertBool ("Expected a regular-expression language-equality diagnostic, received:\n" ++ displayException exception)
-                                 ("regular-expression language equality" `isInfixOf` displayException exception
-                               && "not yet implemented" `isInfixOf` displayException exception)
-    Right _        -> assertBool "Expected C generation to reject regular-expression language equality" False
 
 -- | Exercise a sole 'cgReturnArr' group through the generated output-parameter
 -- ABI while preserving the return elements' declaration order.

@@ -22,7 +22,7 @@ import qualified Data.Foldable         as F (toList)
 import qualified Data.Graph            as DG
 import Data.List                       (intercalate, intersperse, isPrefixOf, nub, nubBy, sortOn)
 import qualified Data.Map.Strict       as Map
-import Data.Maybe                      (fromJust, fromMaybe, isJust)
+import Data.Maybe                      (fromJust, fromMaybe, isJust, isNothing)
 import qualified Data.Set              as Set (Set, empty, fromList, insert, intersection, map, member, notMember, null, toList, union, unions)
 import qualified Data.Text             as T
 import qualified Data.Text.Encoding    as TE
@@ -47,6 +47,7 @@ import Data.SBV.Compilers.C.GMP
 import Data.SBV.Compilers.C.List
 import Data.SBV.Compilers.C.Lowering
 import Data.SBV.Compilers.C.NonLinear
+import Data.SBV.Compilers.C.RegExp (regexExpr)
 import Data.SBV.Compilers.C.Set
 import Data.SBV.Compilers.C.Table
 import Data.SBV.Compilers.C.Text
@@ -2181,7 +2182,7 @@ scheduleC cfg adts functionNames lambdaNames constants initialValues assignments
 
                selectValue current
                  | entriesReady current
-                 , not (isJust checkedBounds) || defaultValue `Set.member` fst current
+                 , isNothing checkedBounds || defaultValue `Set.member` fst current
                  = renderLookup cfg current
                  | Just check <- checkedBounds
                  = let (withDefault, defaultDocs, defaultRequirements, defaultDeclarations) = emitChoice current defaultValue
@@ -2580,6 +2581,7 @@ ppExpr cfg adts functionNames structuredLambdaNames consts (SBVApp op opArgs) re
           , tableExpr cfg (showSV cfg consts) op resultSV
           , setExpr cfg op opArgs (kindOf resultSV) renderedArgs
           , nonLinearExpr cfg op opArgs (kindOf resultSV) renderedArgs
+          , regexExpr cfg op resultSV renderedArgs
           , textExpr cfg op opArgs (kindOf resultSV) renderedArgs
           , listExpr cfg op opArgs resultSV renderedArgs
           , adtExpr cfg adts op opArgs resultSV renderedArgs
@@ -2632,8 +2634,8 @@ ppExpr cfg adts functionNames structuredLambdaNames consts (SBVApp op opArgs) re
         p ArrayInit{}          _   = die "Array initialization escaped the persistent-array lowering pipeline"
         p QuantifiedBool{}     _   = solverOnly "quantified Boolean expressions"
         p SpecialRelOp{}       _   = solverOnly "special relations"
-        p RegExOp{}            _   = unsupportedRegularExpression "regular-expression language equality"
-        p (StrOp StrInRe{})    _   = unsupportedRegularExpression "regular-expression membership"
+        p RegExOp{}            _   = die "Regex comparison escaped the bounded-automaton lowering pipeline"
+        p (StrOp StrInRe{})    _   = die "Regex membership escaped the bounded-automaton lowering pipeline"
         p (Label s)           [a]  = a <+> text "/*" <+> cCommentText s <+> text "*/"
         p (IEEEFP w)            as = handleIEEE w consts (zip opArgs as) var
         p (PseudoBoolean pb)    as = handlePB pb as
@@ -2748,8 +2750,6 @@ ppExpr cfg adts functionNames structuredLambdaNames consts (SBVApp op opArgs) re
         p o args      = die $ "Received operator " ++ show o ++ " applied to " ++ show args
 
         solverOnly feature = error $ "SBV->C: " ++ feature ++ " has solver-only semantics and cannot be compiled to executable C"
-
-        unsupportedRegularExpression feature = error $ "SBV->C: " ++ feature ++ " is not yet implemented by the C backend"
 
         mappedIntegerDivides divisor value
           | divisor > maximumMagnitude = parens (value <+> text "==" <+> text "0")

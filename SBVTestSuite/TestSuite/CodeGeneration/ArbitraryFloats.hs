@@ -17,7 +17,9 @@
 module TestSuite.CodeGeneration.ArbitraryFloats (tests) where
 
 import Control.Exception         (ErrorCall, displayException, try)
+import Control.Monad             (when)
 import Data.List                 (isInfixOf)
+import Data.Maybe                (fromMaybe)
 import Numeric                   (showHex)
 import System.Directory          (doesFileExist, listDirectory)
 import System.Environment        (lookupEnv)
@@ -91,10 +93,9 @@ optionalLibraryFiles = mapM_ check [False, True]
          renderCgPgmBundle (Just dir) (cfg, bundle)
          hasMakefile <- doesFileExist (dir </> "Makefile")
          assertEqual "Unexpected optional Makefile" generateMakefile hasMakefile
-         if generateMakefile
-           then do makefile <- readFile (dir </> "Makefile")
-                   assertBool "Hidden component lost its LibBF link dependency" ("-lbf" `isInfixOf` makefile)
-           else pure ()
+         when generateMakefile $ do
+           makefile <- readFile (dir </> "Makefile")
+           assertBool "Hidden component lost its LibBF link dependency" ("-lbf" `isInfixOf` makefile)
          let driverPath = dir </> "driver"
          (buildExit, _, buildError) <- readProcessWithExitCode "cc"
            [ "-std=c11", "-Wall", "-Werror", "-I" ++ includeDir
@@ -265,8 +266,8 @@ nativeRoundingProgram = do
     , fpAdd sRNE (fpMul sRNE xd yd) (-1) .== 0
     , xf * yf - 1 .== 0
     , xd * yd - 1 .== 0
-    , fpFMA sRNE xf yf (-1) .== literal (-2 ** (-46) :: Float)
-    , fpFMA sRNE xd yd (-1) .== literal (-2 ** (-104) :: Double)
+    , fpFMA sRNE xf yf (-1) .== literal (-(2 ** (-46)) :: Float)
+    , fpFMA sRNE xd yd (-1) .== literal (-(2 ** (-104)) :: Double)
     ]
 
 -- | Generated standalone and library Makefiles must preserve rounding steps
@@ -279,7 +280,7 @@ nativeFloatRoundingSteps = mapM_ check [(library, flags) | library <- [False, Tr
                                then compileToCLib' functionName [("roundingComponent", nativeRoundingProgram)]
                                else compileToC' functionName ((:[]) <$> nativeRoundingProgram)
          renderCgPgmBundle (Just dir) (cfg, bundle)
-         extraFlags <- maybe "" id <$> lookupEnv "SBV_C_TEST_FLAGS"
+         extraFlags <- fromMaybe "" <$> lookupEnv "SBV_C_TEST_FLAGS"
          writeFile (dir </> "rounding.mk") ("CCFLAGS=-Wall -Werror " ++ flags ++ " " ++ extraFlags ++ "\n")
          (makeExit, _, makeError) <- readProcessWithExitCode "make" ["-C", dir] ""
          assertEqual makeError ExitSuccess makeExit
@@ -561,11 +562,10 @@ mappedIntegerFloatConversions = mapM_ check [(width, exposeChecks, arbitraryResu
                      ++ [(fromSFloatingPoint rm halfFraction :: SInteger) .== expected | arbitraryResult]
                    allChecks = ((fromSDouble sRNE large :: SInteger) .== 65539)
                              : concatMap checks [(sRNE, -2), (sRNA, -3), (sRTP, -2), (sRTN, -3), (sRTZ, -2)]
-               if exposeChecks
-                  then do cgOutputArr "checks" allChecks
-                          cgOutputArr "actual" (map (sFloatingPointAsSWord . half) [sRNE, sRNA, sRTP, sRTN, sRTZ])
-                          cgOutputArr "expected" (map (sFloatingPointAsSWord . reference) [sRNE, sRNA, sRTP, sRTN, sRTZ])
-                  else pure ()
+               when exposeChecks $ do
+                 cgOutputArr "checks" allChecks
+                 cgOutputArr "actual" (map (sFloatingPointAsSWord . half) [sRNE, sRNA, sRTP, sRTN, sRTZ])
+                 cgOutputArr "expected" (map (sFloatingPointAsSWord . reference) [sRNE, sRNA, sRTP, sRTN, sRTZ])
                cgReturn (sAnd allChecks)
              sample = if width == 8 then 5 else 2049
          compileAndRunLibBF dir "mappedIntegerFloat" program ") = 1"
@@ -579,7 +579,7 @@ mappedRealConversions = mapM_ check [(realType, mappedInteger) | realType <- [Cg
          let program = do
                cgOverwriteFiles True
                cgSRealType realType
-               if mappedInteger then cgIntegerSize 32 else pure ()
+               when mappedInteger $ cgIntegerSize 32
                cgSetDriverValues [16777217, -5, 7]
                value <- cgInput "value" :: SBVCodeGen SInteger
                real  <- cgInput "real"  :: SBVCodeGen SReal
