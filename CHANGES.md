@@ -70,6 +70,11 @@
     rounding modes are now honored, including directed overflow. Previously these conversions
     always used round-nearest-ties-to-even, regardless of the requested mode.
 
+  * Fix literal regular-expression matching with universal, complement, difference, and
+    intersection expressions inside concatenations and repetitions. Constant folding now
+    checks the remaining suffix and applies Boolean operations to the same matched prefix,
+    agreeing with solver-side membership semantics.
+
 ### Version 14.7, 2026-08-31
 
   * Fix https://github.com/LeventErkok/sbv/issues/813. Thanks to David van Balen for reporting.
