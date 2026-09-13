@@ -27,8 +27,9 @@ import qualified Data.SBV.Char   as SC
 import qualified Data.SBV.RegExp as R
 
 import Control.Monad (forM, forM_, replicateM, unless)
-import Data.List (nub, sort)
-import Test.Tasty.HUnit (assertEqual)
+import Control.Exception (ErrorCall, displayException, evaluate, try)
+import Data.List (isInfixOf, nub, sort)
+import Test.Tasty.HUnit (assertBool, assertEqual)
 
 import qualified Data.Map.Strict as M
 
@@ -61,6 +62,7 @@ tests =
            (assertEqual "Literal regex membership" (Just expected) (unliteral (literal sample `R.match` regex)))
         | (sample, regex, expected) <- regexLiteralCases]
     , testCase "regex literal and solver agreement" regexLiteralAgreement
+    , testCase "invalid regex repetition bounds" regexInvalidBounds
     ]
 
 -- | Regressions for continuation handling: universal matching must not
@@ -68,7 +70,14 @@ tests =
 -- Include nullable repetition, empty inputs, Unicode, and embedded NULs.
 regexLiteralCases :: [(String, R.RegExp, Bool)]
 regexLiteralCases =
-  [ ("a", R.Conc [R.All, "b"], False)
+  [ ("", R.Conc [], True)
+  , ("a", R.Conc [], False)
+  , ("a", R.Conc [R.Conc [], "a", R.Conc []], True)
+  , ("", R.Loop 0 0 "a", True)
+  , ("a", R.Loop 0 0 "a", False)
+  , ("", R.Power 0 "a", True)
+  , ("aa", R.Loop 2 2 "a", True)
+  , ("a", R.Conc [R.All, "b"], False)
   , ("ab", R.Conc [R.All, "b"], True)
   , ("b", R.Conc [R.All, "b"], True)
   , ("", R.Conc [R.All, "b"], False)
@@ -115,13 +124,42 @@ regexLiteralAgreement = do
     forM_ (zip regexes actual) $ \(regex, expected) ->
       assertEqual ("Literal/solver disagreement for " P.++ show sample P.++ " against " P.++ show regex)
                   (Just expected) (unliteral (literal sample `R.match` regex))
- where atoms   = [R.All, R.None, "", "a", "ab"]
+ where atoms   = [R.All, R.None, R.Conc [], "", "a", "ab"]
        unary   = [op regex | op <- [R.Comp, R.KStar, R.KPlus, R.Opt, R.Loop 0 2], regex <- atoms]
        binary  = [op left right | op <- [R.Inter, R.Diff, \a b -> R.Union [a, b]], left <- atoms, right <- atoms]
        base    = atoms P.++ unary P.++ binary
        regexes = nub $ [regex | (_, regex, _) <- regexLiteralCases]
                   P.++ [wrapped | regex <- base, wrapped <- [regex, R.Conc [regex, "b"], R.Conc ["a", regex]]]
        samples = nub $ concatMap (`replicateM` "ab") [0 .. 3] P.++ [sample | (sample, _, _) <- regexLiteralCases]
+
+-- | Invalid bounds must fail on both literal and symbolic inputs, even when
+-- matching could skip the offending branch. The printer uses the same check.
+regexInvalidBounds :: Assertion
+regexInvalidBounds = forM_ invalid $ \(regex, diagnostic) ->
+  forM_ wrappers $ \wrap -> do
+    let r = wrap regex
+    forM_ ["", "aa"] $ \sample ->
+      rejects diagnostic $ evaluate (unliteral ((literal sample :: SString) `R.match` r)) >> pure ()
+    rejects diagnostic $ evaluate (length (show r)) >> pure ()
+    rejects diagnostic $ runSMT $ do
+      input <- sString "input"
+      constrain (input `R.match` r)
+    -- Language equality bypasses match and exercises SMT serialization itself.
+    rejects diagnostic $ sat (r .== R.All) >> pure ()
+ where invalid = [ (R.Loop 2 1 "a", "Loop with arguments: (2,1)")
+                 , (R.Loop (-1) 2 "a", "Loop with arguments: (-1,2)")
+                 , (R.Loop 0 (-1) "a", "Loop with arguments: (0,-1)")
+                 , (R.Power (-1) "a", "Power with arguments: -1")
+                 ]
+       wrappers = [id, \r -> R.Union [R.All, r], \r -> R.Conc [R.None, r],
+                   R.KStar, R.KPlus, R.Opt, R.Comp, R.Loop 0 0, R.Power 0,
+                   R.Inter R.None, R.Diff R.None]
+
+       rejects diagnostic action = do
+         result <- try action :: IO (Either ErrorCall ())
+         case result of
+           Left err -> assertBool ("Expected diagnostic: " P.++ diagnostic) (diagnostic `isInfixOf` displayException err)
+           Right () -> assertFailure ("Accepted invalid regex: " P.++ diagnostic)
 
 checkWith :: SMTConfig -> Symbolic () -> CheckSatResult -> IO ()
 checkWith cfg props csExpected = runSMTWith cfg{verbose=True} $ do
