@@ -171,23 +171,31 @@ class SymVal a => IEEEFloatConvertible a where
   fromSFloat :: SRoundingMode -> SFloat -> SBV a
   fromSFloat = genericFromFloat
 
-  -- | Convert to an IEEE-754 Single-precision float.
+  -- | Convert to an IEEE-754 Single-precision float. Integral literals are
+  -- rounded directly to binary32 in the requested rounding mode.
+  --
+  -- >>> unliteral (toSFloat sRTP (16777217 :: SInteger))
+  -- Just 1.6777218e7
   toSFloat :: SRoundingMode -> SBV a -> SFloat
 
   -- default definition if we have an integral like
   default toSFloat :: Integral a => SRoundingMode -> SBV a -> SFloat
-  toSFloat = genericToFloat (onlyWhenRNE (Just . fromRational . fromIntegral))
+  toSFloat = genericToFloat (\rm -> Just . fpToFloat rm . roundIntegralFP 8 24 rm)
 
   -- | Convert from an IEEE74 double precision float.
   fromSDouble :: SRoundingMode -> SDouble -> SBV a
   fromSDouble = genericFromFloat
 
-  -- | Convert to an IEEE-754 Double-precision float.
+  -- | Convert to an IEEE-754 Double-precision float. Integral literals are
+  -- rounded directly to binary64 in the requested rounding mode.
+  --
+  -- >>> unliteral (toSDouble sRTN (-9007199254740993 :: SInteger))
+  -- Just (-9.007199254740994e15)
   toSDouble :: SRoundingMode -> SBV a -> SDouble
 
   -- default definition if we have an integral like
   default toSDouble :: Integral a => SRoundingMode -> SBV a -> SDouble
-  toSDouble = genericToFloat (onlyWhenRNE (Just . fromRational . fromIntegral))
+  toSDouble = genericToFloat (\rm -> Just . fpToDouble rm . roundIntegralFP 11 53 rm)
 
   -- | Convert from an arbitrary floating point.
   fromSFloatingPoint :: ValidFloat eb sb => SRoundingMode -> SFloatingPoint eb sb -> SBV a
@@ -213,10 +221,15 @@ class SymVal a => IEEEFloatConvertible a where
 integralToFloatingPoint :: forall a eb sb. (Integral a, IEEEFloatConvertible a, ValidFloat eb sb)
                        => SRoundingMode -> SBV a -> SFloatingPoint eb sb
 integralToFloatingPoint = genericToFloat convert
- where convert rm value = Just $ FloatingPoint $ FP ei si
-                                $ fst (bfRoundFloat (mkBFOpts ei si (roundingModeToRoundMode rm)) (bfFromInteger (toInteger value)))
+ where convert rm value = Just $ FloatingPoint $ roundIntegralFP ei si rm value
        ei = intOfProxy (Proxy @eb)
        si = intOfProxy (Proxy @sb)
+
+-- | Round an exact integer once to the requested format. Converting the result
+-- to a matching native Float or Double is exact, including directed overflow.
+roundIntegralFP :: Integral a => Int -> Int -> RoundingMode -> a -> FP
+roundIntegralFP ei si rm value = FP ei si
+                              $ fst (bfRoundFloat (mkBFOpts ei si (roundingModeToRoundMode rm)) (bfFromInteger (toInteger value)))
 
 -- | Run the function if the conversion is in RNE. Otherwise return Nothing.
 onlyWhenRNE :: (a -> Maybe b) -> RoundingMode -> a -> Maybe b
@@ -236,7 +249,8 @@ genericFromFloat rm f = SBV (SVal kTo (Right (cache r)))
                    xsv <- sbvToSV st f
                    newExpr st kTo (SBVApp (IEEEFP (FP_Cast kFrom kTo msv)) [xsv])
 
--- | A generic to-float converter, which will constant-fold as necessary, but only in the sRNE mode for regular floats.
+-- | A generic to-float converter. Fold concrete operands and rounding modes
+-- when the supplied converter supports them; otherwise emit a symbolic cast.
 genericToFloat :: forall a r. (IEEEFloatConvertible a, IEEEFloating r)
                => (RoundingMode -> a -> Maybe r)     -- How to convert concretely, if possible
                -> SRoundingMode                      -- Rounding mode

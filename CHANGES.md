@@ -67,13 +67,19 @@
     Thanks to David Van Balen for reporting [issue #815](https://github.com/LeventErkok/sbv/issues/815).
 
   * Fix constant folding of integral literals converted with `toSFloatingPoint`: all five
-    rounding modes are now honored, including directed overflow. Previously these conversions
-    always used round-nearest-ties-to-even, regardless of the requested mode.
+    rounding modes are now honored during folding, including directed overflow. Previously these
+    conversions always used round-nearest-ties-to-even, regardless of the requested mode.
+    Integral conversions with `toSFloat` and `toSDouble` now also fold in all five modes;
+    previously non-RNE modes were correctly deferred to the solver.
 
   * Fix literal regular-expression matching with universal, complement, difference, and
     intersection expressions inside concatenations and repetitions. Constant folding now
     checks the remaining suffix and applies Boolean operations to the same matched prefix,
     agreeing with solver-side membership semantics.
+
+  * Serialize empty regex concatenations (`Conc []`) as the empty-string language.
+    Reject invalid `Loop` and `Power` bounds consistently in literal matching and
+    serialization, even in branches skipped by the matcher.
 
 ### Version 14.7, 2026-08-31
 

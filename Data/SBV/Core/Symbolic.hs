@@ -36,7 +36,8 @@ module Data.SBV.Core.Symbolic
   ( NodeId(..)
   , SV(..), swKind, trueSV, falseSV
   , Op(..), PBOp(..), OvOp(..), FPOp(..), NROp(..), StrOp(..), RegExOp(..), SeqOp(..), SetOp(..), SpecialRelOp(..), ADTOp(..)
-  , RegExp(..), regExpToSMTString, SMTLambda(SMTLambda), smtLambdaWithInfo, smtLambdaText, smtLambdaInfo
+  , RegExp(..), regExpToSMTString, validateRegExp
+  , SMTLambda(SMTLambda), smtLambdaWithInfo, smtLambdaText, smtLambdaInfo
   , Quantifier(..), needsExistentials, SBVContext(..), globalSBVContext, VarContext(..)
   , SBVType(..), svUninterpreted, svUninterpretedNamedArgs, newUninterpreted
   , SVal(..)
@@ -417,14 +418,14 @@ data RegExp = Literal String       -- ^ Precisely match the given string
             | AllChar              -- ^ Accept every single character
             | None                 -- ^ Accept no strings
             | Range Char Char      -- ^ Accept range of characters
-            | Conc  [RegExp]       -- ^ Concatenation
+            | Conc  [RegExp]       -- ^ Concatenation; the empty list matches exactly the empty string
             | KStar RegExp         -- ^ Kleene Star: Zero or more
             | KPlus RegExp         -- ^ Kleene Plus: One or more
             | Opt   RegExp         -- ^ Zero or one
             | Comp  RegExp         -- ^ Complement of regular expression
             | Diff  RegExp RegExp  -- ^ Difference of regular expressions
-            | Loop  Int Int RegExp -- ^ From @n@ repetitions to @m@ repetitions
-            | Power Int     RegExp -- ^ Exactly @n@ repetitions, i.e., nth power
+            | Loop  Int Int RegExp -- ^ From @n@ repetitions to @m@ repetitions; requires @0 <= n <= m@
+            | Power Int     RegExp -- ^ Exactly @n@ repetitions, i.e., nth power; requires @n >= 0@
             | Union [RegExp]       -- ^ Union of regular expressions
             | Inter RegExp RegExp  -- ^ Intersection of regular expressions
             deriving (Eq, Ord, G.Data, Generic, NFData)
@@ -462,11 +463,35 @@ instance Num RegExp where
 
 -- | Convert a reg-exp to a Haskell-like string
 instance Show RegExp where
-  show = T.unpack . regExpToText (T.pack . show)
+  show r = validateRegExp r `seq` T.unpack (regExpToText (T.pack . show) r)
+
+-- | Reject invalid repetition bounds throughout a regex, even in branches
+-- that literal matching could skip. Sharing this check keeps literal matching
+-- and SMT serialization consistent without constructing text during folding.
+validateRegExp :: RegExp -> ()
+validateRegExp (Literal _) = ()
+validateRegExp All         = ()
+validateRegExp AllChar     = ()
+validateRegExp None        = ()
+validateRegExp (Range _ _) = ()
+validateRegExp (Conc rs)   = foldr (seq . validateRegExp) () rs
+validateRegExp (KStar r)   = validateRegExp r
+validateRegExp (KPlus r)   = validateRegExp r
+validateRegExp (Opt r)     = validateRegExp r
+validateRegExp (Comp r)    = validateRegExp r
+validateRegExp (Diff a b)  = validateRegExp a `seq` validateRegExp b
+validateRegExp (Loop lo hi r)
+  | lo >= 0, hi >= lo     = validateRegExp r
+  | True                 = error $ "Invalid regular-expression Loop with arguments: " ++ show (lo, hi)
+validateRegExp (Power n r)
+  | n >= 0               = validateRegExp r
+  | True                 = error $ "Invalid regular-expression Power with arguments: " ++ show n
+validateRegExp (Union rs)  = foldr (seq . validateRegExp) () rs
+validateRegExp (Inter a b) = validateRegExp a `seq` validateRegExp b
 
 -- | Convert a reg-exp to a SMT-lib acceptable representation
 regExpToSMTString :: RegExp -> Text
-regExpToSMTString = regExpToText (\s -> "\"" <> T.pack (stringToQFS s) <> "\"")
+regExpToSMTString r = validateRegExp r `seq` regExpToText (\s -> "\"" <> T.pack (stringToQFS s) <> "\"") r
 
 -- | Convert a RegExp to text, parameterized by how strings are converted
 regExpToText :: (String -> Text) -> RegExp -> Text
@@ -475,7 +500,7 @@ regExpToText _  All               = "re.all"
 regExpToText _  AllChar           = "re.allchar"
 regExpToText _  None              = "re.nostr"
 regExpToText fs (Range ch1 ch2)   = "(re.range " <> fs [ch1] <> " " <> fs [ch2] <> ")"
-regExpToText _  (Conc [])         = "1"
+regExpToText fs (Conc [])         = regExpToText fs (Literal "")
 regExpToText fs (Conc [x])        = regExpToText fs x
 regExpToText fs (Conc xs)         = "(re.++ " <> T.unwords (map (regExpToText fs) xs) <> ")"
 regExpToText fs (KStar r)         = "(re.* " <> regExpToText fs r <> ")"
@@ -483,12 +508,8 @@ regExpToText fs (KPlus r)         = "(re.+ " <> regExpToText fs r <> ")"
 regExpToText fs (Opt   r)         = "(re.opt " <> regExpToText fs r <> ")"
 regExpToText fs (Comp  r)         = "(re.comp " <> regExpToText fs r <> ")"
 regExpToText fs (Diff  r1 r2)     = "(re.diff " <> regExpToText fs r1 <> " " <> regExpToText fs r2 <> ")"
-regExpToText fs (Loop  lo hi r)
-   | lo >= 0, hi >= lo = "((_ re.loop " <> showText lo <> " " <> showText hi <> ") " <> regExpToText fs r <> ")"
-   | True              = error $ "Invalid regular-expression Loop with arguments: " ++ show (lo, hi)
-regExpToText fs (Power n r)
-   | n >= 0            = regExpToText fs (Loop n n r)
-   | True              = error $ "Invalid regular-expression Power with arguments: " ++ show n
+regExpToText fs (Loop lo hi r)    = "((_ re.loop " <> showText lo <> " " <> showText hi <> ") " <> regExpToText fs r <> ")"
+regExpToText fs (Power n r)       = regExpToText fs (Loop n n r)
 regExpToText fs (Inter r1 r2)     = "(re.inter " <> regExpToText fs r1 <> " " <> regExpToText fs r2 <> ")"
 regExpToText _  (Union [])        = "re.nostr"
 regExpToText fs (Union [x])       = regExpToText fs x
