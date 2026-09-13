@@ -26,8 +26,9 @@ import qualified Data.SBV.List   as S
 import qualified Data.SBV.Char   as SC
 import qualified Data.SBV.RegExp as R
 
-import Control.Monad (unless)
-import Data.List (sort)
+import Control.Monad (forM, forM_, replicateM, unless)
+import Data.List (nub, sort)
+import Test.Tasty.HUnit (assertEqual)
 
 import qualified Data.Map.Strict as M
 
@@ -55,7 +56,72 @@ tests =
     , goldenCapturedIO "strExamples12" $ \rf -> checkWith z3{redirectVerbose=Just rf} strExamples12   Unsat
     , goldenCapturedIO "strExamples13" $ \rf -> checkWith z3{redirectVerbose=Just rf} strExamples13   Unsat
     , testCase         "strExamples14" $ assert strExamples14
+    , testGroup "literal regex semantics"
+        [testCase (show sample P.++ " against " P.++ show regex)
+           (assertEqual "Literal regex membership" (Just expected) (unliteral (literal sample `R.match` regex)))
+        | (sample, regex, expected) <- regexLiteralCases]
+    , testCase "regex literal and solver agreement" regexLiteralAgreement
     ]
+
+-- | Regressions for continuation handling: universal matching must not
+-- discard a suffix, and Boolean operations must inspect the same prefix.
+-- Include nullable repetition, empty inputs, Unicode, and embedded NULs.
+regexLiteralCases :: [(String, R.RegExp, Bool)]
+regexLiteralCases =
+  [ ("a", R.Conc [R.All, "b"], False)
+  , ("ab", R.Conc [R.All, "b"], True)
+  , ("b", R.Conc [R.All, "b"], True)
+  , ("", R.Conc [R.All, "b"], False)
+  , ("", R.All, True)
+  , ("a", R.Conc [R.Comp "a", "b"], False)
+  , ("b", R.Conc [R.Comp "a", "b"], True)
+  , ("ab", R.Conc [R.Comp "a", "b"], False)
+  , ("aab", R.Conc [R.Comp "a", "b"], True)
+  , ("ab", R.Conc [R.Diff "ab" "a", R.Opt "b"], True)
+  , ("ab", R.Conc [R.Diff "a" "ab", R.Opt "b"], True)
+  , ("ab", R.Conc [R.Inter "a" "ab", R.All], False)
+  , ("ab", R.Conc [R.Inter "a" (R.Opt "a"), "b"], True)
+  , ("a", R.Conc [R.Diff R.All "", "a"], False)
+  , ("ba", R.Conc [R.Diff R.All "", "a"], True)
+  , ("", R.KStar (R.Opt "a"), True)
+  , ("aaa", R.KStar (R.Inter (R.Opt "a") (R.Comp "b")), True)
+  , ("b", R.KStar (R.Inter (R.Opt "a") (R.Comp "b")), False)
+  , ("a", R.KStar (R.Conc [R.All, "b"]), False)
+  , ("b", R.Conc [R.Loop 0 2 (R.Opt "a"), "b"], True)
+  , ("aab", R.Conc [R.Power 2 (R.Diff "a" "b"), "b"], True)
+  , ("a\0", R.Conc [R.Comp "b", "\0"], True)
+  , ("\0a", R.Conc [R.All, "\0"], False)
+  , ("\955b", R.Conc [R.Inter R.All (R.Comp "a"), "b"], True)
+  , ("\955a", R.Conc [R.All, "b"], False)
+  ]
+
+-- | Compare folding with actual solver evaluation over a bounded matrix of
+-- regexes and strings. Keep the solver input symbolic and constrain its value
+-- so the reference path cannot silently reuse literal constant folding.
+regexLiteralAgreement :: Assertion
+regexLiteralAgreement = do
+  observations <- runSMT $ do
+    input <- sString "input"
+    query $ forM samples $ \sample -> inNewAssertionStack $ do
+      constrain (input .== literal sample)
+      status <- checkSat
+      actual <- case status of
+                  Sat -> getValue (S.implode [input `R.match` regex | regex <- regexes])
+                  _   -> pure []
+      pure (sample, status, actual)
+  forM_ observations $ \(sample, status, actual) -> do
+    assertEqual "A concrete string assignment must be satisfiable" Sat status
+    assertEqual "One result per regex" (length regexes) (length actual)
+    forM_ (zip regexes actual) $ \(regex, expected) ->
+      assertEqual ("Literal/solver disagreement for " P.++ show sample P.++ " against " P.++ show regex)
+                  (Just expected) (unliteral (literal sample `R.match` regex))
+ where atoms   = [R.All, R.None, "", "a", "ab"]
+       unary   = [op regex | op <- [R.Comp, R.KStar, R.KPlus, R.Opt, R.Loop 0 2], regex <- atoms]
+       binary  = [op left right | op <- [R.Inter, R.Diff, \a b -> R.Union [a, b]], left <- atoms, right <- atoms]
+       base    = atoms P.++ unary P.++ binary
+       regexes = nub $ [regex | (_, regex, _) <- regexLiteralCases]
+                  P.++ [wrapped | regex <- base, wrapped <- [regex, R.Conc [regex, "b"], R.Conc ["a", regex]]]
+       samples = nub $ concatMap (`replicateM` "ab") [0 .. 3] P.++ [sample | (sample, _, _) <- regexLiteralCases]
 
 checkWith :: SMTConfig -> Symbolic () -> CheckSatResult -> IO ()
 checkWith cfg props csExpected = runSMTWith cfg{verbose=True} $ do
