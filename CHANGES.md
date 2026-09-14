@@ -3,6 +3,12 @@
 
 ### Version 14.8, Not yet released
 
+  * Escape labels on tuples, ADTs, and arrays in the current C backend. Diagnostic
+    comments cannot inject C statements through comment delimiters; nested-comment
+    markers and control characters are also escaped consistently with scalar labels.
+    Also retain C type declarations for ADTs used only inside private function or
+    array-lambda bodies, even when their inputs and results are scalar.
+
   * Fix signed overflow in C generation of pseudo-Boolean comparisons (`pbLe`,
     `pbGe`, and `pbEq`). Generated reductions use unsigned arithmetic and stop
     accumulating after exceeding the bound when the full sum might overflow.

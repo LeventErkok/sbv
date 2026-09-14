@@ -43,6 +43,7 @@ import Data.SBV.Compilers.C.GMP        (isExactGMPKind)
 import Data.SBV.Compilers.C.List       (listClone, listRelease)
 import Data.SBV.Compilers.C.Lowering   (CLowering, expressionLowering)
 import Data.SBV.Compilers.C.Set        (setClone, setRelease)
+import Data.SBV.Compilers.C.Syntax     (cCommentText)
 import Data.SBV.Compilers.C.Types      (elementCType, kindTag, tupleCType, tupleFieldName)
 import Data.SBV.Compilers.C.Value      (managedValueClone, managedValueRelease, valueDriverInit, valueNeedsOwnership)
 import Data.SBV.Compilers.CodeGen      (CgConfig)
@@ -310,7 +311,7 @@ tupleExpr op svs resultSV args
         , resultKind == kindOf right
         -> lower $ renderedCondition <+> text "?" <+> renderedLeft <+> text ":" <+> renderedRight
       (Label label, [_], [renderedTuple])
-        -> lower $ renderedTuple <+> text "/*" <+> text label <+> text "*/"
+        -> lower $ renderedTuple <+> text "/*" <+> cCommentText label <+> text "*/"
       _ -> Nothing
  where resultKind = kindOf resultSV
 

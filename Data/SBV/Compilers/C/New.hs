@@ -16,8 +16,7 @@
 module Data.SBV.Compilers.C.New(compileToC, compileToCLib, compileToC', compileToCLib') where
 
 import Control.DeepSeq                 (rnf)
-import qualified Data.ByteString       as BS
-import Data.Char                       (chr, isAsciiLower, isAsciiUpper, isDigit, isSpace, toLower)
+import Data.Char                       (isAsciiLower, isAsciiUpper, isDigit, isSpace, toLower)
 import qualified Data.Foldable         as F (toList)
 import qualified Data.Graph            as DG
 import Data.List                       (intercalate, intersperse, isPrefixOf, nub, nubBy, sortOn)
@@ -25,8 +24,6 @@ import qualified Data.Map.Strict       as Map
 import Data.Maybe                      (fromJust, fromMaybe, isJust, isNothing)
 import qualified Data.Set              as Set (Set, difference, empty, fromList, insert, intersection, map, member, notMember, null, toList, union, unions)
 import qualified Data.Text             as T
-import qualified Data.Text.Encoding    as TE
-import Numeric                         (showOct)
 import System.FilePath                 (replaceExtension, takeBaseName)
 import System.Random
 
@@ -50,6 +47,7 @@ import Data.SBV.Compilers.C.NonLinear
 import Data.SBV.Compilers.C.PseudoBoolean (assignPseudoBoolean)
 import Data.SBV.Compilers.C.RegExp (regexExpr)
 import Data.SBV.Compilers.C.Set
+import Data.SBV.Compilers.C.Syntax (cCommentText, cStringLiteral)
 import Data.SBV.Compilers.C.Table
 import Data.SBV.Compilers.C.Text
 import qualified Data.SBV.Compilers.C.Types as CTypes (arrayStoredReleaseName, constElementCType, definedFunctionCName, elementCType, kindTag)
@@ -252,15 +250,11 @@ cgen retainBuildMetadata cfg nm st sbvProg
                    $$ (if hasRequirement CRequiresSets  then setOwnershipTypeDecls cfg sets else empty)
                    $$ (if hasRequirement CRequiresArrays then arrayTypeDecls arrays else empty)
         kinds           = Set.unions [reskinds sbvProg, usedKinds]
-        usedKinds       = Set.union interfaceKinds assignmentKinds
+        usedKinds       = Set.union interfaceKinds (cProgramUsedKinds sbvProg)
         interfaceKinds  = Set.fromList . concatMap expandKinds
                         $ concatMap cgValKinds (map snd ins ++ map snd outs ++ cgReturns st)
           where cgValKinds (CgAtomic sv) = [kindOf sv]
                 cgValKinds (CgArray svs) = map kindOf svs
-        assignmentKinds = Set.fromList . concatMap expandKinds $ concatMap expressionKinds assignments
-          where assignments = case resAsgns sbvProg of
-                                SBVPgm programAssignments -> F.toList programAssignments
-                expressionKinds (resultSV, SBVApp _ arguments) = map kindOf (resultSV : arguments)
         arrays          = arrayKinds kinds
         lists           = listKinds kinds
         sets            = setKinds kinds
@@ -308,6 +302,32 @@ cgen retainBuildMetadata cfg nm st sbvProg
                      [] -> empty
                      xs -> vcat $ text "/* User given declarations: */" : map text xs
         flags    = requirementLDFlags requirements ++ cgLDFlags st
+
+-- | Collect types used by the entry point and all retained function/lambda
+-- bodies. A private computation can construct and consume an ADT without that
+-- type appearing in any public signature or top-level assignment. Constants,
+-- parameters, and table entries count even when their body has no assignments.
+cProgramUsedKinds :: Result -> Set.Set Kind
+cProgramUsedKinds result = Set.fromList . concatMap expandKinds $
+     assignmentKinds assignments
+  ++ map (kindOf . fst) (snd (resConsts result))
+  ++ tableKinds (resTables result)
+  ++ concat [lambdaKinds body | (_, (definition, _)) <- resDefinitions result, Just body <- [smtDefInfo definition]]
+ where SBVPgm program = resAsgns result
+       assignments = F.toList program
+
+       assignmentKinds expressions = concat
+         [ map kindOf (value : arguments)
+        ++ case operation of
+             ArrayInit (Right lambdaDef) | Just body <- smtLambdaInfo lambdaDef -> lambdaKinds body
+             _                                                                 -> []
+         | (value, SBVApp operation arguments) <- expressions]
+
+       lambdaKinds body = map kindOf (liOutput body : map snd (liParams body) ++ map fst (liConsts body))
+                       ++ assignmentKinds (F.toList (liAssignments body))
+                       ++ tableKinds (liTables body)
+
+       tableKinds tables = concat [keyKind : valueKind : map kindOf entries | ((_, keyKind, valueKind), entries) <- tables]
 
 -- | Emit tuple and ADT layouts in their joint by-value dependency order.
 -- Forward-declared recursive ADT pointers impose no ordering constraint.
@@ -1648,27 +1668,6 @@ ppTable cfg allowStatic constants ((tableIndex, _, resultKind), elements)
          | allowStatic && location == -1 && not (tableMustBeLocal cfg resultKind) = text "static"
          | True                                                                  = empty
        tableName = text ("table" ++ show tableIndex)
-
--- | Render comment contents without allowing terminators, line splices, or
--- trigraphs to change the surrounding C program during preprocessing.
-cCommentText :: String -> Doc
-cCommentText = text . concatMap escape
- where escape '*'  = "* "
-       escape '\\' = "\\134"
-       escape '?'  = "\\077"
-       escape c    = [c]
-
--- | Render arbitrary text as a UTF-8 C string literal, using fixed-width
--- octal escapes where a byte cannot safely appear verbatim.
-cStringLiteral :: String -> Doc
-cStringLiteral = doubleQuotes . text . concatMap escapeByte . BS.unpack . TE.encodeUtf8 . T.pack
- where escapeByte byte
-         | byte == 34              = "\\\""
-         | byte == 63              = "\\?"
-         | byte == 92              = "\\\\"
-         | 32 <= byte, byte <= 126 = [chr (fromIntegral byte)]
-         | True                    = '\\' : replicate (3 - length octal) '0' ++ octal
-         where octal = showOct byte ""
 
 -- | Declare the private ownership-arena bundle threaded through generated SBV
 -- functions and retained array callbacks. The retain bridge creates empty

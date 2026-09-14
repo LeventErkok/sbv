@@ -60,6 +60,7 @@ import Data.SBV.Compilers.C.List       ( listClone
                                        , listRelease
                                        )
 import Data.SBV.Compilers.C.Lowering   (CLowering(..), expressionLowering)
+import Data.SBV.Compilers.C.Syntax     (cCommentText)
 import Data.SBV.Compilers.C.Set        ( setClone
                                        , setDriverClear
                                        , setDriverInit
@@ -770,7 +771,7 @@ adtExpr cfg adts op svs resultSV args
         , resultKind == kindOf right
         -> lower $ renderedCondition <+> text "?" <+> renderedLeft <+> text ":" <+> renderedRight
       (Label label, [_], [renderedValue])
-        -> lower $ renderedValue <+> text "/*" <+> text label <+> text "*/"
+        -> lower $ renderedValue <+> text "/*" <+> cCommentText label <+> text "*/"
       _ -> error $ "SBV->C: ADT lowering does not support " ++ adtOperationName op
                 ++ " with argument kinds " ++ show (map kindOf svs)
                 ++ " and result kind " ++ show resultKind

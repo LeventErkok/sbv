@@ -122,6 +122,7 @@ tests = testGroup "CodeGeneration.CgTests"
   , testCase "execute guarded pseudo-Boolean reductions in functions and array lambdas" scopedPseudoBoolean
   , testCase "collect C runtime requirements" dependencyRequirements
   , testCase "escape assertion messages in generated C" escapedAssertionMessages
+  , escapedValueLabels
   , testCase "execute IEEE native floating-point remainders" nativeFloatingRemainders
   , testCase "declare rounding modes in nested collections" collectionRoundingModes
   , testCase "relink library drivers after component changes" libraryDriverDependencies
@@ -289,6 +290,55 @@ escapedAssertionMessages = withSystemTempDirectory "sbv-assertion-escaping" $ \d
   (runExit, _, runError) <- readProcessWithExitCode (dir </> "escapedAssertion_driver") [] ""
   assertBool "Expected the violated assertion to terminate the driver" (runExit /= ExitSuccess)
   assertBool ("Assertion text was changed: " ++ runError) (("ASSERTION FAILED: " ++ message) `isInfixOf` runError)
+
+-- | Labels are semantic no-ops even when their text contains C statements,
+-- nested comment markers, preprocessing splices, trigraphs, or control bytes.
+-- Exercise scalar, tuple, acyclic/recursive ADT, and persistent-array labels in
+-- entry points, private functions, and closed lambdas, including static libraries.
+escapedValueLabels :: TestTree
+escapedValueLabels = testGroup "escaped C labels"
+  [ testCase (form ++ "/" ++ scopeName ++ "/" ++ sampleName) (check (library, scope, message))
+  | (form, library) <- [("program", False), ("library", True)]
+  , (scopeName, scope) <- [("entry", 0 :: Int), ("function", 1), ("array lambda", 2)]
+  , (sampleName, message) <- messages
+  ]
+ where messages = [ ("statements", "*/; abort(); /*")
+                  , ("preprocessing", "nested /* comment; \\\n??/\n*/")
+                  , ("control characters", "Unicode \955, NUL \0, CR \r, tab \t and control \SOH")
+                  ]
+
+       check (library, scope, message) = withSystemTempDirectory "sbv-c-label-escaping" $ \dir -> do
+         let functionName = "escapedLabels"
+             evaluateValue :: SWord8 -> SBool
+             evaluateValue value =
+               let annotate :: SymVal a => SBV a -> SBV a
+                   annotate = label message
+                   (firstField, secondField) = untuple (annotate (tuple (value, value + 1)))
+                   tagged = annotate (sCGOne value)
+                   tree   = annotate (sCGNode (sCGLeaf value) (sCGLeaf (value + 1)))
+                   array  = annotate (constArray value :: SArray Word8 Word8)
+               in sAnd [ annotate value .== value
+                       , firstField .== value
+                       , secondField .== value + 1
+                       , getCGOne_1 tagged .== value
+                       , getCGLeaf_1 (getCGNode_1 tree) .== value
+                       , readArray array value .== value
+                       ]
+             evaluateScoped value = case scope of
+               0 -> evaluateValue value
+               1 -> smtFunction "C escaped labels" evaluateValue value
+               _ -> readArray (lambdaArray evaluateValue) value
+             program = do
+               cgOverwriteFiles True
+               cgSetDriverValues [7]
+               value <- cgInput "value"
+               cgReturn (evaluateScoped value)
+         (_, cfg, bundle) <- if library
+                               then compileToCLib' functionName [("labelComponent", program)]
+                               else compileToC' functionName ((:[]) <$> program)
+         renderCgPgmBundle (Just dir) (cfg, bundle)
+         outputText <- compileAndRunGenerated dir functionName
+         assertBool outputText (") = 1" `isInfixOf` outputText)
 
 -- | Compare executed native remainders against constant SBV evaluation,
 -- including quotient ties, negative operands, and a negative divisor.

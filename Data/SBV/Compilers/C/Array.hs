@@ -48,6 +48,7 @@ import qualified Text.PrettyPrint.HughesPJ as P ((<>), render)
 import Data.SBV.Compilers.C.BV         (isWideBV)
 import Data.SBV.Compilers.C.GMP        (isExactGMPKind)
 import Data.SBV.Compilers.C.Lowering   (CLowering(..), CRequirement(..), expressionLowering)
+import Data.SBV.Compilers.C.Syntax     (cCommentText)
 import Data.SBV.Compilers.C.Types      ( constElementCType
                                        , arrayKindTag
                                        , arrayOutputCTypeName
@@ -758,7 +759,7 @@ arrayExpr cfg definedFunctionName structuredLambdaName op svs resultSV args
         , resultKind == kindOf right
         -> expression $ renderedCondition <+> text "?" <+> renderedLeft <+> text ":" <+> renderedRight
       (Label label, [_], [array])
-        -> expression $ array <+> text "/*" <+> text label <+> text "*/"
+        -> expression $ array <+> text "/*" <+> cCommentText label <+> text "*/"
       (Equal{}, initial:rest, a:as)
         | all ((== kindOf initial) . kindOf) rest
         -> expression $ conjunction [namedCall (arrayEqualName (kindOf initial)) [a, b] | b <- as]

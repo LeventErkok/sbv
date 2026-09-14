@@ -330,6 +330,7 @@ Library
                   , Data.SBV.Compilers.C.PseudoBoolean
                   , Data.SBV.Compilers.C.RegExp
                   , Data.SBV.Compilers.C.Set
+                  , Data.SBV.Compilers.C.Syntax
                   , Data.SBV.Compilers.C.Table
                   , Data.SBV.Compilers.C.Text
                   , Data.SBV.Compilers.C.Types
