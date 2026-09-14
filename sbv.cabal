@@ -315,6 +315,8 @@ Library
                   , Data.SBV.Control.Utils
                   , Data.SBV.Compilers.C
                   , Data.SBV.Compilers.C.PseudoBoolean
+                  , Data.SBV.Compilers.C.Real
+                  , Data.SBV.Compilers.C.Syntax
                   , Data.SBV.Compilers.CodeGen
                   , Data.SBV.Lambda
                   , Data.SBV.SCase
@@ -431,6 +433,7 @@ Test-Suite SBVTest
                   , TestSuite.CodeGeneration.GCD
                   , TestSuite.CodeGeneration.PopulationCount
                   , TestSuite.CodeGeneration.PseudoBoolean
+                  , TestSuite.CodeGeneration.ScalarSafety
                   , TestSuite.CodeGeneration.Uninterpreted
                   , TestSuite.CompileTests.SCase
                   , TestSuite.CompileTests.PCase

@@ -59,6 +59,11 @@ overcome this, SBV allows the user to explicitly set what the corresponding type
 the functions below. Note that while these mappings will produce valid C code, the resulting code will be subject to
 overflow/underflows for 'Data.SBV.SInteger', and rounding for 'Data.SBV.SReal', so there is an implicit loss of precision.
 
+Real-to-integer flooring preserves the mathematical floor of the represented
+native real, then retains the low bits selected by 'cgIntegerSize'. This applies
+to @CgFloat@, @CgDouble@, and @CgLongDouble@ without an out-of-range C integer
+cast. Flooring a non-finite mapped real terminates the process with a diagnostic.
+
 If the user does /not/ specify these mappings, then SBV will
 refuse to compile programs that involve these types.
 -}

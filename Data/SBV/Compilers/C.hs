@@ -35,6 +35,8 @@ import Data.SBV.Core.Data
 import Data.SBV.Core.Kind (kRoundingMode)
 import Data.SBV.Compilers.CodeGen
 import Data.SBV.Compilers.C.PseudoBoolean (assignPseudoBoolean)
+import Data.SBV.Compilers.C.Real (mappedRealFloorWidth, mappedRealFloorCall, mappedRealFloorRuntime)
+import Data.SBV.Compilers.C.Syntax (cCommentText, cStringLiteral)
 
 import Data.SBV.Utils.PrettyNum   (chex, showCFloat, showCDouble)
 
@@ -500,6 +502,7 @@ genCProg cfg fn proto (Result pinfo kindInfo _tvals _ovals cgs topInps (_, preCo
        post   = text ""
              $$ vcat (map codeSeg cgs)
              $$ extDecls
+             $$ mappedRealFloorRuntime cfg assignments
              $$ proto
              $$ text "{"
              $$ text ""
@@ -609,15 +612,16 @@ genCProg cfg fn proto (Result pinfo kindInfo _tvals _ovals cgs topInps (_, preCo
                  | True                                   = (i', a) : merge2 ts arest
 
        genAssert (msg, cs, sv) = (getNodeId sv, doc)
-         where doc =     text "/* ASSERTION:" <+> text msg
-                     $$  maybe empty (vcat . map text) (locInfo (getCallStack <$> cs))
+         where doc =     text "/* ASSERTION:" <+> cCommentText msg
+                     $$  maybe empty (vcat . map cCommentText) (locInfo (getCallStack <$> cs))
                      $$  text " */"
                      $$  text "if" P.<> parens (showSV cfg consts sv)
                      $$  text "{"
                      $+$ nest 2 (vcat [errOut, text "exit(-1);"])
                      $$  text "}"
                      $$  text ""
-               errOut = text $ "fprintf(stderr, \"%s:%d:ASSERTION FAILED: " ++ msg ++ "\\n\", __FILE__, __LINE__);"
+               errOut = text "fprintf(stderr, \"%s:%d:ASSERTION FAILED: %s\\n\", __FILE__, __LINE__,"
+                    <+> cStringLiteral msg P.<> text ");"
                locInfo (Just ps) = let loc (f, sl) = concat [srcLocFile sl, ":", show (srcLocStartLine sl), ":", show (srcLocStartCol sl), ":", f ]
                                    in case map loc ps of
                                          []     -> Nothing
@@ -749,10 +753,13 @@ ppExpr cfg consts (SBVApp op opArgs) lhs (typ, var)
         p :: Op -> [Doc] -> Doc
         p ReadArray{}       _  = tbd "User specified arrays (ReadArray)"
         p WriteArray{}      _  = tbd "User specified arrays (WriteArray)"
-        p (Label s)        [a] = a <+> text "/*" <+> text s <+> text "*/"
+        p (Label s)        [a] = a <+> text "/*" <+> cCommentText s <+> text "*/"
         p (IEEEFP w)         as = handleIEEE w  consts (zip opArgs as) var
         p (PseudoBoolean pb) as = assignPseudoBoolean pb as var
         p (OverflowOp o) _      = tbd $ "Overflow operations" ++ show o
+        p castOp@KindCast{} [a]
+          | Just width <- mappedRealFloorWidth cfg castOp
+          = mappedRealFloorCall width a
         p (KindCast _ to)   [a] = parens (text (show to)) <+> a
         p (Uninterpreted s) [] = text "/* Uninterpreted constant */" <+> text (T.unpack s)
         p (Uninterpreted s) as = text "/* Uninterpreted function */" <+> text (T.unpack s) P.<> parens (fsep (punctuate comma as))
@@ -1050,6 +1057,7 @@ getLDFlag (o, k) = flag o
   where math = ["-lm"]
 
         flag (IEEEFP FP_Cast{})                                     = math
+        flag (KindCast KReal KUnbounded)                            = math
         flag (IEEEFP fop)       | fop `elem` requiresMath           = math
         flag Abs                | k `elem` [KFloat, KDouble, KReal] = math
         flag _                                                      = []
