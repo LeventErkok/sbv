@@ -33,14 +33,14 @@
 [GOOD] (set-option :pp.max_depth      4294967295)
 [GOOD] (set-option :pp.min_alias_size 4294967295)
 [GOOD] (set-option :model.inline_def  true      )
+[GOOD] (declare-datatypes ((SBVTuple2 2)) ((par (T1 T2)
+                                           ((mkSBVTuple2 (proj_1_SBVTuple2 T1)
+                                                         (proj_2_SBVTuple2 T2))))))
 [GOOD] ; User defined ADT: Maybe
 [GOOD] (declare-datatype Maybe (par (a) (
            (Nothing)
            (Just (getJust_1 a))
        )))
-[GOOD] (declare-datatypes ((SBVTuple2 2)) ((par (T1 T2)
-                                           ((mkSBVTuple2 (proj_1_SBVTuple2 T1)
-                                                         (proj_2_SBVTuple2 T2))))))
 [GOOD] (define-fun s13 () (_ BitVec 16) #x000a)
 [GOOD] (define-fun s15 () (_ BitVec 16) (bvneg #x0001))
 [GOOD] (define-fun s17 () (_ BitVec 16) #x0007)
