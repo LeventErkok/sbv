@@ -19,6 +19,7 @@ import qualified TestSuite.ADT.ADT
 import qualified TestSuite.ADT.Expr
 import qualified TestSuite.ADT.MutRec
 import qualified TestSuite.ADT.PExpr
+import qualified TestSuite.ADT.Registration
 import qualified TestSuite.Arrays.InitVals
 import qualified TestSuite.Arrays.Memory
 import qualified TestSuite.Arrays.Query
@@ -147,6 +148,7 @@ main = do sCaseTests <- TestSuite.CompileTests.SCase.tests
                       , TestSuite.ADT.Expr.tests
                       , TestSuite.ADT.MutRec.tests
                       , TestSuite.ADT.PExpr.tests
+                      , TestSuite.ADT.Registration.tests
                       , TestSuite.Arrays.InitVals.tests
                       , TestSuite.Arrays.Memory.tests
                       , TestSuite.Arrays.Query.tests

@@ -276,16 +276,12 @@ mkADT adtKind typeName params cstrs = do
 
     -- make the initializer to get the subtypes registered
     st <- TH.newName "_st"  -- Get an underscored name here, since st might go unused if there're no subtypes
-    register <- do let concretize b@TH.ConT{}     = b
-                       concretize TH.VarT{}       = TH.ConT ''Integer
-                       concretize (TH.AppT l arg) = TH.AppT (concretize l) (concretize arg)
-                       concretize r               = r
-
+    register <- do dependencies <- adtRegistrationTypes typeName
                    end <- TH.noBindS [| pure () |]
                    pure $ TH.DoE Nothing $ [TH.NoBindS (TH.AppE (TH.AppE (TH.VarE 'registerKind) (TH.VarE st))
                                                                 (TH.AppE (TH.VarE 'kindOf)
-                                                                         (TH.AppTypeE (TH.ConE 'Proxy) (concretize t))))
-                                           | (_, fts) <- cstrs, (_, t, KApp n _) <- fts, n /= TH.nameBase typeName
+                                                                         (TH.AppTypeE (TH.ConE 'Proxy) t)))
+                                           | t <- dependencies
                                            ] ++ [end]
 
     let regFun = TH.FunD 'mkSymValInit [TH.Clause [TH.VarP st, TH.WildP] (TH.NormalB register) []]
@@ -590,6 +586,43 @@ dissect typeName = do
               | True                = ADTFull
 
         pure (k, args, cs)
+
+-- | Find all ADT definitions needed by a generated symbolic initializer, including
+-- references nested in containers and dependencies of those references. Visit each
+-- type constructor once so recursive and mutually recursive declarations terminate.
+-- Registration needs only the datatype schema: replace free type variables with
+-- Integer, retaining concrete arguments and the declaration's own type variables.
+adtRegistrationTypes :: TH.Name -> TH.Q [TH.Type]
+adtRegistrationTypes root = dependencies root >>= collect [root]
+ where collect _    [] = pure []
+       collect seen ((nm, ty) : pending)
+         | nm `elem` seen = collect seen pending
+         | True = do nested <- dependencies nm
+                     rest   <- collect (nm : seen) (pending ++ nested)
+                     pure (concretize ty : rest)
+
+       concretize TH.VarT{}       = TH.ConT ''Integer
+       concretize (TH.AppT l arg) = TH.AppT (concretize l) (concretize arg)
+       concretize ty              = ty
+
+       dependencies nm = do (_, _, constructors) <- dissect nm
+                            concat <$> sequence [field nm constructor ty | (constructor, fields) <- constructors, (_, ty, _) <- fields]
+
+       field owner constructor original = do
+         ty   <- expandSyns original
+         kind <- toSBV owner constructor ty
+         let (headType, arguments) = applications ty []
+             nested = concat <$> mapM (field owner constructor) arguments
+         case kind of
+           KApp{} | TH.ConT nm <- headType -> ((nm, ty) :) <$> nested
+           KTuple{} -> nested
+           KList{}  -> nested
+           KSet{}   -> nested
+           KArray{} -> nested
+           _        -> pure []
+
+       applications (TH.AppT fun arg) arguments = applications fun (arg : arguments)
+       applications fun               arguments = (fun, arguments)
 
 -- | Find the SBV kind for this type
 toSBV :: TH.Name -> TH.Name -> TH.Type -> TH.Q Kind
