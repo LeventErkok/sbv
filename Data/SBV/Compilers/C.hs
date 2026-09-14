@@ -17,7 +17,7 @@ module Data.SBV.Compilers.C(compileToC, compileToCLib, compileToC', compileToCLi
 
 import Control.DeepSeq                (rnf)
 import Data.Char                      (isSpace)
-import Data.List                      (nub, intercalate, intersperse)
+import Data.List                      (nub, intercalate)
 import Data.Maybe                     (isJust, isNothing, fromJust)
 import qualified Data.Foldable as F   (toList)
 import qualified Data.Set      as Set (member, union, unions, empty, toList, singleton, fromList)
@@ -34,6 +34,7 @@ import qualified Text.PrettyPrint.HughesPJ as P ((<>))
 import Data.SBV.Core.Data
 import Data.SBV.Core.Kind (kRoundingMode)
 import Data.SBV.Compilers.CodeGen
+import Data.SBV.Compilers.C.PseudoBoolean (assignPseudoBoolean)
 
 import Data.SBV.Utils.PrettyNum   (chex, showCFloat, showCDouble)
 
@@ -623,18 +624,6 @@ genCProg cfg fn proto (Result pinfo kindInfo _tvals _ovals cgs topInps (_, preCo
                                          (f:rs) -> Just $ (" * SOURCE   : " ++ f) : map (" *            " ++)  rs
                locInfo _         = Nothing
 
-handlePB :: PBOp -> [Doc] -> Doc
-handlePB o args = case o of
-                    PB_AtMost  k -> addIf (repeat 1) <+> text "<=" <+> int k
-                    PB_AtLeast k -> addIf (repeat 1) <+> text ">=" <+> int k
-                    PB_Exactly k -> addIf (repeat 1) <+> text "==" <+> int k
-                    PB_Le cs   k -> addIf cs         <+> text "<=" <+> int k
-                    PB_Ge cs   k -> addIf cs         <+> text ">=" <+> int k
-                    PB_Eq cs   k -> addIf cs         <+> text "==" <+> int k
-
-  where addIf :: [Int] -> Doc
-        addIf cs = parens $ fsep $ intersperse (text "+") [parens (a <+> text "?" <+> int c <+> text ":" <+> int 0) | (a, c) <- zip args cs]
-
 handleIEEE :: FPOp -> [(SV, CV)] -> [(SV, Doc)] -> Doc -> Doc
 handleIEEE w consts as var = cvt w
   where same f                   = (f, f)
@@ -735,6 +724,7 @@ ppExpr cfg consts (SBVApp op opArgs) lhs (typ, var)
   | True
   = lhs <+> text "=" <+> rhs
   where doNotAssign (IEEEFP FP_Reinterpret{}) = True   -- generates a memcpy instead; no simple assignment
+        doNotAssign PseudoBoolean{}            = True   -- assigns through an overflow-safe reduction
         doNotAssign _                         = False  -- generates simple assignment
 
         rhs = p op (map (showSV cfg consts) opArgs)
@@ -761,7 +751,7 @@ ppExpr cfg consts (SBVApp op opArgs) lhs (typ, var)
         p WriteArray{}      _  = tbd "User specified arrays (WriteArray)"
         p (Label s)        [a] = a <+> text "/*" <+> text s <+> text "*/"
         p (IEEEFP w)         as = handleIEEE w  consts (zip opArgs as) var
-        p (PseudoBoolean pb) as = handlePB pb as
+        p (PseudoBoolean pb) as = assignPseudoBoolean pb as var
         p (OverflowOp o) _      = tbd $ "Overflow operations" ++ show o
         p (KindCast _ to)   [a] = parens (text (show to)) <+> a
         p (Uninterpreted s) [] = text "/* Uninterpreted constant */" <+> text (T.unpack s)

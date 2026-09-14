@@ -3,6 +3,12 @@
 
 ### Version 14.8, Not yet released
 
+  * Fix signed overflow in C generation of pseudo-Boolean comparisons (`pbLe`,
+    `pbGe`, and `pbEq`). Generated reductions use unsigned arithmetic and stop
+    accumulating after exceeding the bound when the full sum might overflow.
+    Large coefficients and totals now preserve the mathematical comparison
+    without requiring an additional runtime dependency.
+
   * Fix `mkSymbolic` dependency registration for ADTs with other ADTs nested inside
     tuple, list, set, or array fields, including type synonyms and transitive dependencies.
     Previously these could fail with an unregistered-subkind error unless an unrelated
