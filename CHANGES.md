@@ -3,6 +3,10 @@
 
 ### Version 14.8, Not yet released
 
+  * C array-equality limits now report intentional unsupported/disabled comparisons
+    as user-facing generation errors rather than internal compiler failures.
+    Regressions cover atomic rejection of both standalone programs and libraries.
+
   * The current C backend explicitly rejects array lambdas capturing outer symbolic
     values before emitting files, including captures embedded in nested lambdas,
     lookup tables, and rounding modes. Closed array lambdas remain supported;

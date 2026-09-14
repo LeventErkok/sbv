@@ -452,8 +452,9 @@ finiteArrayCallbacks = withSystemTempDirectory "sbv-finite-array-callbacks" $ \d
     , "}"
     ]
 
--- | Reject oversized, infinite, recursive, and nested-array comparisons
--- before creating files. Opt-in permits compact native-floating and wide
+-- | Reject disabled, oversized, infinite, recursive, and nested-array comparisons
+-- with user-facing diagnostics before creating standalone or library files.
+-- Opt-in permits compact native-floating and wide
 -- bit-vector loops to be generated without attempting to execute them.
 finiteArrayRejections :: Assertion
 finiteArrayRejections = do
@@ -463,18 +464,27 @@ finiteArrayRejections = do
         left  <- cgInput "left"  :: SBVCodeGen (SArray key Word8)
         right <- cgInput "right" :: SBVCodeGen (SArray key Word8)
         cgReturn (left .=== right)
-      reject diagnostic program = withSystemTempDirectory "sbv-array-equality-rejection" $ \dir -> do
-        result <- try (compileToC (Just dir) "rejectedEquality" program) :: IO (Either ErrorCall ())
+      reject diagnostic program = mapM_ (checkRejection diagnostic program) [False, True]
+      checkRejection diagnostic program library = withSystemTempDirectory "sbv-array-equality-rejection" $ \dir -> do
+        let closed = cgGenerateDriver False >> cgReturn sTrue
+            action | library = void $ compileToCLib (Just dir) "rejectedLibrary" [("closedComponent", closed), ("rejectedEquality", program)]
+                   | True    = compileToC (Just dir) "rejectedEquality" program
+        result <- try action :: IO (Either ErrorCall ())
         case result of
-          Left exception -> assertBool (displayException exception) (diagnostic `isInfixOf` displayException exception)
-          Right _        -> assertFailure "Expected array equality to reject generation"
-        assertEqual "Rejected equality must not create files" [] =<< listDirectory dir
+          Left exception -> do
+            let message = displayException exception
+            assertBool message (diagnostic `isInfixOf` message)
+            assertBool "An intentional array-equality limit must not be reported as an internal error"
+                       (not ("Unexpected" `isInfixOf` message))
+          Right _ -> assertFailure "Expected array equality to reject generation"
+        assertEqual "Rejected equality must not create any component files" [] =<< listDirectory dir
       checkCompact program = do
         (_, _, bundle) <- compileToC' "largeDomain" (cgArrayEqualityLimit (2 ^ (673 :: Int)) >> program)
         assertBool "Explicitly admitted large domains must generate compact loops" (length (show bundle) < 100000)
   mapM_ (reject "cgArrayEqualityLimit")
     [comparison (Proxy @Word32), comparison (Proxy @(WordN 673)), comparison (Proxy @Float)
     , cgArrayEqualityLimit 26 >> comparison (Proxy @(FloatingPoint 2 3))]
+  reject "disabled by cgArrayEqualityLimit 0" (cgArrayEqualityLimit 0 >> comparison (Proxy @Bool))
   mapM_ (reject "cannot enumerate key domain")
     [comparison (Proxy @Integer), comparison (Proxy @String), comparison (Proxy @CodeGenTree)]
   reject "Nested extensional array equality" $ do

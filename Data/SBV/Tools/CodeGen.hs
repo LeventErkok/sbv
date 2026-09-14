@@ -234,6 +234,11 @@ at the cost of up to 65,536 lookups in each array. The setting also applies
 inside defined functions and array lambdas, independently for each library
 component. A zero limit disables exhaustive comparison. This is a generation
 setting, not a runtime timeout; lookup and value-comparison costs are additional.
+Exceeding the limit reports the required domain size and suggests raising it.
+Infinite or unsupported domains and nested array equality remain unsupported
+regardless of the limit. These are generation-time diagnostics, not internal
+compiler errors, and library preflight rejects the whole bundle before writing
+any component files.
 
 Supported key domains are Booleans, bit-vectors, characters, rounding modes,
 floating-point formats, and non-recursive tuples and ADTs built from these.

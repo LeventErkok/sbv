@@ -2828,11 +2828,15 @@ ppExpr cfg adts functionNames structuredLambdaNames consts (SBVApp op opArgs) re
 ppArrayEquality :: CgConfig -> [Kind] -> Kind -> Doc
 ppArrayEquality cfg adts kind@(KArray keyKind valueKind)
   | requiresExtensionalEquality adts (Equal True) [valueKind]
-  = die "Nested extensional array equality is not yet supported."
+  = error $ "SBV->C: Nested extensional array equality is not supported: array values of kind " ++ show valueKind
+         ++ " contain arrays. This comparison is not approximated."
+  | cgArrayEqualityMaxKeys cfg == 0
+  = error "SBV->C: Extensional array equality is disabled by cgArrayEqualityLimit 0. Select a positive limit to permit finite-domain comparisons."
   | Nothing <- cardinality
-  = die $ "Extensional array equality cannot enumerate key domain " ++ show keyKind
+  = error $ "SBV->C: Extensional array equality cannot enumerate key domain " ++ show keyKind
+         ++ ". Only supported finite domains can be compared; raising cgArrayEqualityLimit does not enable infinite or unsupported domains."
   | Just count <- cardinality, count > cgArrayEqualityMaxKeys cfg
-  = die $ "Extensional array equality for " ++ show keyKind ++ " requires " ++ show count
+  = error $ "SBV->C: Extensional array equality for " ++ show keyKind ++ " requires " ++ show count
        ++ " keys, exceeding cgArrayEqualityLimit " ++ show (cgArrayEqualityMaxKeys cfg)
        ++ ". Raise cgArrayEqualityLimit explicitly to permit this work."
   | True
