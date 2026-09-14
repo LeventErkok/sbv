@@ -223,6 +223,12 @@ valid objects; fixed-size groups require the declared number of elements.
 Outputs must not overlap other outputs or storage reachable through an input.
 In-place calls are not part of the supported ABI.
 
+Fixed-size input groups follow the same per-element borrowing rules as scalar
+inputs. In particular, a group of symbolic arrays accepts a C array of the
+generated @SBVArrayInput_...@ callback descriptors, not private array-node
+pointers. The example driver initializes and releases managed group elements
+individually, including their nested exact values and callback contexts.
+
 Scalar GMP output parameters, including each element of a GMP output group,
 must be initialized with @mpz_init@ or @mpq_init@ before the call. They can be
 reused across calls and must eventually be cleared by the caller. This also

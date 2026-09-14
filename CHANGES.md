@@ -3,6 +3,11 @@
 
 ### Version 14.8, Not yet released
 
+  * Fix fixed-size input groups in the current C backend. Symbolic-array groups
+    now use public callback descriptors, matching individual array inputs.
+    Generated drivers initialize and release managed group elements individually,
+    including exact-valued collections and aggregates containing arrays.
+
   * Recreate generated C library archives from exactly the selected components,
     removing retired members when a library is regenerated. Build replacements
     in a temporary archive so an archiver failure preserves the last good archive.

@@ -381,6 +381,7 @@ mkParam _   (n, CgAtomic sv)     = pprCWord True sv <+> text n
 mkParam _   (_, CgArray [])        = die "mkParam: CgArray with no elements!"
 mkParam cfg (n, CgArray (sv:_))
   | isExactGMPKind cfg kind = text "const" <+> text (gmpArrayType kind) <+> text "*" P.<> text n
+  | isArray kind            = text "const" <+> text (arrayInputCType kind) <+> text "*" P.<> text n
   | True                    = pprCWord True sv <+> text "*" P.<> text n
   where kind = kindOf sv
 
@@ -772,16 +773,25 @@ genDriver cfg adts randVals fn publicInputs publicOutputs mbRet
                 (frs, srs) = splitAt l rs
        matchInputSeeds _      []                            = []
        matchInputSeeds []     _                             = die "Run out of driver values!"
-       matchInputSeeds (r:rs) ((n, CgAtomic{})        : cs) = (n, r) : matchInputSeeds rs cs
+       matchInputSeeds (r:rs) ((n, CgAtomic{})        : cs) = (n, [r]) : matchInputSeeds rs cs
        matchInputSeeds _      ((n, CgArray [])        : _ ) = die $ "Unsupported empty array input " ++ show n
        matchInputSeeds rs     ((n, CgArray values@(_:_)) : cs)
-         | seed : _ <- seeds
-         , length seeds == length values                       = (n, seed) : matchInputSeeds rest cs
+         | length seeds == length values                       = (n, seeds) : matchInputSeeds rest cs
          | True                                                = die "Run out of driver values!"
         where (seeds, rest) = splitAt (length values) rs
-       inputSeed n = case lookup n inputSeeds of
-                       Just seed -> seed
-                       Nothing   -> die $ "Missing driver seed for composite input " ++ show n
+       inputSeed n = case inputGroupSeeds n of
+                       seed:_ -> seed
+                       []     -> die $ "Missing driver seed for composite input " ++ show n
+       inputGroupSeeds n = case lookup n inputSeeds of
+                            Just seeds -> seeds
+                            Nothing    -> die $ "Missing driver seed for composite input " ++ show n
+       inputElementName n index = n ++ "_element_" ++ show (index :: Int)
+       inputNeedsInitialization kind = isArray kind
+                                    || collectionUsesADT kind
+                                    || listNeedsDriverInit cfg kind
+                                    || setNeedsDriverInit cfg kind
+                                    || tupleNeedsOwnership cfg kind
+                                    || (isConcreteADTKind kind && adtNeedsOwnership cfg adts kind)
        mkRVal sv = mkRValKind (kindOf sv)
        mkRValKind kind r
          | isRoundingMode kind            = roundingModeDriverValue r
@@ -842,6 +852,11 @@ genDriver cfg adts randVals fn publicInputs publicOutputs mbRet
          | isExactGMPKind cfg kind = text (gmpArrayType kind) <+> text n P.<> brackets (int lengthOfArray) P.<> semi
                                   $$ vcat (zipWith initialize [0 :: Int ..] vs)
                                   $$ displayInputArray
+         | inputNeedsInitialization kind
+         = vcat [initializeElement elementName seed | (elementName, seed) <- zip elementNames (inputGroupSeeds n)]
+        $$ text "const" <+> text inputType <+> text n P.<> brackets (int lengthOfArray)
+           <+> text "=" <+> braces (fsep (punctuate comma (map text elementNames))) P.<> semi
+        $$ displayInputArray
          | True                    = pprCWord True sv <+> text n P.<> brackets (int lengthOfArray) <+> text "= {"
                                   $$ nest 4 (fsep (punctuate comma (align vs)))
                                   $$ text "};"
@@ -850,6 +865,17 @@ genDriver cfg adts randVals fn publicInputs publicOutputs mbRet
                lengthOfArray = length sws
 
                initialize index = gmpDriverInitialize kind (text n P.<> brackets (int index))
+
+               elementNames = [inputElementName n index | index <- [0 .. lengthOfArray - 1]]
+               inputType
+                 | isArray kind = arrayInputCType kind
+                 | True         = showCType kind
+               initializeElement elementName seed
+                 | KArray _ valueKind <- kind
+                 = driverValueInit valueKind (elementName ++ "_default") seed
+                $$ arrayDriverInput cfg kind elementName (elementName ++ "_default")
+                 | True
+                 = driverValueInit kind elementName seed
 
                displayInputArray = text ""
                                 $$ text "printf" P.<> parens (printQuotes (text "Contents of input array" <+> text (publicName n) P.<> text ":\\n")) P.<> semi
@@ -963,8 +989,11 @@ genDriver cfg adts randVals fn publicInputs publicOutputs mbRet
                       key        = text keyName
                       keySetup   = driverValueInit keyKind keyName 0
                       keyCleanup = driverValueClear keyKind keyName
-                      arrayValue  = text (arrayOutputReadName arrayKind)
-                                 P.<> parens (fsep (punctuate comma [entry, key]))
+                      arrayValue
+                        | n `elem` map fst inps
+                        = entry P.<> text ".lookup" P.<> parens (fsep (punctuate comma [entry P.<> text ".context", key]))
+                        | True
+                        = text (arrayOutputReadName arrayKind) P.<> parens (fsep (punctuate comma [entry, key]))
                displayArrayEntry arrayKind = die $ "Expected an array return-group element, received " ++ show arrayKind
 
        displayArray stem label descriptor kind@(KArray keyKind valueKind)
@@ -1075,6 +1104,14 @@ genDriver cfg adts randVals fn publicInputs publicOutputs mbRet
                                  , (index, sv) <- zip [0 :: Int ..] svs
                                  , isExactGMPKind cfg (kindOf sv)
                                  ]
+                              ++ [clearInputElement (kindOf sv) (inputElementName n index)
+                                 | (_, n, CgArray svs) <- pairedInputs
+                                 , (index, sv) <- zip [0 :: Int ..] svs
+                                 , inputNeedsInitialization (kindOf sv)
+                                 , not (isExactGMPKind cfg (kindOf sv))
+                                 ]
+               clearInputElement (KArray _ valueKind) elementName = driverValueClear valueKind (elementName ++ "_default")
+               clearInputElement kind                elementName = driverValueClear kind elementName
                outputCleanup = [ gmpDriverClear (kindOf sv) (text n)
                                | (n, CgAtomic sv) <- outs
                                , isExactGMPKind cfg (kindOf sv)
@@ -1589,7 +1626,7 @@ genCProg cfg adts lists sets fn proto
          | True                                = [text "*" P.<> text cNm <+> text "=" <+> showSV cfg consts sv P.<> semi | alive]
        genIO isInp (_,     (cNm, CgArray sws)) = zipWith genElt sws [(0::Int)..]
          where genElt sv i
-                 | isInp                         = declSV typeWidth sv <+> text "=" <+> inputValue entry sv P.<> semi
+                 | isInp                         = vcat (genIO True (sv `Set.member` usedVariables, (entry, CgAtomic sv)))
                  | isExactGMPKind cfg kind      = gmpSet kind (text entry) value P.<> semi
                  | isArray kind                 = text entry <+> text "=" <+> text (arrayExportName kind) P.<> parens value P.<> semi
                  | kind == KString              = text entry <+> text "=" <+> textClone value P.<> semi

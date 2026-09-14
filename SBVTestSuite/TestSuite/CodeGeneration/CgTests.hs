@@ -198,6 +198,11 @@ tests = testGroup "CodeGeneration.CgTests"
   , testCase "return multiple value groups" multipleReturnGroups
   , testCase "return managed non-atomic value groups" managedReturnGroups
   , testCase "return grouped values from a library" groupedReturnLibrary
+  , testCase "borrow symbolic-array input groups" (groupedArrayInputs False)
+  , testCase "borrow symbolic-array input groups in a library" (groupedArrayInputs True)
+  , testCase "retain grouped callback inputs across independent library calls" groupedArrayInputOwnership
+  , testCase "initialize and release managed input groups" (groupedManagedInputs False)
+  , testCase "initialize and release managed input groups in a library" (groupedManagedInputs True)
   , testCase "compile and execute a free array with a C definition" definedFreeArray
   , testCase "return and output owned arrays" ownedArrayResults
   , testCase "retain an escaping callback array" escapingCallbackArray
@@ -3347,6 +3352,115 @@ multipleReturnGroups = withSystemTempDirectory "sbv-multiple-return-groups" $ \d
              ("void multipleReturnGroups(" `isInfixOf` headerText
            && "SWord16 *result_0" `isInfixOf` headerText
            && "SWord16 *result_3" `isInfixOf` headerText)
+
+-- | Fixed-size symbolic-array inputs use public callback descriptors rather
+-- than private array nodes. Distinct seeds must initialize each callback, and
+-- managed defaults and returned arrays have independent ownership.
+groupedArrayInputs :: Bool -> Assertion
+groupedArrayInputs library = withSystemTempDirectory "sbv-grouped-array-inputs" $ \dir -> do
+  let program = do
+        cgOverwriteFiles True
+        cgSetDriverValues [3, 7, 11, 15]
+        native <- cgInputArr 2 "native" :: SBVCodeGen [SArray Word8 Word16]
+        exact  <- cgInputArr 2 "exact"  :: SBVCodeGen [SArray Word8 [Integer]]
+        cgOutputArr "nativeValues" [readArray value 0 | value <- native]
+        cgOutputArr "exactHeads" [SL.head (readArray value 0) | value <- exact]
+        cgReturnArr native
+        cgReturnArr exact
+  outputText <- runGroupedInputProgram dir "groupedArrayInputs" library program
+  headerText <- readFile (dir </> "groupedArrayInputs.h")
+  mapM_ (\fragment -> assertBool outputText (fragment `isInfixOf` outputText))
+    [ "nativeValues[0] = 0x0003U"
+    , "nativeValues[1] = 0x0007U"
+    , "exactHeads[0] = 11"
+    , "exactHeads[1] = 15"
+    , "result_0[1][0] =0x0007U"
+    , "result_1[1][0] =[15, 16, 17]"
+    ]
+  assertBool "Expected public callback descriptors for grouped array inputs"
+             ("const SBVArrayInput_2_u8_3_u16 *native" `isInfixOf` headerText)
+
+-- | A hand-written caller can pass callback groups without private runtime
+-- nodes. Returned groups retain each context independently across later calls.
+groupedArrayInputOwnership :: Assertion
+groupedArrayInputOwnership = withSystemTempDirectory "sbv-grouped-array-ownership" $ \dir -> do
+  _ <- compileToCLib (Just dir) "arrayGroupLibrary"
+    [("copyArrayGroup", do
+        cgOverwriteFiles True
+        cgGenerateDriver False
+        values <- cgInputArr 2 "values" :: SBVCodeGen [SArray Word8 Word16]
+        cgReturnArr values)]
+  compileAndRunCaller dir "arrayGroupLibrary" $ unlines
+    [ "#include \"arrayGroupLibrary.h\""
+    , "#include <assert.h>"
+    , "static unsigned live_contexts;"
+    , "static SWord16 lookup(const void *context, SWord8 key)"
+    , "{ return *(const SWord16 *) context + key; }"
+    , "static const void *retain(const void *context)"
+    , "{ SWord16 *copy = malloc(sizeof(*copy)); assert(copy != NULL); *copy = *(const SWord16 *) context; ++live_contexts; return copy; }"
+    , "static void release(const void *context)"
+    , "{ --live_contexts; free((void *) context); }"
+    , "int main(void)"
+    , "{"
+    , "  for (unsigned i = 0; i < 32; ++i) {"
+    , "    SWord16 data[] = {7, 23};"
+    , "    const SBVArrayInput_2_u8_3_u16 inputs[] = {{lookup, &data[0], retain, release}, {lookup, &data[1], retain, release}};"
+    , "    SBVArrayOutput_2_u8_3_u16 first[2], second[2];"
+    , "    copyArrayGroup(inputs, first);"
+    , "    data[0] = 99; data[1] = 101;"
+    , "    const SBVArrayInput_2_u8_3_u16 borrowed[] = {sbv_array_output_as_input_2_u8_3_u16(first[1]), sbv_array_output_as_input_2_u8_3_u16(first[0])};"
+    , "    copyArrayGroup(borrowed, second);"
+    , "    for (unsigned j = 0; j < 2; ++j) sbv_array_output_release_2_u8_3_u16(&first[j]);"
+    , "    assert(live_contexts == 2);"
+    , "    assert(sbv_array_output_read_2_u8_3_u16(second[0], 1) == 24);"
+    , "    assert(sbv_array_output_read_2_u8_3_u16(second[1], 1) == 8);"
+    , "    for (unsigned j = 0; j < 2; ++j) sbv_array_output_release_2_u8_3_u16(&second[j]);"
+    , "    assert(live_contexts == 0);"
+    , "  }"
+    , "  return 0;"
+    , "}"
+    ]
+
+-- | Managed input groups need per-element initialization, including nested
+-- exact values and retained arrays, followed by exactly one owner cleanup.
+groupedManagedInputs :: Bool -> Assertion
+groupedManagedInputs library = withSystemTempDirectory "sbv-grouped-managed-inputs" $ \dir -> do
+  let program = do
+        cgOverwriteFiles True
+        cgSetDriverValues [3, 7, 11, 15, 21, 25, 1, 5, 31, 35]
+        lists  <- cgInputArr 2 "lists"  :: SBVCodeGen [SList Integer]
+        sets   <- cgInputArr 2 "sets"   :: SBVCodeGen [SSet Rational]
+        pairs  <- cgInputArr 2 "pairs"  :: SBVCodeGen [SBV (Integer, [Integer])]
+        adts   <- cgInputArr 2 "adts"   :: SBVCodeGen [SCodeGenCollections]
+        arrays <- cgInputArr 2 "arrays" :: SBVCodeGen [SList (ArrayModel Word8 Word16)]
+        cgOutputArr "listHeads" (map SL.head lists)
+        cgOutputArr "pairIntegers" (map (fst . untuple) pairs)
+        cgOutputArr "arrayHeads" [readArray (SL.head value) 0 | value <- arrays]
+        cgReturnArr lists
+        cgReturnArr sets
+        cgReturnArr pairs
+        cgReturnArr adts
+        cgReturnArr arrays
+  outputText <- runGroupedInputProgram dir "groupedManagedInputs" library program
+  mapM_ (\fragment -> assertBool outputText (fragment `isInfixOf` outputText))
+    [ "listHeads[0] = 3"
+    , "listHeads[1] = 7"
+    , "pairIntegers[0] = 21"
+    , "pairIntegers[1] = 25"
+    , "arrayHeads[0] = 0x001fU"
+    , "arrayHeads[1] = 0x0023U"
+    , "result_0[1] = [7, 8, 9]"
+    ]
+
+-- | Exercise the same grouped-input program through standalone generation
+-- and two translation units sharing one library header and combined driver.
+runGroupedInputProgram :: FilePath -> String -> Bool -> SBVCodeGen () -> IO String
+runGroupedInputProgram dir programName library program
+  | library = do
+      (_, cfg, bundle) <- compileToCLib' programName [(programName ++ "First", program), (programName ++ "Second", program)]
+      renderCgPgmBundle (Just dir) (cfg, bundle)
+      compileAndRunGenerated dir programName
+  | True = compileProgramAndRunGenerated dir programName program
 
 -- | Exercise deep ownership and element-wise cleanup for non-atomic return
 -- groups containing lists, exact integers, and persistent arrays.
