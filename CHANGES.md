@@ -3,6 +3,12 @@
 
 ### Version 14.8, Not yet released
 
+  * Recreate generated C library archives from exactly the selected components,
+    removing retired members when a library is regenerated. Build replacements
+    in a temporary archive so an archiver failure preserves the last good archive.
+    Library drivers now depend on the archive, fixing direct and parallel driver
+    builds and ensuring component changes cause the driver to be relinked.
+
   * Make standalone generated C driver objects depend on their generated headers.
     Incremental builds now recompile the driver when a header changes instead of
     potentially linking a stale caller against the updated implementation.

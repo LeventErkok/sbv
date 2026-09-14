@@ -432,6 +432,7 @@ Test-Suite SBVTest
                   , TestSuite.CodeGeneration.Floats
                   , TestSuite.CodeGeneration.GCD
                   , TestSuite.CodeGeneration.PopulationCount
+                  , TestSuite.CodeGeneration.LibraryBuild
                   , TestSuite.CodeGeneration.PseudoBoolean
                   , TestSuite.CodeGeneration.ScalarSafety
                   , TestSuite.CodeGeneration.Uninterpreted
