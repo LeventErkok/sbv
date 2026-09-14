@@ -12,7 +12,7 @@ all: foo_driver
 foo.o: foo.c foo.h
 	${CC} ${CCFLAGS} -c $< -o $@
 
-foo_driver.o: foo_driver.c
+foo_driver.o: foo_driver.c foo.h
 	${CC} ${CCFLAGS} -c $< -o $@
 
 foo_driver: foo.o foo_driver.o

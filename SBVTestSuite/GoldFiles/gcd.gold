@@ -12,7 +12,7 @@ all: sgcd_driver
 sgcd.o: sgcd.c sgcd.h
 	${CC} ${CCFLAGS} -c $< -o $@
 
-sgcd_driver.o: sgcd_driver.c
+sgcd_driver.o: sgcd_driver.c sgcd.h
 	${CC} ${CCFLAGS} -c $< -o $@
 
 sgcd_driver: sgcd.o sgcd_driver.o

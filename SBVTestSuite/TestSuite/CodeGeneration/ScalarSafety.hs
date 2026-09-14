@@ -6,7 +6,8 @@
 -- Maintainer: erkokl@gmail.com
 -- Stability : experimental
 --
--- Executed regressions for diagnostic escaping and mapped real flooring.
+-- Executed regressions for diagnostic escaping, mapped real flooring, and
+-- incremental C builds.
 -----------------------------------------------------------------------------
 
 {-# OPTIONS_GHC -Wall -Werror #-}
@@ -39,7 +40,7 @@ tests = testsWith "CodeGeneration.ScalarSafety" $ \dir library program ->
 -- compatibility backend. Independent C callers supply fractional inputs and
 -- check against mathematical integer results rather than C casts.
 testsWith :: String -> Generator -> TestTree
-testsWith groupName generate = testGroup groupName
+testsWith groupName generate = testGroup groupName $
   [ testGroup (form ++ "/" ++ optimization)
       [ testGroup "floor"
           [ testCase (show realType ++ "/" ++ show width) $ withSystemTempDirectory "sbv-c-real-floor" $ \dir -> do
@@ -75,6 +76,26 @@ testsWith groupName generate = testGroup groupName
   | (form, library) <- [("program", False), ("library", True)]
   , optimization <- ["-O0", "-O2 -fsanitize=undefined,float-cast-overflow -fno-sanitize-recover=all"]
   ]
+  ++ [testCase "driver header dependency" (driverHeaderDependency generate)]
+
+-- | Header changes must invalidate the separately compiled standalone driver.
+-- Make's hypothetical-newer prerequisite avoids sleeps and timestamp races.
+driverHeaderDependency :: Generator -> Assertion
+driverHeaderDependency generate = withSystemTempDirectory "sbv-c-driver-header" $ \dir -> do
+  generate dir False $ do
+    cgOverwriteFiles True
+    cgSetDriverValues [41]
+    value <- cgInput "value" :: SBVCodeGen SWord8
+    cgReturn value
+  extraFlags <- maybe "" (" " ++) <$> lookupEnv "SBV_C_TEST_FLAGS"
+  let target = "scalarChecks_driver.o"
+  (makeExit, _, makeError) <- readProcessWithExitCode "make"
+    ["-C", dir, target, "CCFLAGS=-std=c11 -Wall -Wextra -Werror -O2" ++ extraFlags] ""
+  assertEqual makeError ExitSuccess makeExit
+  (freshExit, _, freshError) <- readProcessWithExitCode "make" ["-C", dir, "-q", target] ""
+  assertEqual freshError ExitSuccess freshExit
+  (staleExit, _, staleError) <- readProcessWithExitCode "make" ["-C", dir, "-q", "-W", "scalarChecks.h", target] ""
+  assertEqual ("Changing the header must invalidate the driver object: " ++ staleError) (ExitFailure 1) staleExit
 
 -- | Text must remain a semantic no-op even when it resembles C statements or
 -- affects preprocessing. Embedded NUL/control bytes must also compile cleanly.

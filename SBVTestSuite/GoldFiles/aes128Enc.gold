@@ -12,7 +12,7 @@ all: aes128Enc_driver
 aes128Enc.o: aes128Enc.c aes128Enc.h
 	${CC} ${CCFLAGS} -c $< -o $@
 
-aes128Enc_driver.o: aes128Enc_driver.c
+aes128Enc_driver.o: aes128Enc_driver.c aes128Enc.h
 	${CC} ${CCFLAGS} -c $< -o $@
 
 aes128Enc_driver: aes128Enc.o aes128Enc_driver.o

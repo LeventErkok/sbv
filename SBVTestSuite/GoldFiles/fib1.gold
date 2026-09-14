@@ -12,7 +12,7 @@ all: fib1_driver
 fib1.o: fib1.c fib1.h
 	${CC} ${CCFLAGS} -c $< -o $@
 
-fib1_driver.o: fib1_driver.c
+fib1_driver.o: fib1_driver.c fib1.h
 	${CC} ${CCFLAGS} -c $< -o $@
 
 fib1_driver: fib1.o fib1_driver.o

@@ -12,7 +12,7 @@ all: crcUSB5_driver
 crcUSB5.o: crcUSB5.c crcUSB5.h
 	${CC} ${CCFLAGS} -c $< -o $@
 
-crcUSB5_driver.o: crcUSB5_driver.c
+crcUSB5_driver.o: crcUSB5_driver.c crcUSB5.h
 	${CC} ${CCFLAGS} -c $< -o $@
 
 crcUSB5_driver: crcUSB5.o crcUSB5_driver.o

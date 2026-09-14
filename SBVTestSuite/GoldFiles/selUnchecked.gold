@@ -12,7 +12,7 @@ all: selUnChecked_driver
 selUnChecked.o: selUnChecked.c selUnChecked.h
 	${CC} ${CCFLAGS} -c $< -o $@
 
-selUnChecked_driver.o: selUnChecked_driver.c
+selUnChecked_driver.o: selUnChecked_driver.c selUnChecked.h
 	${CC} ${CCFLAGS} -c $< -o $@
 
 selUnChecked_driver: selUnChecked.o selUnChecked_driver.o

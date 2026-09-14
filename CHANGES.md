@@ -3,6 +3,10 @@
 
 ### Version 14.8, Not yet released
 
+  * Make standalone generated C driver objects depend on their generated headers.
+    Incremental builds now recompile the driver when a header changes instead of
+    potentially linking a stale caller against the updated implementation.
+
   * Fix C generation of diagnostic labels and assertion messages. Comment delimiters,
     control characters, and preprocessing sequences cannot alter generated code, and
     assertion text is passed as data rather than interpreted as a printf format string.

@@ -12,7 +12,7 @@ all: aes128Dec_driver
 aes128Dec.o: aes128Dec.c aes128Dec.h
 	${CC} ${CCFLAGS} -c $< -o $@
 
-aes128Dec_driver.o: aes128Dec_driver.c
+aes128Dec_driver.o: aes128Dec_driver.c aes128Dec.h
 	${CC} ${CCFLAGS} -c $< -o $@
 
 aes128Dec_driver: aes128Dec.o aes128Dec_driver.o

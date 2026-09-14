@@ -12,7 +12,7 @@ all: popCount_driver
 popCount.o: popCount.c popCount.h
 	${CC} ${CCFLAGS} -c $< -o $@
 
-popCount_driver.o: popCount_driver.c
+popCount_driver.o: popCount_driver.c popCount.h
 	${CC} ${CCFLAGS} -c $< -o $@
 
 popCount_driver: popCount.o popCount_driver.o
