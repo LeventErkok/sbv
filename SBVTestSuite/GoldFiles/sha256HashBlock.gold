@@ -12,7 +12,7 @@ all: sha256HashBlock_driver
 sha256HashBlock.o: sha256HashBlock.c sha256HashBlock.h
 	${CC} ${CCFLAGS} -ffp-contract=off -c $< -o $@
 
-sha256HashBlock_driver.o: sha256HashBlock_driver.c
+sha256HashBlock_driver.o: sha256HashBlock_driver.c sha256HashBlock.h
 	${CC} ${CCFLAGS} -ffp-contract=off -c $< -o $@
 
 sha256HashBlock_driver: sha256HashBlock.o sha256HashBlock_driver.o

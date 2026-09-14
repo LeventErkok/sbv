@@ -12,7 +12,7 @@ all: tstShiftLeft_driver
 tstShiftLeft.o: tstShiftLeft.c tstShiftLeft.h
 	${CC} ${CCFLAGS} -ffp-contract=off -c $< -o $@
 
-tstShiftLeft_driver.o: tstShiftLeft_driver.c
+tstShiftLeft_driver.o: tstShiftLeft_driver.c tstShiftLeft.h
 	${CC} ${CCFLAGS} -ffp-contract=off -c $< -o $@
 
 tstShiftLeft_driver: tstShiftLeft.o tstShiftLeft_driver.o

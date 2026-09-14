@@ -12,7 +12,7 @@ all: fib2_driver
 fib2.o: fib2.c fib2.h
 	${CC} ${CCFLAGS} -ffp-contract=off -c $< -o $@
 
-fib2_driver.o: fib2_driver.c
+fib2_driver.o: fib2_driver.c fib2.h
 	${CC} ${CCFLAGS} -ffp-contract=off -c $< -o $@
 
 fib2_driver: fib2.o fib2_driver.o

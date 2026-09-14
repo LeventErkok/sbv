@@ -12,7 +12,7 @@ all: merge_driver
 merge.o: merge.c merge.h
 	${CC} ${CCFLAGS} -ffp-contract=off -c $< -o $@
 
-merge_driver.o: merge_driver.c
+merge_driver.o: merge_driver.c merge.h
 	${CC} ${CCFLAGS} -ffp-contract=off -c $< -o $@
 
 merge_driver: merge.o merge_driver.o

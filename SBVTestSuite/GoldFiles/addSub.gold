@@ -12,7 +12,7 @@ all: addSub_driver
 addSub.o: addSub.c addSub.h
 	${CC} ${CCFLAGS} -ffp-contract=off -c $< -o $@
 
-addSub_driver.o: addSub_driver.c
+addSub_driver.o: addSub_driver.c addSub.h
 	${CC} ${CCFLAGS} -ffp-contract=off -c $< -o $@
 
 addSub_driver: addSub.o addSub_driver.o

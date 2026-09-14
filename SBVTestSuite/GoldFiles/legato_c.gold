@@ -12,7 +12,7 @@ all: legatoMult_driver
 legatoMult.o: legatoMult.c legatoMult.h
 	${CC} ${CCFLAGS} -ffp-contract=off -c $< -o $@
 
-legatoMult_driver.o: legatoMult_driver.c
+legatoMult_driver.o: legatoMult_driver.c legatoMult.h
 	${CC} ${CCFLAGS} -ffp-contract=off -c $< -o $@
 
 legatoMult_driver: legatoMult.o legatoMult_driver.o

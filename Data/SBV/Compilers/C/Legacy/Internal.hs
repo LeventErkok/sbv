@@ -297,7 +297,7 @@ genMake ifdr fn dn ldFlags = foldr1 ($$) [l | (True, l) <- lns]
              , (True, nmo P.<> text (": " ++ ppSameLine (hsep [nmc, nmh])))
              , (True, text "\t${CC} ${CCFLAGS}" <+> text "-c $< -o $@")
              , (True, text "")
-             , (ifdr, nmdo P.<> text ":" <+> nmdc)
+             , (ifdr, nmdo P.<> text (": " ++ ppSameLine (hsep [nmdc, nmh])))
              , (ifdr, text "\t${CC} ${CCFLAGS}" <+> text "-c $< -o $@")
              , (ifdr, text "")
              , (ifdr, nmd P.<> text (": " ++ ppSameLine (hsep [nmo, nmdo])))
