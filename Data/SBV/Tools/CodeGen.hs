@@ -370,6 +370,48 @@ let suffixMatcher = do
 
 == Boundaries
 
+=== Support policy
+
+The following distinctions apply equally to standalone functions and libraries:
+
+* /Supported representations/: arbitrary-width bit-vectors, native and
+  arbitrary-format floats, GMP integers and rational-valued reals, text,
+  lists, finite\/cofinite sets, tuples, concrete ADTs, and persistent arrays.
+  Dependencies and ownership follow the representation descriptions above.
+* /Supported with generation budgets/: exhaustive finite-domain array equality
+  ('cgArrayEqualityLimit') and regex compilation ('cgRegexLimits'). Exceeding
+  a budget reports the relevant setting; raising it does not enable a different
+  feature or change semantics. Regex matching has no approximate fallback.
+* /Unsupported types/: uninterpreted sorts, including uses nested in supported
+  containers. Uninterpreted /functions/ with caller-supplied C implementations
+  are a separate, supported mechanism.
+* /Unsupported equality/: nested arrays and general infinite-domain array
+  equality, even for sparse constant-plus-write arrays. The same restriction
+  applies to implicit element comparisons in collection operations.
+* /Unsupported solver requests/: finite or infinite quantifiers, special
+  relations, soft constraints, optimization objectives, and SMT-only constraint
+  attributes. Ordinary hard constraints become executable checks, not searches
+  for satisfying inputs.
+* /Unsupported closures/: array lambdas capturing outer symbolic values.
+  Closed array lambdas and firstified higher-order operations with explicit
+  'Data.SBV.Closure' environments remain supported. Unsupported implicit
+  higher-order captures are rejected by SBV's frontend or by C preflight when
+  retained in a defined function; the backend does not add first-class runtime
+  functions or general function equality.
+* /Unsupported exact real values/: algebraic roots, transcendental operations
+  in exact-rational mode, and inexact or interval literals that do not specify
+  a single exact value. A native real mapping explicitly opts into approximate
+  arithmetic; it does not choose an approximation for an algebraic literal.
+
+These unsupported cases report an explicit diagnostic during generation,
+including retained private-function and array-lambda bodies. Validation of an
+entire library precedes file output: a rejected component does not leave earlier
+components partially written. This is not a filesystem transaction; an I\/O
+failure while writing otherwise valid output can still leave files behind.
+Already constant-folded or eliminated operations do not require a lowering.
+Runtime failures and caller preconditions are separate contracts, described
+above; in particular, violating the RNE entry requirement is not diagnosed.
+
 Array comparisons with infinite or unsupported key domains, or values that
 themselves contain arrays, are rejected during generation. Comparing arrays
 nested inside collections or aggregates is also not implemented. Quantifiers,
@@ -389,10 +431,16 @@ can be empty.
 Numeric conversions honor 'cgIntegerSize' and the @CgFloat@/@CgDouble@ real
 mappings. Converting a mapped real to an integer still floors; explicitly
 rounded floating casts retain their requested rounding mode. @CgLongDouble@
-retains native arithmetic and native floating casts, but bridges to exact GMP
-numbers or arbitrary floating-point formats are rejected during generation.
-They require a representation-aware long-double conversion, not narrowing
-through binary64.
+retains native arithmetic and uses representation-aware LibBF bridges to exact
+integers, bit-vectors, and native or arbitrary floating-point formats. These
+bridges import the full significand and round directly to the destination,
+without narrowing through binary64. The target C compiler must provide binary64,
+x87 extended, or binary128 @long double@; other formats (including double-double)
+receive a compile-time diagnostic when a bridge is needed. Merely selecting
+@CgLongDouble@ does not itself require LibBF. Explicit native mappings remain
+approximations: compound expressions, including integer numerator\/denominator
+conversions in 'Data.SBV.Rational.sRationalToSReal', retain their separate rounding
+steps instead of becoming a single exact-rational conversion.
 -}
 
 {- $unboundedCGen

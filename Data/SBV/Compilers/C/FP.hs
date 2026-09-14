@@ -159,6 +159,7 @@ arbitraryFPRuntime cfg ks asgns
      , ""]
   ++ concatMap formatRuntime ks
   ++ concat [exactBridgeRuntime | any castUsesExact floatCasts]
+  ++ concat [longDoubleBridgeRuntime | cgReal cfg == Just CgLongDouble, any castUsesReal floatCasts]
   ++ concatMap reinterpretRuntime (nub (concatMap reinterprets asgns))
   ++ concatMap (castRuntime cfg) floatCasts
  where markUnused line = case splitAt 7 line of
@@ -180,6 +181,7 @@ arbitraryFPRuntime cfg ks asgns
        floatCasts = nub (concatMap casts asgns)
 
        castUsesExact (FloatCast fr to) = isExactGMPKind cfg fr || isExactGMPKind cfg to
+       castUsesReal  (FloatCast fr to) = KReal `elem` [fr, to]
 
        exactNativeCast fr to = (isExactGMPKind cfg fr && isNativeFloat to)
                             || (isNativeFloat fr && isExactGMPKind cfg to)
@@ -536,7 +538,7 @@ reinterpretName fr to = "sbv_fp_reinterpret_" ++ reprTag fr ++ "_" ++ reprTag to
 
 -- | Resolve explicit native mappings for numeric conversion helpers. A native
 -- real mapping to long double has no fixed SBV IEEE kind; retain 'KReal' so the
--- conversion can report that unsupported bridge instead of narrowing silently.
+-- bridge can use the target C compiler's format instead of assuming binary64.
 floatCastKind :: CgConfig -> Kind -> Kind
 floatCastKind cfg KReal = case cgReal cfg of
                            Just CgFloat  -> KFloat
@@ -547,10 +549,7 @@ floatCastKind cfg kind = mappedIntegerKind (cgInteger cfg) kind
 -- | Test whether a cast crosses an explicitly mapped floating representation,
 -- including integer mappings used as a floating-point source or destination.
 mappedFloatCast :: CgConfig -> Kind -> Kind -> Bool
-mappedFloatCast cfg fr to
-  | Just CgLongDouble <- cgReal cfg
-  , KReal `elem` [fr, to] = False
-  | True                 = (from /= fr || target /= to || mappedReal)
+mappedFloatCast cfg fr to = (from /= fr || target /= to || mappedReal)
                         && (floating from || floating target || mappedReal)
  where from   = floatCastKind cfg fr
        target = floatCastKind cfg to
@@ -571,10 +570,12 @@ castRuntime cfg (FloatCast source target) = case (fr, to) of
     , "  bf_delete(&x); bf_context_end(&ctx); return raw;"
     , "}"
     , ""]
-  (KFloat, KFP{})     -> fromNative "SFloat"
-  (KDouble, KFP{})    -> fromNative "SDouble"
-  (KFP{}, KFloat)     -> toNative "SFloat" True
-  (KFP{}, KDouble)    -> toNative "SDouble" False
+  (KFloat, KFP{})               -> fromNative "SFloat"
+  (KDouble, KFP{})              -> fromNative "SDouble"
+  (KReal, KFP{}) | longDouble fr -> fromNative "SReal"
+  (KFP{}, KFloat)               -> toNative "SFloat" True
+  (KFP{}, KDouble)              -> toNative "SDouble" False
+  (KFP{}, KReal) | longDouble to -> toNative "SReal" False
   _ | isNativeFloat fr && isNativeFloat to      -> nativeToNative
   _ | isExactGMPKind cfg fr && isNativeFloat to -> exactToNative
   _ | isNativeFloat fr && isExactGMPKind cfg to -> nativeToExact
@@ -582,9 +583,6 @@ castRuntime cfg (FloatCast source target) = case (fr, to) of
   _ | isFP fr && isExactGMPKind cfg to -> fpToExact
   _ | isBounded fr && isSomeFloat to -> integerToFP
   _ | isSomeFloat fr && isBounded to -> fpToInteger
-  _ | Just CgLongDouble <- cgReal cfg
-    , KReal `elem` [source, target]
-    -> error "SBV->C: Numeric conversions involving cgSRealType CgLongDouble are not yet supported; use CgFloat, CgDouble, or exact GMP reals."
   _                   -> error $ "SBV->C: Unsupported arbitrary floating-point cast: " ++ show (fr, to)
  where fr = floatCastKind cfg source
        to = floatCastKind cfg target
@@ -594,7 +592,7 @@ castRuntime cfg (FloatCast source target) = case (fr, to) of
          ["static inline " ++ reprCType to ++ " " ++ helperName ++ "(" ++ sourceType ++ " a, bf_rnd_t rnd)"
          , "{"
          , "  bf_context_t ctx; bf_t x; " ++ reprCType to ++ " raw;"
-         , "  bf_context_init(&ctx, sbv_bf_realloc, NULL); bf_init(&ctx, &x); bf_set_float64(&x, (double) a);"
+         , "  bf_context_init(&ctx, sbv_bf_realloc, NULL); " ++ decodeFloating fr
          , "  bf_round(&x, " ++ show (significandBits to) ++ ", " ++ prefix to ++ "_flags(rnd)); raw = " ++ prefix to ++ "_encode(&x);"
          , "  bf_delete(&x); bf_context_end(&ctx); return raw;"
          , "}"
@@ -603,20 +601,20 @@ castRuntime cfg (FloatCast source target) = case (fr, to) of
        toNative targetType singlePrecision =
             ["static inline " ++ targetType ++ " " ++ helperName ++ "(" ++ reprCType fr ++ " a, bf_rnd_t rnd)"
             , "{"
-            , "  bf_context_t ctx; bf_t x; double result;"
+            , "  bf_context_t ctx; bf_t x; " ++ nativeResultType to ++ " result;"
             , "  bf_context_init(&ctx, sbv_bf_realloc, NULL); " ++ prefix fr ++ "_decode(&ctx, &x, a);"
             ]
          ++ ["  bf_round(&x, 24, BF_FLAG_SUBNORMAL | bf_set_exp_bits(8) | (bf_flags_t) rnd);" | singlePrecision]
-         ++ ["  bf_get_float64(&x, &result, rnd); bf_delete(&x); bf_context_end(&ctx); return (" ++ targetType ++ ") result;"
+         ++ ["  " ++ getNative to ++ " bf_delete(&x); bf_context_end(&ctx); return (" ++ targetType ++ ") result;"
             , "}"
             , ""]
 
        nativeToNative =
          ["static inline " ++ nativeCType to ++ " " ++ helperName ++ "(" ++ nativeCType fr ++ " a, bf_rnd_t rnd)"
          , "{"
-         , "  bf_context_t ctx; bf_t x; double result;"
-         , "  bf_context_init(&ctx, sbv_bf_realloc, NULL); bf_init(&ctx, &x); bf_set_float64(&x, (double) a);"
-         , "  bf_round(&x, " ++ show (significandBits to) ++ ", " ++ nativeFlags to ++ "); bf_get_float64(&x, &result, rnd);"
+         , "  bf_context_t ctx; bf_t x; " ++ nativeResultType to ++ " result;"
+         , "  bf_context_init(&ctx, sbv_bf_realloc, NULL); " ++ decodeFloating fr
+         , "  bf_round(&x, " ++ precision to ++ ", " ++ nativeFlags to ++ "); " ++ getNative to
          , "  bf_delete(&x); bf_context_end(&ctx); return (" ++ nativeCType to ++ ") result;"
          , "}"
          , ""]
@@ -642,7 +640,7 @@ castRuntime cfg (FloatCast source target) = case (fr, to) of
          , "    bf_set_ui(&chunk, words[i]); bf_add(&x, &x, &chunk, BF_PREC_INF, BF_FLAG_EXT_EXP | BF_RNDZ);"
          , "  }"
          , "  if (negative) bf_neg(&x);"
-         , "  bf_round(&x, " ++ show (significandBits to) ++ ", " ++ floatingFlags to ++ ");" ++ integerFinish
+         , "  bf_round(&x, " ++ precision to ++ ", " ++ floatingFlags to ++ ");" ++ integerFinish
          , "  bf_delete(&chunk); bf_delete(&x); bf_context_end(&ctx); return " ++ integerResult ++ ";"
          , "}"
          , ""]
@@ -719,19 +717,19 @@ castRuntime cfg (FloatCast source target) = case (fr, to) of
          | fr == KUnbounded =
             ["static inline " ++ nativeCType to ++ " " ++ helperName ++ "(SInteger a, bf_rnd_t rnd)"
             , "{"
-            , "  bf_context_t ctx; bf_t x, chunk; double result;"
+            , "  bf_context_t ctx; bf_t x, chunk; " ++ nativeResultType to ++ " result;"
             , "  bf_context_init(&ctx, sbv_bf_realloc, NULL); bf_init(&ctx, &x); bf_init(&ctx, &chunk); sbv_bf_set_mpz(&x, &chunk, a);"
-            , "  bf_round(&x, " ++ show (significandBits to) ++ ", " ++ nativeFlags to ++ "); bf_get_float64(&x, &result, rnd);"
+            , "  bf_round(&x, " ++ precision to ++ ", " ++ nativeFlags to ++ "); " ++ getNative to
             , "  bf_delete(&chunk); bf_delete(&x); bf_context_end(&ctx); return (" ++ nativeCType to ++ ") result;"
             , "}"
             , ""]
          | fr == KReal =
             ["static inline " ++ nativeCType to ++ " " ++ helperName ++ "(SReal a, bf_rnd_t rnd)"
             , "{"
-            , "  bf_context_t ctx; bf_t x, numerator, denominator, chunk; double result;"
+            , "  bf_context_t ctx; bf_t x, numerator, denominator, chunk; " ++ nativeResultType to ++ " result;"
             , "  bf_context_init(&ctx, sbv_bf_realloc, NULL); bf_init(&ctx, &x); bf_init(&ctx, &numerator); bf_init(&ctx, &denominator); bf_init(&ctx, &chunk);"
             , "  sbv_bf_set_mpz(&numerator, &chunk, mpq_numref(a)); sbv_bf_set_mpz(&denominator, &chunk, mpq_denref(a));"
-            , "  bf_div(&x, &numerator, &denominator, " ++ show (significandBits to) ++ ", " ++ nativeFlags to ++ "); bf_get_float64(&x, &result, rnd);"
+            , "  bf_div(&x, &numerator, &denominator, " ++ precision to ++ ", " ++ nativeFlags to ++ "); " ++ getNative to
             , "  bf_delete(&chunk); bf_delete(&denominator); bf_delete(&numerator); bf_delete(&x); bf_context_end(&ctx); return (" ++ nativeCType to ++ ") result;"
             , "}"
             , ""]
@@ -741,8 +739,10 @@ castRuntime cfg (FloatCast source target) = case (fr, to) of
          | to == KUnbounded =
             ["static inline SInteger " ++ helperName ++ "(sbv_gmp_ctx *gmp_ctx, " ++ nativeCType fr ++ " a, bf_rnd_t rnd)"
             , "{"
-            , "  bf_context_t ctx; bf_t x; mpz_ptr result = sbv_gmp_new_integer(gmp_ctx);"
-            , "  bf_context_init(&ctx, sbv_bf_realloc, NULL); bf_init(&ctx, &x); bf_set_float64(&x, (double) a); bf_rint(&x, rnd);"
+            ]
+         ++ ["  if (!isfinite(a)) { fputs(\"SBV->C: Cannot convert a non-finite mapped SReal to exact SInteger.\\n\", stderr); abort(); }" | source == KReal]
+         ++ [ "  bf_context_t ctx; bf_t x; mpz_ptr result = sbv_gmp_new_integer(gmp_ctx);"
+            , "  bf_context_init(&ctx, sbv_bf_realloc, NULL); " ++ decodeFloating fr ++ " bf_rint(&x, rnd);"
             , "  sbv_bf_get_mpz(result, &x); bf_delete(&x); bf_context_end(&ctx); return result;"
             , "}"
             , ""]
@@ -750,21 +750,34 @@ castRuntime cfg (FloatCast source target) = case (fr, to) of
             ["static inline SReal " ++ helperName ++ "(sbv_gmp_ctx *gmp_ctx, " ++ nativeCType fr ++ " a, bf_rnd_t rnd)"
             , "{"
             , "  bf_context_t ctx; bf_t x; mpq_ptr result = sbv_gmp_new_real(gmp_ctx);"
-            , "  (void) rnd; bf_context_init(&ctx, sbv_bf_realloc, NULL); bf_init(&ctx, &x); bf_set_float64(&x, (double) a);"
+            , "  (void) rnd; bf_context_init(&ctx, sbv_bf_realloc, NULL); " ++ decodeFloating fr
             , "  sbv_bf_get_mpq(result, &x); bf_delete(&x); bf_context_end(&ctx); return result;"
             , "}"
             , ""]
          | otherwise = error $ "SBV->C: Expected an exact GMP target kind, received " ++ show to
 
-       nativeFlags KFloat  = "BF_FLAG_SUBNORMAL | bf_set_exp_bits(8) | (bf_flags_t) rnd"
-       nativeFlags KDouble = "BF_FLAG_SUBNORMAL | bf_set_exp_bits(11) | (bf_flags_t) rnd"
-       nativeFlags k       = error $ "SBV->C: Expected a native floating-point kind, received " ++ show k
+       nativeFlags KFloat                   = "BF_FLAG_SUBNORMAL | bf_set_exp_bits(8) | (bf_flags_t) rnd"
+       nativeFlags KDouble                  = "BF_FLAG_SUBNORMAL | bf_set_exp_bits(11) | (bf_flags_t) rnd"
+       nativeFlags KReal | longDouble KReal = "sbv_bf_long_double_flags(rnd)"
+       nativeFlags k                        = error $ "SBV->C: Expected a native floating-point kind, received " ++ show k
 
-       nativeCType KFloat  = "SFloat"
-       nativeCType KDouble = "SDouble"
-       nativeCType k       = error $ "SBV->C: Expected a native floating-point kind, received " ++ show k
+       nativeCType KFloat                   = "SFloat"
+       nativeCType KDouble                  = "SDouble"
+       nativeCType KReal | longDouble KReal = "SReal"
+       nativeCType k                        = error $ "SBV->C: Expected a native floating-point kind, received " ++ show k
 
-       isNativeFloat k = k == KFloat || k == KDouble
+       longDouble k = k == KReal && cgReal cfg == Just CgLongDouble
+
+       precision k | longDouble k = "LDBL_MANT_DIG"
+                   | True         = show (significandBits k)
+
+       nativeResultType k | longDouble k = "long double"
+                          | True         = "double"
+
+       getNative k | longDouble k = "result = sbv_bf_get_long_double(&x, rnd);"
+                   | True         = "bf_get_float64(&x, &result, rnd);"
+
+       isNativeFloat k = k == KFloat || k == KDouble || longDouble k
 
        isSomeFloat k = isFP k || isNativeFloat k
 
@@ -780,17 +793,18 @@ castRuntime cfg (FloatCast source target) = case (fr, to) of
 
        decodeFloating k
          | isFP k          = prefix k ++ "_decode(&ctx, &x, a);"
+         | longDouble k    = "bf_init(&ctx, &x); sbv_bf_set_long_double(&x, a);"
          | isNativeFloat k = "bf_init(&ctx, &x); bf_set_float64(&x, (double) a);"
          | otherwise       = error $ "SBV->C: Expected a floating-point kind, received " ++ show k
 
        integerResultDeclaration
          | isFP to          = " " ++ reprCType to ++ " raw;"
-         | isNativeFloat to = " double result;"
+         | isNativeFloat to = " " ++ nativeResultType to ++ " result;"
          | otherwise        = error $ "SBV->C: Expected a floating-point target kind, received " ++ show to
 
        integerFinish
          | isFP to          = " raw = " ++ prefix to ++ "_encode(&x);"
-         | isNativeFloat to = " bf_get_float64(&x, &result, rnd);"
+         | isNativeFloat to = " " ++ getNative to
          | otherwise        = error $ "SBV->C: Expected a floating-point target kind, received " ++ show to
 
        integerResult
@@ -800,6 +814,69 @@ castRuntime cfg (FloatCast source target) = case (fr, to) of
 
        sourceWords   = (reprWidth fr + 63) `div` 64
        sourceTopBits = let r = reprWidth fr `mod` 64 in if r == 0 then 64 else r
+
+-- | Import and export native long doubles without binary64 intermediates.
+-- Work on numeric significands, not ABI-dependent object layouts (in particular
+-- x87 padding and its explicit integer bit). Unsupported non-IEEE-like formats
+-- are rejected by the target compiler. All reconstruction operations are exact
+-- after LibBF has rounded once to the target precision and exponent range.
+longDoubleBridgeRuntime :: [String]
+longDoubleBridgeRuntime =
+  [ "#include <float.h>"
+  , "#if FLT_RADIX == 2 && LDBL_MANT_DIG == 53 && LDBL_MAX_EXP == 1024 && LDBL_MIN_EXP == -1021"
+  , "#define SBV_LDBL_EXP_BITS 11"
+  , "#elif FLT_RADIX == 2 && (LDBL_MANT_DIG == 64 || LDBL_MANT_DIG == 113) && LDBL_MAX_EXP == 16384 && LDBL_MIN_EXP == -16381"
+  , "#define SBV_LDBL_EXP_BITS 15"
+  , "#else"
+  , "#error SBV C long-double conversions require binary64, x87 extended, or binary128 long double"
+  , "#endif"
+  , "#if BF_EXP_BITS_MAX < SBV_LDBL_EXP_BITS"
+  , "#error SBV C long-double conversions exceed the LibBF exponent range"
+  , "#endif"
+  , ""
+  , "static bf_flags_t sbv_bf_long_double_flags(bf_rnd_t rnd)"
+  , "{"
+  , "  return BF_FLAG_SUBNORMAL | bf_set_exp_bits(SBV_LDBL_EXP_BITS) | (bf_flags_t) rnd;"
+  , "}"
+  , ""
+  , "static void sbv_bf_set_long_double(bf_t *result, long double value)"
+  , "{"
+  , "  int exponent, shift = 0, status = 0; bf_t chunk;"
+  , "  if (isnan(value)) { bf_set_nan(result); return; }"
+  , "  if (isinf(value)) { bf_set_inf(result, signbit(value) != 0); return; }"
+  , "  if (value == 0) { bf_set_zero(result, signbit(value) != 0); return; }"
+  , "  long double fraction = frexpl(fabsl(value), &exponent);"
+  , "  bf_init(result->ctx, &chunk); bf_set_zero(result, 0);"
+  , "  while (fraction != 0) {"
+  , "    fraction = ldexpl(fraction, 32);"
+  , "    const uint32_t bits = (uint32_t) fraction; fraction -= (long double) bits;"
+  , "    status |= bf_mul_2exp(result, 32, BF_PREC_INF, BF_FLAG_EXT_EXP | BF_RNDZ);"
+  , "    status |= bf_set_ui(&chunk, bits);"
+  , "    status |= bf_add(result, result, &chunk, BF_PREC_INF, BF_FLAG_EXT_EXP | BF_RNDZ); shift += 32;"
+  , "  }"
+  , "  status |= bf_mul_2exp(result, exponent - shift, BF_PREC_INF, BF_FLAG_EXT_EXP | BF_RNDZ);"
+  , "  bf_delete(&chunk); if (status & BF_ST_MEM_ERROR) abort();"
+  , "  if (signbit(value)) bf_neg(result);"
+  , "}"
+  , ""
+  , "static long double sbv_bf_get_long_double(bf_t *value, bf_rnd_t rnd)"
+  , "{"
+  , "  if (bf_round(value, LDBL_MANT_DIG, sbv_bf_long_double_flags(rnd)) & BF_ST_MEM_ERROR) abort();"
+  , "  if (bf_is_nan(value)) return nanl(\"\");"
+  , "  if (!bf_is_finite(value)) return value->sign ? -HUGE_VALL : HUGE_VALL;"
+  , "  if (bf_is_zero(value)) return value->sign ? -0.0L : 0.0L;"
+  , "  long double significand = 0;"
+  , "  const slimb_t base = (slimb_t) value->len * LIMB_BITS;"
+  , "  for (int i = 0; i < LDBL_MANT_DIG; ++i) {"
+  , "    const slimb_t bit = base - 1 - i;"
+  , "    const unsigned digit = bit < 0 ? 0 : (unsigned) ((value->tab[bit / LIMB_BITS] >> (bit % LIMB_BITS)) & 1);"
+  , "    significand = significand * 2 + digit;"
+  , "  }"
+  , "  const long double result = ldexpl(significand, (int) value->expn - LDBL_MANT_DIG);"
+  , "  return value->sign ? -result : result;"
+  , "}"
+  , ""
+  ]
 
 -- | Emit conversion primitives shared by LibBF/GMP value casts.
 exactBridgeRuntime :: [String]

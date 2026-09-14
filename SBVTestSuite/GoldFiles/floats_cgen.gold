@@ -558,11 +558,101 @@ SFloat toFP_Integer_ToFloat(const SInteger sbv_input_0)
 #endif
 
 
+/* LibBF-backed arbitrary floating-point runtime. */
+#ifndef SBV_CGEN_UNUSED
+#if defined(__GNUC__) || defined(__clang__)
+#define SBV_CGEN_UNUSED __attribute__((unused))
+#else
+#define SBV_CGEN_UNUSED
+#endif
+#endif
+
+static SBV_CGEN_UNUSED inline bf_rnd_t sbv_bf_rounding_mode(int mode)
+{
+  switch (mode) {
+    case 0: return BF_RNDN;
+    case 1: return BF_RNDNA;
+    case 2: return BF_RNDU;
+    case 3: return BF_RNDD;
+    case 4: return BF_RNDZ;
+    default: abort();
+  }
+}
+
+static SBV_CGEN_UNUSED void *sbv_bf_realloc(void *opaque, void *ptr, size_t size)
+{
+  (void) opaque;
+  return realloc(ptr, size);
+}
+
+#include <float.h>
+#if FLT_RADIX == 2 && LDBL_MANT_DIG == 53 && LDBL_MAX_EXP == 1024 && LDBL_MIN_EXP == -1021
+#define SBV_LDBL_EXP_BITS 11
+#elif FLT_RADIX == 2 && (LDBL_MANT_DIG == 64 || LDBL_MANT_DIG == 113) && LDBL_MAX_EXP == 16384 && LDBL_MIN_EXP == -16381
+#define SBV_LDBL_EXP_BITS 15
+#else
+#error SBV C long-double conversions require binary64, x87 extended, or binary128 long double
+#endif
+#if BF_EXP_BITS_MAX < SBV_LDBL_EXP_BITS
+#error SBV C long-double conversions exceed the LibBF exponent range
+#endif
+
+static SBV_CGEN_UNUSED bf_flags_t sbv_bf_long_double_flags(bf_rnd_t rnd)
+{
+  return BF_FLAG_SUBNORMAL | bf_set_exp_bits(SBV_LDBL_EXP_BITS) | (bf_flags_t) rnd;
+}
+
+static SBV_CGEN_UNUSED void sbv_bf_set_long_double(bf_t *result, long double value)
+{
+  int exponent, shift = 0, status = 0; bf_t chunk;
+  if (isnan(value)) { bf_set_nan(result); return; }
+  if (isinf(value)) { bf_set_inf(result, signbit(value) != 0); return; }
+  if (value == 0) { bf_set_zero(result, signbit(value) != 0); return; }
+  long double fraction = frexpl(fabsl(value), &exponent);
+  bf_init(result->ctx, &chunk); bf_set_zero(result, 0);
+  while (fraction != 0) {
+    fraction = ldexpl(fraction, 32);
+    const uint32_t bits = (uint32_t) fraction; fraction -= (long double) bits;
+    status |= bf_mul_2exp(result, 32, BF_PREC_INF, BF_FLAG_EXT_EXP | BF_RNDZ);
+    status |= bf_set_ui(&chunk, bits);
+    status |= bf_add(result, result, &chunk, BF_PREC_INF, BF_FLAG_EXT_EXP | BF_RNDZ); shift += 32;
+  }
+  status |= bf_mul_2exp(result, exponent - shift, BF_PREC_INF, BF_FLAG_EXT_EXP | BF_RNDZ);
+  bf_delete(&chunk); if (status & BF_ST_MEM_ERROR) abort();
+  if (signbit(value)) bf_neg(result);
+}
+
+static SBV_CGEN_UNUSED long double sbv_bf_get_long_double(bf_t *value, bf_rnd_t rnd)
+{
+  if (bf_round(value, LDBL_MANT_DIG, sbv_bf_long_double_flags(rnd)) & BF_ST_MEM_ERROR) abort();
+  if (bf_is_nan(value)) return nanl("");
+  if (!bf_is_finite(value)) return value->sign ? -HUGE_VALL : HUGE_VALL;
+  if (bf_is_zero(value)) return value->sign ? -0.0L : 0.0L;
+  long double significand = 0;
+  const slimb_t base = (slimb_t) value->len * LIMB_BITS;
+  for (int i = 0; i < LDBL_MANT_DIG; ++i) {
+    const slimb_t bit = base - 1 - i;
+    const unsigned digit = bit < 0 ? 0 : (unsigned) ((value->tab[bit / LIMB_BITS] >> (bit % LIMB_BITS)) & 1);
+    significand = significand * 2 + digit;
+  }
+  const long double result = ldexpl(significand, (int) value->expn - LDBL_MANT_DIG);
+  return value->sign ? -result : result;
+}
+
+static SBV_CGEN_UNUSED inline SFloat sbv_fp_cast_real_float(SReal a, bf_rnd_t rnd)
+{
+  bf_context_t ctx; bf_t x; double result;
+  bf_context_init(&ctx, sbv_bf_realloc, NULL); bf_init(&ctx, &x); sbv_bf_set_long_double(&x, a);
+  bf_round(&x, 24, BF_FLAG_SUBNORMAL | bf_set_exp_bits(8) | (bf_flags_t) rnd); bf_get_float64(&x, &result, rnd);
+  bf_delete(&x); bf_context_end(&ctx); return (SFloat) result;
+}
+
+
 SFloat toFP_Real_ToFloat(const SReal sbv_input_0)
 {
   const SReal  s0 = sbv_input_0;
         SFloat s2;
-  s2 = (SFloat) s0;
+  s2 = sbv_fp_cast_real_float(s0, BF_RNDN);
 
   return s2;
 }
@@ -987,11 +1077,101 @@ SDouble toFP_Integer_ToDouble(const SInteger sbv_input_0)
 #endif
 
 
+/* LibBF-backed arbitrary floating-point runtime. */
+#ifndef SBV_CGEN_UNUSED
+#if defined(__GNUC__) || defined(__clang__)
+#define SBV_CGEN_UNUSED __attribute__((unused))
+#else
+#define SBV_CGEN_UNUSED
+#endif
+#endif
+
+static SBV_CGEN_UNUSED inline bf_rnd_t sbv_bf_rounding_mode(int mode)
+{
+  switch (mode) {
+    case 0: return BF_RNDN;
+    case 1: return BF_RNDNA;
+    case 2: return BF_RNDU;
+    case 3: return BF_RNDD;
+    case 4: return BF_RNDZ;
+    default: abort();
+  }
+}
+
+static SBV_CGEN_UNUSED void *sbv_bf_realloc(void *opaque, void *ptr, size_t size)
+{
+  (void) opaque;
+  return realloc(ptr, size);
+}
+
+#include <float.h>
+#if FLT_RADIX == 2 && LDBL_MANT_DIG == 53 && LDBL_MAX_EXP == 1024 && LDBL_MIN_EXP == -1021
+#define SBV_LDBL_EXP_BITS 11
+#elif FLT_RADIX == 2 && (LDBL_MANT_DIG == 64 || LDBL_MANT_DIG == 113) && LDBL_MAX_EXP == 16384 && LDBL_MIN_EXP == -16381
+#define SBV_LDBL_EXP_BITS 15
+#else
+#error SBV C long-double conversions require binary64, x87 extended, or binary128 long double
+#endif
+#if BF_EXP_BITS_MAX < SBV_LDBL_EXP_BITS
+#error SBV C long-double conversions exceed the LibBF exponent range
+#endif
+
+static SBV_CGEN_UNUSED bf_flags_t sbv_bf_long_double_flags(bf_rnd_t rnd)
+{
+  return BF_FLAG_SUBNORMAL | bf_set_exp_bits(SBV_LDBL_EXP_BITS) | (bf_flags_t) rnd;
+}
+
+static SBV_CGEN_UNUSED void sbv_bf_set_long_double(bf_t *result, long double value)
+{
+  int exponent, shift = 0, status = 0; bf_t chunk;
+  if (isnan(value)) { bf_set_nan(result); return; }
+  if (isinf(value)) { bf_set_inf(result, signbit(value) != 0); return; }
+  if (value == 0) { bf_set_zero(result, signbit(value) != 0); return; }
+  long double fraction = frexpl(fabsl(value), &exponent);
+  bf_init(result->ctx, &chunk); bf_set_zero(result, 0);
+  while (fraction != 0) {
+    fraction = ldexpl(fraction, 32);
+    const uint32_t bits = (uint32_t) fraction; fraction -= (long double) bits;
+    status |= bf_mul_2exp(result, 32, BF_PREC_INF, BF_FLAG_EXT_EXP | BF_RNDZ);
+    status |= bf_set_ui(&chunk, bits);
+    status |= bf_add(result, result, &chunk, BF_PREC_INF, BF_FLAG_EXT_EXP | BF_RNDZ); shift += 32;
+  }
+  status |= bf_mul_2exp(result, exponent - shift, BF_PREC_INF, BF_FLAG_EXT_EXP | BF_RNDZ);
+  bf_delete(&chunk); if (status & BF_ST_MEM_ERROR) abort();
+  if (signbit(value)) bf_neg(result);
+}
+
+static SBV_CGEN_UNUSED long double sbv_bf_get_long_double(bf_t *value, bf_rnd_t rnd)
+{
+  if (bf_round(value, LDBL_MANT_DIG, sbv_bf_long_double_flags(rnd)) & BF_ST_MEM_ERROR) abort();
+  if (bf_is_nan(value)) return nanl("");
+  if (!bf_is_finite(value)) return value->sign ? -HUGE_VALL : HUGE_VALL;
+  if (bf_is_zero(value)) return value->sign ? -0.0L : 0.0L;
+  long double significand = 0;
+  const slimb_t base = (slimb_t) value->len * LIMB_BITS;
+  for (int i = 0; i < LDBL_MANT_DIG; ++i) {
+    const slimb_t bit = base - 1 - i;
+    const unsigned digit = bit < 0 ? 0 : (unsigned) ((value->tab[bit / LIMB_BITS] >> (bit % LIMB_BITS)) & 1);
+    significand = significand * 2 + digit;
+  }
+  const long double result = ldexpl(significand, (int) value->expn - LDBL_MANT_DIG);
+  return value->sign ? -result : result;
+}
+
+static SBV_CGEN_UNUSED inline SDouble sbv_fp_cast_real_double(SReal a, bf_rnd_t rnd)
+{
+  bf_context_t ctx; bf_t x; double result;
+  bf_context_init(&ctx, sbv_bf_realloc, NULL); bf_init(&ctx, &x); sbv_bf_set_long_double(&x, a);
+  bf_round(&x, 53, BF_FLAG_SUBNORMAL | bf_set_exp_bits(11) | (bf_flags_t) rnd); bf_get_float64(&x, &result, rnd);
+  bf_delete(&x); bf_context_end(&ctx); return (SDouble) result;
+}
+
+
 SDouble toFP_Real_ToDouble(const SReal sbv_input_0)
 {
   const SReal   s0 = sbv_input_0;
         SDouble s2;
-  s2 = (SDouble) s0;
+  s2 = sbv_fp_cast_real_double(s0, BF_RNDN);
 
   return s2;
 }
@@ -1656,11 +1836,101 @@ SInteger fromFP_Float_ToInteger(const SFloat sbv_input_0)
 #endif
 
 
+/* LibBF-backed arbitrary floating-point runtime. */
+#ifndef SBV_CGEN_UNUSED
+#if defined(__GNUC__) || defined(__clang__)
+#define SBV_CGEN_UNUSED __attribute__((unused))
+#else
+#define SBV_CGEN_UNUSED
+#endif
+#endif
+
+static SBV_CGEN_UNUSED inline bf_rnd_t sbv_bf_rounding_mode(int mode)
+{
+  switch (mode) {
+    case 0: return BF_RNDN;
+    case 1: return BF_RNDNA;
+    case 2: return BF_RNDU;
+    case 3: return BF_RNDD;
+    case 4: return BF_RNDZ;
+    default: abort();
+  }
+}
+
+static SBV_CGEN_UNUSED void *sbv_bf_realloc(void *opaque, void *ptr, size_t size)
+{
+  (void) opaque;
+  return realloc(ptr, size);
+}
+
+#include <float.h>
+#if FLT_RADIX == 2 && LDBL_MANT_DIG == 53 && LDBL_MAX_EXP == 1024 && LDBL_MIN_EXP == -1021
+#define SBV_LDBL_EXP_BITS 11
+#elif FLT_RADIX == 2 && (LDBL_MANT_DIG == 64 || LDBL_MANT_DIG == 113) && LDBL_MAX_EXP == 16384 && LDBL_MIN_EXP == -16381
+#define SBV_LDBL_EXP_BITS 15
+#else
+#error SBV C long-double conversions require binary64, x87 extended, or binary128 long double
+#endif
+#if BF_EXP_BITS_MAX < SBV_LDBL_EXP_BITS
+#error SBV C long-double conversions exceed the LibBF exponent range
+#endif
+
+static SBV_CGEN_UNUSED bf_flags_t sbv_bf_long_double_flags(bf_rnd_t rnd)
+{
+  return BF_FLAG_SUBNORMAL | bf_set_exp_bits(SBV_LDBL_EXP_BITS) | (bf_flags_t) rnd;
+}
+
+static SBV_CGEN_UNUSED void sbv_bf_set_long_double(bf_t *result, long double value)
+{
+  int exponent, shift = 0, status = 0; bf_t chunk;
+  if (isnan(value)) { bf_set_nan(result); return; }
+  if (isinf(value)) { bf_set_inf(result, signbit(value) != 0); return; }
+  if (value == 0) { bf_set_zero(result, signbit(value) != 0); return; }
+  long double fraction = frexpl(fabsl(value), &exponent);
+  bf_init(result->ctx, &chunk); bf_set_zero(result, 0);
+  while (fraction != 0) {
+    fraction = ldexpl(fraction, 32);
+    const uint32_t bits = (uint32_t) fraction; fraction -= (long double) bits;
+    status |= bf_mul_2exp(result, 32, BF_PREC_INF, BF_FLAG_EXT_EXP | BF_RNDZ);
+    status |= bf_set_ui(&chunk, bits);
+    status |= bf_add(result, result, &chunk, BF_PREC_INF, BF_FLAG_EXT_EXP | BF_RNDZ); shift += 32;
+  }
+  status |= bf_mul_2exp(result, exponent - shift, BF_PREC_INF, BF_FLAG_EXT_EXP | BF_RNDZ);
+  bf_delete(&chunk); if (status & BF_ST_MEM_ERROR) abort();
+  if (signbit(value)) bf_neg(result);
+}
+
+static SBV_CGEN_UNUSED long double sbv_bf_get_long_double(bf_t *value, bf_rnd_t rnd)
+{
+  if (bf_round(value, LDBL_MANT_DIG, sbv_bf_long_double_flags(rnd)) & BF_ST_MEM_ERROR) abort();
+  if (bf_is_nan(value)) return nanl("");
+  if (!bf_is_finite(value)) return value->sign ? -HUGE_VALL : HUGE_VALL;
+  if (bf_is_zero(value)) return value->sign ? -0.0L : 0.0L;
+  long double significand = 0;
+  const slimb_t base = (slimb_t) value->len * LIMB_BITS;
+  for (int i = 0; i < LDBL_MANT_DIG; ++i) {
+    const slimb_t bit = base - 1 - i;
+    const unsigned digit = bit < 0 ? 0 : (unsigned) ((value->tab[bit / LIMB_BITS] >> (bit % LIMB_BITS)) & 1);
+    significand = significand * 2 + digit;
+  }
+  const long double result = ldexpl(significand, (int) value->expn - LDBL_MANT_DIG);
+  return value->sign ? -result : result;
+}
+
+static SBV_CGEN_UNUSED inline SReal sbv_fp_cast_float_real(SFloat a, bf_rnd_t rnd)
+{
+  bf_context_t ctx; bf_t x; long double result;
+  bf_context_init(&ctx, sbv_bf_realloc, NULL); bf_init(&ctx, &x); bf_set_float64(&x, (double) a);
+  bf_round(&x, LDBL_MANT_DIG, sbv_bf_long_double_flags(rnd)); result = sbv_bf_get_long_double(&x, rnd);
+  bf_delete(&x); bf_context_end(&ctx); return (SReal) result;
+}
+
+
 SReal fromFP_Float_ToReal(const SFloat sbv_input_0)
 {
   const SFloat s0 = sbv_input_0;
         SReal  s2;
-  s2 = (SReal) s0;
+  s2 = sbv_fp_cast_float_real(s0, BF_RNDN);
 
   return s2;
 }
@@ -2361,11 +2631,101 @@ SInteger fromFP_DoubleTo_Integer(const SDouble sbv_input_0)
 #endif
 
 
+/* LibBF-backed arbitrary floating-point runtime. */
+#ifndef SBV_CGEN_UNUSED
+#if defined(__GNUC__) || defined(__clang__)
+#define SBV_CGEN_UNUSED __attribute__((unused))
+#else
+#define SBV_CGEN_UNUSED
+#endif
+#endif
+
+static SBV_CGEN_UNUSED inline bf_rnd_t sbv_bf_rounding_mode(int mode)
+{
+  switch (mode) {
+    case 0: return BF_RNDN;
+    case 1: return BF_RNDNA;
+    case 2: return BF_RNDU;
+    case 3: return BF_RNDD;
+    case 4: return BF_RNDZ;
+    default: abort();
+  }
+}
+
+static SBV_CGEN_UNUSED void *sbv_bf_realloc(void *opaque, void *ptr, size_t size)
+{
+  (void) opaque;
+  return realloc(ptr, size);
+}
+
+#include <float.h>
+#if FLT_RADIX == 2 && LDBL_MANT_DIG == 53 && LDBL_MAX_EXP == 1024 && LDBL_MIN_EXP == -1021
+#define SBV_LDBL_EXP_BITS 11
+#elif FLT_RADIX == 2 && (LDBL_MANT_DIG == 64 || LDBL_MANT_DIG == 113) && LDBL_MAX_EXP == 16384 && LDBL_MIN_EXP == -16381
+#define SBV_LDBL_EXP_BITS 15
+#else
+#error SBV C long-double conversions require binary64, x87 extended, or binary128 long double
+#endif
+#if BF_EXP_BITS_MAX < SBV_LDBL_EXP_BITS
+#error SBV C long-double conversions exceed the LibBF exponent range
+#endif
+
+static SBV_CGEN_UNUSED bf_flags_t sbv_bf_long_double_flags(bf_rnd_t rnd)
+{
+  return BF_FLAG_SUBNORMAL | bf_set_exp_bits(SBV_LDBL_EXP_BITS) | (bf_flags_t) rnd;
+}
+
+static SBV_CGEN_UNUSED void sbv_bf_set_long_double(bf_t *result, long double value)
+{
+  int exponent, shift = 0, status = 0; bf_t chunk;
+  if (isnan(value)) { bf_set_nan(result); return; }
+  if (isinf(value)) { bf_set_inf(result, signbit(value) != 0); return; }
+  if (value == 0) { bf_set_zero(result, signbit(value) != 0); return; }
+  long double fraction = frexpl(fabsl(value), &exponent);
+  bf_init(result->ctx, &chunk); bf_set_zero(result, 0);
+  while (fraction != 0) {
+    fraction = ldexpl(fraction, 32);
+    const uint32_t bits = (uint32_t) fraction; fraction -= (long double) bits;
+    status |= bf_mul_2exp(result, 32, BF_PREC_INF, BF_FLAG_EXT_EXP | BF_RNDZ);
+    status |= bf_set_ui(&chunk, bits);
+    status |= bf_add(result, result, &chunk, BF_PREC_INF, BF_FLAG_EXT_EXP | BF_RNDZ); shift += 32;
+  }
+  status |= bf_mul_2exp(result, exponent - shift, BF_PREC_INF, BF_FLAG_EXT_EXP | BF_RNDZ);
+  bf_delete(&chunk); if (status & BF_ST_MEM_ERROR) abort();
+  if (signbit(value)) bf_neg(result);
+}
+
+static SBV_CGEN_UNUSED long double sbv_bf_get_long_double(bf_t *value, bf_rnd_t rnd)
+{
+  if (bf_round(value, LDBL_MANT_DIG, sbv_bf_long_double_flags(rnd)) & BF_ST_MEM_ERROR) abort();
+  if (bf_is_nan(value)) return nanl("");
+  if (!bf_is_finite(value)) return value->sign ? -HUGE_VALL : HUGE_VALL;
+  if (bf_is_zero(value)) return value->sign ? -0.0L : 0.0L;
+  long double significand = 0;
+  const slimb_t base = (slimb_t) value->len * LIMB_BITS;
+  for (int i = 0; i < LDBL_MANT_DIG; ++i) {
+    const slimb_t bit = base - 1 - i;
+    const unsigned digit = bit < 0 ? 0 : (unsigned) ((value->tab[bit / LIMB_BITS] >> (bit % LIMB_BITS)) & 1);
+    significand = significand * 2 + digit;
+  }
+  const long double result = ldexpl(significand, (int) value->expn - LDBL_MANT_DIG);
+  return value->sign ? -result : result;
+}
+
+static SBV_CGEN_UNUSED inline SReal sbv_fp_cast_double_real(SDouble a, bf_rnd_t rnd)
+{
+  bf_context_t ctx; bf_t x; long double result;
+  bf_context_init(&ctx, sbv_bf_realloc, NULL); bf_init(&ctx, &x); bf_set_float64(&x, (double) a);
+  bf_round(&x, LDBL_MANT_DIG, sbv_bf_long_double_flags(rnd)); result = sbv_bf_get_long_double(&x, rnd);
+  bf_delete(&x); bf_context_end(&ctx); return (SReal) result;
+}
+
+
 SReal fromFP_DoubleTo_Real(const SDouble sbv_input_0)
 {
   const SDouble s0 = sbv_input_0;
         SReal   s2;
-  s2 = (SReal) s0;
+  s2 = sbv_fp_cast_double_real(s0, BF_RNDN);
 
   return s2;
 }

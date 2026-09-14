@@ -2116,6 +2116,10 @@ internalConstraint st isSoft attrs b = do v <- svToSV st b
 -- | Generalization of 'Data.SBV.addSValOptGoal'
 addSValOptGoal :: MonadSymbolic m => Objective SVal -> m ()
 addSValOptGoal obj = do st <- symbolicEnv
+                        mode <- liftIO $ readIORef (runMode st)
+                        case mode of
+                          CodeGen -> error "SBV->C: Optimization objectives require a solver and cannot be compiled to executable C."
+                          _       -> pure ()
 
                         -- create the tracking variable here for the metric
                         let mkGoal nm orig = liftIO $ do origSV  <- svToSV st orig

@@ -450,6 +450,7 @@ Test-Suite SBVTest
                   , TestSuite.CodeGeneration.ArbitraryBits
                   , TestSuite.CodeGeneration.ArbitraryFloats
                   , TestSuite.CodeGeneration.ArrayCaptures
+                  , TestSuite.CodeGeneration.Boundaries
                   , TestSuite.CodeGeneration.CgTests
                   , TestSuite.CodeGeneration.CRC_USB5
                   , TestSuite.CodeGeneration.ExactNumbers

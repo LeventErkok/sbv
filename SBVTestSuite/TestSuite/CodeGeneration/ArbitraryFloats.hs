@@ -16,12 +16,11 @@
 
 module TestSuite.CodeGeneration.ArbitraryFloats (tests) where
 
-import Control.Exception         (ErrorCall, displayException, try)
 import Control.Monad             (when)
 import Data.List                 (isInfixOf)
 import Data.Maybe                (fromMaybe)
 import Numeric                   (showHex)
-import System.Directory          (doesFileExist, listDirectory)
+import System.Directory          (doesFileExist)
 import System.Environment        (lookupEnv)
 import System.Exit               (ExitCode(..))
 import System.FilePath           ((</>))
@@ -30,6 +29,7 @@ import System.Process            (readProcessWithExitCode)
 import Test.Tasty.HUnit          (assertBool, assertEqual)
 
 import qualified Data.SBV.Dynamic as D
+import qualified Data.SBV.Rational as Rat
 
 import Data.SBV.Internals
 import Data.SBV.Tuple (tuple, untuple)
@@ -56,7 +56,8 @@ tests = testGroup "CodeGeneration.ArbitraryFloats"
   , testCase "convert between native floats and exact numbers" nativeFloatExactConversions
   , testCase "convert mapped integers with explicit float rounding" mappedIntegerFloatConversions
   , testCase "convert mapped reals across numeric representations" mappedRealConversions
-  , testCase "reject unsupported long-double numeric bridges before rendering" longDoubleNumericBoundaries
+  , testCase "preserve target long-double precision across numeric bridges" longDoubleNumericBoundaries
+  , testCase "reject unsupported target long-double formats explicitly" unsupportedLongDoubleFormat
   , testCase "compile and execute special arithmetic" arbitraryFloatSpecialArithmetic
   , testCase "compile and execute arbitrary-float table lookup" arbitraryFloatTableLookup
   , testCase "preserve arbitrary floating-point array-key equality" arbitraryFloatArrayKeys
@@ -575,7 +576,7 @@ mappedIntegerFloatConversions = mapM_ check [(width, exposeChecks, arbitraryResu
 -- exact integers round to the selected real format, real-to-integer casts
 -- floor, and explicit floating casts honor their requested rounding mode.
 mappedRealConversions :: Assertion
-mappedRealConversions = mapM_ check [(realType, mappedInteger) | realType <- [CgFloat, CgDouble], mappedInteger <- [False, True]]
+mappedRealConversions = mapM_ check [(realType, mappedInteger) | realType <- [CgFloat, CgDouble, CgLongDouble], mappedInteger <- [False, True]]
  where check (realType, mappedInteger) = withSystemTempDirectory "sbv-mapped-real-conversions" $ \dir -> do
          let program = do
                cgOverwriteFiles True
@@ -596,27 +597,130 @@ mappedRealConversions = mapM_ check [(realType, mappedInteger) | realType <- [Cg
                       .&& toSDouble sRNE real .== -5
          compileAndRunLibBFGMP dir "mappedRealConversions" program "= 1"
 
--- | Long double retains its native ABI, but cannot be silently treated as an
--- IEEE binary64 value when crossing an exact or arbitrary-float boundary.
+-- | Exercise target-dependent precision, exponent extremes, signed zero, NaN,
+-- and all five rounding modes through an independent library caller. On targets
+-- wider than binary64 the same tests explicitly preserve the additional bits.
 longDoubleNumericBoundaries :: Assertion
-longDoubleNumericBoundaries = mapM_ check
-  [ do value <- cgInput "value" :: SBVCodeGen SInteger
-       cgReturn (sFromIntegral value :: SReal)
-  , do value <- cgInput "value" :: SBVCodeGen SReal
-       cgReturn (sRealToSIntegerFloor value)
-  , do value <- cgInput "value" :: SBVCodeGen SFPHalf
-       cgReturn (fromSFloatingPoint sRNE value :: SReal)
-  , do value <- cgInput "value" :: SBVCodeGen SReal
-       cgReturn (toSFloatingPoint sRNE value :: SFPHalf)
-  ]
- where check program = withSystemTempDirectory "sbv-long-double-boundary" $ \dir -> do
-         result <- try (D.compileToC (Just dir) "longDoubleBoundary" $ do
-                          cgSRealType CgLongDouble
-                          program) :: IO (Either ErrorCall ())
-         case result of
-           Left exception -> assertBool (displayException exception) ("CgLongDouble" `isInfixOf` displayException exception)
-           Right _        -> assertBool "Expected an unsupported long-double bridge diagnostic" False
-         assertEqual "Unsupported bridges must not write files" [] =<< listDirectory dir
+longDoubleNumericBoundaries = withSystemTempDirectory "sbv-long-double-bridges" $ \dir -> do
+  let prepare program = cgOverwriteFiles True >> cgGenerateDriver False >> cgSRealType CgLongDouble >> program
+      wide :: SReal -> SFloatingPoint 20 200
+      wide = toSFloatingPoint sRNE
+      components =
+        [ ("integerToLong", do
+            value <- cgInput "value" :: SBVCodeGen SInteger
+            cgReturn (sFromIntegral value :: SReal))
+        , ("wordToLong", do
+            value <- cgInput "value" :: SBVCodeGen SWord64
+            cgReturn (sFromIntegral value :: SReal))
+        , ("rationalToLong", do
+            value <- cgInput "value" :: SBVCodeGen SRational
+            cgReturn (Rat.sRationalToSReal value))
+        , ("floorLong", do
+            value <- cgInput "value" :: SBVCodeGen SReal
+            cgOutput "result" (sRealToSIntegerFloor value))
+        , ("roundedInteger", do
+            mode  <- cgInput "mode"  :: SBVCodeGen SRoundingMode
+            value <- cgInput "value" :: SBVCodeGen SInteger
+            let exact = toSFloatingPoint sRNE value :: SFloatingPoint 20 200
+            cgReturn (fromSFloatingPoint mode exact :: SReal))
+        , ("wideRoundTrip", do
+            value <- cgInput "value" :: SBVCodeGen SReal
+            cgReturn (fromSFloatingPoint sRNE (wide value) :: SReal))
+        , ("tinyLong", do
+            mode  <- cgInput "mode"  :: SBVCodeGen SRoundingMode
+            value <- cgInput "value" :: SBVCodeGen SReal
+            cgReturn (fromSFloatingPoint mode (fpDiv sRNE (wide value) 2) :: SReal))
+        , ("narrowFloat", do
+            mode  <- cgInput "mode"  :: SBVCodeGen SRoundingMode
+            value <- cgInput "value" :: SBVCodeGen SReal
+            cgReturn (toSFloat mode value))
+        , ("nativeRoundTrip", do
+            value <- cgInput "value" :: SBVCodeGen SDouble
+            cgReturn (toSDouble sRNE (fromSDouble sRNE value :: SReal)))
+        ]
+  _ <- D.compileToCLib (Just dir) "longBridges" [(functionName, prepare program) | (functionName, program) <- components]
+  writeFile (dir </> "caller.c") $ unlines
+    [ "#include <assert.h>"
+    , "#include <float.h>"
+    , "#include <math.h>"
+    , "#include \"longBridges.h\""
+    , "int main(int argc, char **argv)"
+    , "{"
+    , "  mpz_t input, output; mpz_inits(input, output, NULL);"
+    , "  (void) argv; if (argc > 1) { floorLong(HUGE_VALL, output); return 0; }"
+    , "  const long double base = ldexpl(1.0L, LDBL_MANT_DIG);"
+    , "  for (int negative = 0; negative < 2; ++negative) for (int odd = 0; odd < 2; ++odd) {"
+    , "    mpz_set_ui(input, 1); mpz_mul_2exp(input, input, LDBL_MANT_DIG); mpz_add_ui(input, input, 1 + 2 * odd);"
+    , "    if (negative) mpz_neg(input, input);"
+    , "    for (int mode = 0; mode < 5; ++mode) {"
+    , "      const bool up = mode == SBV_RM_RNA || (mode == SBV_RM_RNE && odd) || (mode == SBV_RM_RTP && !negative) || (mode == SBV_RM_RTN && negative);"
+    , "      const long double magnitude = base + 2 * odd + (up ? 2 : 0);"
+    , "      assert(roundedInteger((RoundingMode) mode, input) == (negative ? -magnitude : magnitude));"
+    , "    }"
+    , "    const long double nearest = base + (odd ? 4 : 0);"
+    , "    assert(integerToLong(input) == (negative ? -nearest : nearest));"
+    , "  }"
+    , "  mpz_set_ui(input, 1); mpz_mul_2exp(input, input, LDBL_MANT_DIG - 1); mpz_add_ui(input, input, 1);"
+    , "  const long double precise = ldexpl(1.0L, LDBL_MANT_DIG - 1) + 1;"
+    , "  assert(integerToLong(input) == precise); floorLong(precise, output); assert(mpz_cmp(input, output) == 0);"
+    , "  mpq_t rational; mpq_init(rational); mpz_set(mpq_numref(rational), input);"
+    , "  mpz_set_ui(mpq_denref(rational), 1); mpz_mul_2exp(mpq_denref(rational), mpq_denref(rational), LDBL_MANT_DIG - 1);"
+    , "  assert(rationalToLong(rational) == 1.0L + ldexpl(1.0L, 1 - LDBL_MANT_DIG)); mpq_clear(rational);"
+    , "  assert(wordToLong(UINT64_C(9007199254740993)) == (LDBL_MANT_DIG > 53 ? 9007199254740993.0L : 9007199254740992.0L));"
+    , "  floorLong(-2.5L, output); assert(mpz_cmp_si(output, -3) == 0);"
+    , "  const long double tiny = nextafterl(0.0L, 1.0L);"
+    , "  const long double values[] = {0.0L, -0.0L, tiny, -tiny, LDBL_MIN, -LDBL_MIN, LDBL_MAX, -LDBL_MAX, precise, -precise, HUGE_VALL, -HUGE_VALL};"
+    , "  for (size_t i = 0; i < sizeof values / sizeof *values; ++i) {"
+    , "    const long double result = wideRoundTrip(values[i]);"
+    , "    assert(result == values[i] && (signbit(result) != 0) == (signbit(values[i]) != 0));"
+    , "  }"
+    , "  assert(isnan(wideRoundTrip(nanl(\"\"))));"
+    , "  for (int mode = 0; mode < 5; ++mode) {"
+    , "    const RoundingMode rm = (RoundingMode) mode;"
+    , "    const long double positive = tinyLong(rm, tiny), negative = tinyLong(rm, -tiny);"
+    , "    assert(positive == ((rm == SBV_RM_RNA || rm == SBV_RM_RTP) ? tiny : 0));"
+    , "    assert(negative == ((rm == SBV_RM_RNA || rm == SBV_RM_RTN) ? -tiny : 0));"
+    , "    assert(signbit(negative));"
+    , "    assert(narrowFloat(rm, 1.0L + 0x1p-24L) == ((rm == SBV_RM_RNA || rm == SBV_RM_RTP) ? 0x1.000002p0f : 1.0f));"
+    , "    mpz_set_ui(input, 1); mpz_mul_2exp(input, input, LDBL_MAX_EXP);"
+    , "    const long double large = roundedInteger(rm, input);"
+    , "    assert(large == ((rm == SBV_RM_RTZ || rm == SBV_RM_RTN) ? LDBL_MAX : HUGE_VALL));"
+    , "    mpz_neg(input, input); const long double small = roundedInteger(rm, input);"
+    , "    assert(small == ((rm == SBV_RM_RTZ || rm == SBV_RM_RTP) ? -LDBL_MAX : -HUGE_VALL));"
+    , "  }"
+    , "  assert(nativeRoundTrip(DBL_MAX) == DBL_MAX); assert(signbit(nativeRoundTrip(-0.0)));"
+    , "  assert(isinf(nativeRoundTrip(HUGE_VAL))); assert(isnan(nativeRoundTrip(NAN)));"
+    , "  mpz_clears(input, output, NULL); return 0;"
+    , "}"
+    ]
+  writeFile (dir </> "caller.mk") $ unlines
+    [ "caller: caller.c longBridges.h longBridges.a"
+    , "\t${CC} ${CCFLAGS} ${GMP_CFLAGS} caller.c longBridges.a ${LDFLAGS} -o $@"
+    ]
+  makeOptions <- generatedMakeOptions dir
+  (buildExit, _, buildError) <- readProcessWithExitCode "make" (["-C", dir, "caller"] ++ makeOptions) ""
+  assertEqual buildError ExitSuccess buildExit
+  (runExit, _, runError) <- readProcessWithExitCode (dir </> "caller") [] ""
+  assertEqual runError ExitSuccess runExit
+  (invalidExit, _, invalidError) <- readProcessWithExitCode (dir </> "caller") ["nonfinite"] ""
+  assertBool "Non-finite real flooring must terminate" (invalidExit /= ExitSuccess)
+  assertBool invalidError ("Cannot convert a non-finite mapped SReal to exact SInteger" `isInfixOf` invalidError)
+
+-- | Simulate an unsupported double-double target format at the generated
+-- translation unit's feature check, without pretending to execute that ABI.
+unsupportedLongDoubleFormat :: Assertion
+unsupportedLongDoubleFormat = withSystemTempDirectory "sbv-long-double-format" $ \dir -> do
+  D.compileToC (Just dir) "unsupportedLongDouble" $ do
+    cgOverwriteFiles True
+    cgGenerateDriver False
+    cgSRealType CgLongDouble
+    cgAddDecl ["#include <float.h>", "#undef LDBL_MANT_DIG", "#define LDBL_MANT_DIG 106"]
+    value <- cgInput "value" :: SBVCodeGen SReal
+    cgReturn (toSFloatingPoint sRNE value :: SFPHalf)
+  makeOptions <- generatedMakeOptions dir
+  (buildExit, _, buildError) <- readProcessWithExitCode "make" (["-C", dir, "unsupportedLongDouble.o"] ++ makeOptions) ""
+  assertBool "Unsupported long-double formats must not compile" (buildExit /= ExitSuccess)
+  assertBool buildError ("long-double conversions require binary64, x87 extended, or binary128" `isInfixOf` buildError)
 
 -- | Exercise LibBF encoding of subnormal results, NaN, and signed zero.
 arbitraryFloatSpecialArithmetic :: Assertion

@@ -3,6 +3,23 @@
 
 ### Version 14.8, Not yet released
 
+  * Support representation-aware `CgLongDouble` numeric conversion bridges in the
+    current C backend. Preserve the target's full significand without a binary64
+    intermediate, using LibBF for requested rounding modes and exponent limits.
+    Support binary64, x87 extended, and binary128 long double; reject other target
+    formats explicitly when a bridge is needed. Add standalone and library tests
+    for precision, overflow, subnormals, special values, and all rounding modes.
+
+  * Document the current C backend's supported features, configurable resource
+    limits, and deliberately unsupported cases. Add diagnostic regressions for
+    standalone and library generation, including rejection before file output.
+    Optimization requests now identify their solver requirement rather than an
+    internal tracker variable. Algebraic, interval, and inexact real literals
+    receive explicit diagnostics instead of an internal error or silent rounding.
+    Retained defined functions with implicit captures now identify the unsupported
+    closure and suggest explicit arguments or `Closure`, instead of reporting a
+    missing internal assignment. Supported explicit closures are unchanged.
+
   * Fix fixed-size input groups in the current C backend. Symbolic-array groups
     now use public callback descriptors, matching individual array inputs.
     Generated drivers initialize and release managed group elements individually,

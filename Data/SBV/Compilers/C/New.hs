@@ -493,6 +493,12 @@ specifierKind cfg kind = case kind of
 --   There are many options here, using binary, decimal, etc. We simply use decimal for values 8-bits or less,
 --   and hex otherwise.
 mkConst :: CgConfig -> CV -> Doc
+mkConst _ (CV KReal (CAlgReal (AlgRational False _)))
+  = error "SBV->C: Inexact SReal literals do not specify an exact value and cannot be compiled."
+mkConst _ (CV KReal (CAlgReal AlgInterval{}))
+  = error "SBV->C: Interval SReal literals do not specify an exact value and cannot be compiled."
+mkConst _ (CV KReal (CAlgReal AlgPolyRoot{}))
+  = error "SBV->C: Algebraic SReal literals are not supported; use an explicitly chosen rational approximation."
 mkConst _   cv
   | Just d <- roundingModeConst cv = d
 mkConst cfg cv
@@ -1187,6 +1193,8 @@ genCProg cfg adts lists sets fn proto
          (Result pinfo kindInfo _tvals _ovals cgs topInps (_, preConsts) tbls _uis definitions
                  (SBVPgm asgns) cstrs origAsserts _)
          inVars outVars mbRet extDecls
+  | not (null usorts)
+  = error $ "SBV->C: Cannot compile functions with uninterpreted sorts: " ++ intercalate ", " usorts
   | not (null unsupportedSets)
   = notyet $ "Sets with element kinds " ++ intercalate ", " (map (show . setElementKind) unsupportedSets)
   | any (requiresExtensionalEquality adts (Equal True) . pure . setElementKind) sets
@@ -1199,12 +1207,10 @@ genCProg cfg adts lists sets fn proto
   = notyet $ "Lists with element kinds " ++ intercalate ", " (map (show . listElementKind) unsupportedLists)
   | any containsNestedList kindInfo
   = notyet "Lists nested in arrays or unsupported aggregate types"
-  | not (null usorts)
-  = error $ "SBV->C: Cannot compile functions with uninterpreted sorts: " ++ intercalate ", " usorts
-  | hasQuants pinfo
-  = error "SBV->C: Cannot compile in the presence of quantified variables."
   | not $ null (progSpecialRels pinfo)
   = error "SBV->C: Cannot compile in the presence of special relations."
+  | hasQuants pinfo
+  = error "SBV->C: Cannot compile in the presence of quantified variables."
   | not (null unstructuredDefinitions)
   = error $ "SBV->C: Cannot compile SMT-text-only function definitions: " ++ intercalate ", " unstructuredDefinitions
   | (callbackName, captures) : _ <- capturingArrayLambdas
@@ -1214,6 +1220,13 @@ genCProg cfg adts lists sets fn proto
       , "  Captured values: " ++ intercalate ", " [show sv ++ " :: " ++ show (kindOf sv) | sv <- captures]
       , "Only closed lambdaArray bodies can be compiled: use the index, literal constants, and local computations."
       , "Support for captured array-lambda environments is deferred; captured values are never approximated or ignored."
+      ]
+  | (functionName, captures) : _ <- capturingFunctions
+  = error $ unlines
+      [ "SBV->C: Defined functions with implicit captures of outer symbolic values are not supported."
+      , "  Function: " ++ functionName
+      , "  Captured values: " ++ intercalate ", " [show sv ++ " :: " ++ show (kindOf sv) | sv <- captures]
+      , "Pass captured values as explicit function arguments, or use Closure with an explicit closureEnv for higher-order operations."
       ]
   | not (null softConstraints)
   = tbd "Soft constraints"
@@ -1356,7 +1369,12 @@ genCProg cfg adts lists sets fn proto
        allAssignments         = assignments ++ lambdaAssignments
        capturingArrayLambdas  = [ (callbackName, captures)
                                | (callbackName, _, lambdaInfo) <- arrayLambdaDefinitions
-                               , let captures = cArrayLambdaFreeValues lambdaInfo
+                               , let captures = cLambdaFreeValues lambdaInfo
+                               , not (null captures)
+                               ]
+       capturingFunctions     = [ (functionName, captures)
+                               | (functionName, _, _, _, lambdaInfo) <- structuredDefinitions
+                               , let captures = cLambdaFreeValues lambdaInfo
                                , not (null captures)
                                ]
        equalityArrayKinds     = nubBy (\left right -> arrayEqualName left == arrayEqualName right)
@@ -2369,8 +2387,8 @@ arrayLambdaResultType kind
 -- in operators, every table entry/default, the result itself, and free values
 -- of nested array lambdas. Each nested callback is also checked separately,
 -- so capturing its enclosing lambda's parameter is rejected too.
-cArrayLambdaFreeValues :: LambdaInfo -> [SV]
-cArrayLambdaFreeValues lambdaInfo = Set.toList $ Set.fromList uses `Set.difference` bound
+cLambdaFreeValues :: LambdaInfo -> [SV]
+cLambdaFreeValues lambdaInfo = Set.toList $ Set.fromList uses `Set.difference` bound
  where assignments = F.toList (liAssignments lambdaInfo)
        bound       = Set.fromList (falseSV : trueSV : map fst assignments ++ map snd (liParams lambdaInfo) ++ map fst (liConsts lambdaInfo))
        uses        = liOutput lambdaInfo : concatMap (dependencies . snd) assignments ++ concatMap snd (liTables lambdaInfo)
@@ -2379,7 +2397,7 @@ cArrayLambdaFreeValues lambdaInfo = Set.toList $ Set.fromList uses `Set.differen
          LkUp _ index defaultValue -> [index, defaultValue]
          IEEEFP (FP_Cast _ _ rm)   -> [rm]
          ArrayInit (Right lambdaDef)
-           | Just nested <- smtLambdaInfo lambdaDef -> cArrayLambdaFreeValues nested
+           | Just nested <- smtLambdaInfo lambdaDef -> cLambdaFreeValues nested
          _                        -> []
 
 -- | Lower a retained one-argument array lambda into a C lookup callback. Its
