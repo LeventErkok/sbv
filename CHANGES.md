@@ -3,6 +3,12 @@
 
 ### Version 14.8, Not yet released
 
+  * Fix signed overflow in C generation of pseudo-Boolean comparisons (`pbLe`,
+    `pbGe`, and `pbEq`). Generated reductions use unsigned arithmetic and stop
+    accumulating after exceeding the bound when the full sum might overflow.
+    Large coefficients and totals now preserve the mathematical comparison
+    without requiring an additional runtime dependency.
+
   * C array-equality limits now report intentional unsupported/disabled comparisons
     as user-facing generation errors rather than internal compiler failures.
     Regressions cover atomic rejection of both standalone programs and libraries.

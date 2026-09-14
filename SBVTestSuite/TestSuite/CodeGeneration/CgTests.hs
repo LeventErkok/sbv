@@ -119,6 +119,7 @@ tests = testGroup "CodeGeneration.CgTests"
   , goldenVsStringShow "selUnchecked" $ genSelect False "selUnChecked"
   , goldenVsStringShow "codeGen1"       foo
   , testCase "compile through the public legacy facade" legacyPublicFacade
+  , testCase "execute guarded pseudo-Boolean reductions in functions and array lambdas" scopedPseudoBoolean
   , testCase "collect C runtime requirements" dependencyRequirements
   , testCase "escape assertion messages in generated C" escapedAssertionMessages
   , testCase "execute IEEE native floating-point remainders" nativeFloatingRemainders
@@ -2558,6 +2559,38 @@ managedScalarDefinedSBVFunctions = withSystemTempDirectory "sbv-managed-scalar-d
   assertBool "Expected private defined-function calls to thread the shared ownership context"
              ("sbv_function_ctx *const __sbv_parent_function_ctx" `isInfixOf` sourceText
            && "(&__sbv_function_ctx," `isInfixOf` sourceText)
+
+-- | Check overflow-safe statement blocks in conditionals, private functions,
+-- and closed array lambdas. Every five-bit input is compared against equivalent
+-- unweighted predicates, including sums that exceed the entire unsigned range.
+scopedPseudoBoolean :: Assertion
+scopedPseudoBoolean = mapM_ check [(library, scope) | library <- [False, True], scope <- [0 :: Int, 1, 2]]
+ where check (library, scope) = withSystemTempDirectory "sbv-scoped-pseudo-boolean" $ \dir -> do
+         let functionName = "scopedPseudoBoolean"
+             evaluateBits :: SWord8 -> SBool
+             evaluateBits value =
+               let bits     = map (sTestBit value) [0, 1, 2]
+                   weighted = zip [maxBound, maxBound, maxBound] bits
+               in ite (sTestBit value 3)
+                      (pbLe weighted maxBound .== pbAtMost bits 1)
+                      (pbEq weighted maxBound .== pbExactly bits 1)
+                  .&& (pbGe weighted maxBound .== sOr bits)
+             evaluateScoped value = case scope of
+               0 -> evaluateBits value
+               1 -> smtFunction "C scoped pseudo-Boolean" evaluateBits value
+               _ -> readArray (lambdaArray evaluateBits) value
+             program = do
+               cgOverwriteFiles True
+               cgIntegerSize 8
+               cgSetDriverValues [0..31]
+               inputs <- cgInputArr 32 "inputs"
+               cgReturn (sAnd (map evaluateScoped inputs))
+         (_, cfg, bundle) <- if library
+                               then compileToCLib' functionName [("scopedComponent", program)]
+                               else compileToC' functionName ((:[]) <$> program)
+         renderCgPgmBundle (Just dir) (cfg, bundle)
+         outputText <- compileAndRunGenerated dir functionName
+         assertBool outputText (") = 1" `isInfixOf` outputText)
 
 -- | Exercise composed 'smtFunction' definitions over exact-element lists and
 -- sets, requiring coordinated list, set, and GMP ownership arenas.

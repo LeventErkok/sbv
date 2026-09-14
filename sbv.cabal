@@ -327,6 +327,7 @@ Library
                   , Data.SBV.Compilers.C.Lowering
                   , Data.SBV.Compilers.C.NonLinear
                   , Data.SBV.Compilers.C.New
+                  , Data.SBV.Compilers.C.PseudoBoolean
                   , Data.SBV.Compilers.C.RegExp
                   , Data.SBV.Compilers.C.Set
                   , Data.SBV.Compilers.C.Table
@@ -454,6 +455,7 @@ Test-Suite SBVTest
                   , TestSuite.CodeGeneration.Floats
                   , TestSuite.CodeGeneration.GCD
                   , TestSuite.CodeGeneration.PopulationCount
+                  , TestSuite.CodeGeneration.PseudoBoolean
                   , TestSuite.CodeGeneration.RegExp
                   , TestSuite.CodeGeneration.Uninterpreted
                   , TestSuite.CompileTests.SCase

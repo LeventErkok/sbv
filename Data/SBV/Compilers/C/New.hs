@@ -47,6 +47,7 @@ import Data.SBV.Compilers.C.GMP
 import Data.SBV.Compilers.C.List
 import Data.SBV.Compilers.C.Lowering
 import Data.SBV.Compilers.C.NonLinear
+import Data.SBV.Compilers.C.PseudoBoolean (assignPseudoBoolean)
 import Data.SBV.Compilers.C.RegExp (regexExpr)
 import Data.SBV.Compilers.C.Set
 import Data.SBV.Compilers.C.Table
@@ -2472,19 +2473,6 @@ isConcreteADTKind :: Kind -> Bool
 isConcreteADTKind KApp{} = True
 isConcreteADTKind kind   = isADT kind && not (isRoundingMode kind) && not (isUninterpreted kind)
 
--- | Lower a pseudo-Boolean relation to a weighted sum of Boolean indicators.
-handlePB :: PBOp -> [Doc] -> Doc
-handlePB o args = case o of
-                    PB_AtMost  k -> addIf (repeat 1) <+> text "<=" <+> int k
-                    PB_AtLeast k -> addIf (repeat 1) <+> text ">=" <+> int k
-                    PB_Exactly k -> addIf (repeat 1) <+> text "==" <+> int k
-                    PB_Le cs   k -> addIf cs         <+> text "<=" <+> int k
-                    PB_Ge cs   k -> addIf cs         <+> text ">=" <+> int k
-                    PB_Eq cs   k -> addIf cs         <+> text "==" <+> int k
-
-  where addIf :: [Int] -> Doc
-        addIf cs = parens $ fsep $ intersperse (text "+") [parens (a <+> text "?" <+> int c <+> text ":" <+> int 0) | (a, c) <- zip args cs]
-
 -- | Lower native IEEE operations not handled by the explicit LibBF adapters.
 handleIEEE :: FPOp -> [(SV, CV)] -> [(SV, Doc)] -> Doc -> Doc
 handleIEEE w consts as var = cvt w
@@ -2604,7 +2592,8 @@ ppExpr cfg adts functionNames structuredLambdaNames consts (SBVApp op opArgs) re
           | not (isFP (kindOf resultSV) || any (isFP . kindOf) opArgs)
           , not (isWideBV (kindOf resultSV) || any (isWideBV . kindOf) opArgs)
           = True   -- generates a memcpy instead; no simple assignment
-        doNotAssign _ = False
+        doNotAssign PseudoBoolean{} = True   -- assigns through an overflow-safe reduction
+        doNotAssign _              = False
 
         renderedArgs = map (showSV cfg consts) opArgs
 
@@ -2670,7 +2659,7 @@ ppExpr cfg adts functionNames structuredLambdaNames consts (SBVApp op opArgs) re
         p (StrOp StrInRe{})    _   = die "Regex membership escaped the bounded-automaton lowering pipeline"
         p (Label s)           [a]  = a <+> text "/*" <+> cCommentText s <+> text "*/"
         p (IEEEFP w)            as = handleIEEE w consts (zip opArgs as) var
-        p (PseudoBoolean pb)    as = handlePB pb as
+        p (PseudoBoolean pb)    as = assignPseudoBoolean pb as var
         p OverflowOp{}         _   = die "Overflow operation escaped the exact bit-vector lowering pipeline"
         p NonLinear{}          _   = die "Non-linear operation escaped the dedicated lowering pipeline"
         p (KindCast _ to)      [a]  = parens (text (showCType to)) <+> a
