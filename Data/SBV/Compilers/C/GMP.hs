@@ -46,7 +46,8 @@ import Data.SBV.Core.Data
 import Data.SBV.Core.Symbolic          (NROp(..))
 
 -- | Test whether a kind uses the exact GMP representation under this
--- configuration. Supplying 'cgIntegerSize' or 'cgSRealType' selects the
+-- configuration. Supplying 'Data.SBV.Tools.CodeGen.cgIntegerSize' or
+-- 'Data.SBV.Tools.CodeGen.cgSRealType' selects the
 -- historical lossy representation for 'KUnbounded' or 'KReal'; 'KRational'
 -- is always exact.
 isExactGMPKind :: CgConfig -> Kind -> Bool

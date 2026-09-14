@@ -64,7 +64,7 @@ class CgTarget a where
 
 -- | Options for code-generation.
 data CgConfig = CgConfig {
-          cgRTC                  :: Bool              -- ^ If 'True', perform run-time-checks for index-out-of-bounds or shifting-by-large values etc.
+          cgRTC                  :: Bool              -- ^ If 'True', check finite table indices and select the supplied default when out of bounds.
         , cgInteger              :: Maybe Int         -- ^ Optional lossy bit-size for representing SInteger; 'Nothing' selects exact GMP integers
         , cgReal                 :: Maybe CgSRealType -- ^ Optional lossy representation for SReal; 'Nothing' selects exact GMP rationals
         , cgDriverVals           :: [Integer]         -- ^ Values to use for the driver program generated, useful for generating non-random drivers.
@@ -154,7 +154,11 @@ instance SolverContext SBVCodeGen where
 cgSym :: Symbolic a -> SBVCodeGen a
 cgSym = SBVCodeGen . lift
 
--- | Sets RTC (run-time-checks) for index-out-of-bounds, shift-with-large value etc. on/off. Default: 'False'.
+-- | Enable bounds checks for finite table selection. Out-of-range indices
+-- select the supplied default. With checks disabled (the default), callers
+-- must guarantee in-range indices. This setting does not disable assertions,
+-- executable constraints, ownership checks, or exact bit-vector shift
+-- semantics in the current C backend.
 cgPerformRTCs :: Bool -> SBVCodeGen ()
 cgPerformRTCs b = modify' (\s -> s { cgFinalConfig = (cgFinalConfig s) { cgRTC = b } })
 

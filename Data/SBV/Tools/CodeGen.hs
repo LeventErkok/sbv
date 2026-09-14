@@ -56,6 +56,63 @@ The original, native-scalar-only implementation remains available from
 "Data.SBV.Tools.CodeGen.Legacy" for compatibility during the transition to the
 new backend.
 
+== Building generated code
+
+'compileToC' writes a function source and header, plus an example driver and
+Makefile by default. 'compileToCLib' writes component sources, a shared header,
+and a Makefile building @name.a@ (not @libname.a@), with an optional combined
+driver. Generated C does not need the Haskell runtime or an SMT solver.
+
+For a standalone function named @example@, a typical build is:
+
+@
+make CC=clang CCFLAGS='-std=c11 -Wall -O2'
+./example_driver
+@
+
+Use 'cgGenerateDriver' to omit the example driver, and 'cgGenerateMakefile' to
+integrate sources into an existing build. With the driver disabled, build
+@example.o@ for a standalone function or @name.a@ for a library. Example drivers
+illustrate the generated calling convention; they are not exhaustive tests.
+
+Dependencies are selected from the operations and representations actually
+used, including those inside private functions and array lambdas:
+
+* Native and arbitrary-width bit-vectors, text, collections, arrays, and regex
+  matching do not themselves require an external runtime library. Their element
+  types or computations can still require one.
+* Exact integers, rational reals, and rationals require the C GMP headers and
+  library. Generated Makefiles obtain @GMP_CFLAGS@ and @GMP_LIBS@ from
+  @pkg-config@; set both variables explicitly if GMP is installed elsewhere.
+* LibBF-backed floating-point operations require @libbf.h@ and a compatible C
+  LibBF library. The default link flags are @-lbf -lm@. Installing the Haskell
+  @libBF@ package does not necessarily install a standalone library named
+  @libbf@ on the C linker's search path.
+* Native mathematical operations can require @-lm@ without GMP or LibBF.
+
+Generated Makefiles use @CCFLAGS@, not @CFLAGS@, and include local @*.mk@ files
+for overrides. Supply nonstandard include paths through @CCFLAGS@ and library
+paths through @LDFLAGS@. Replacing @LDFLAGS@ replaces the generated dependency
+flags too: retain every required library, including @GMP_LIBS@ when applicable.
+For example, a LibBF-only program can use:
+
+@
+make CC=clang CCFLAGS='-std=c11 -Wall -O2 -I\/path\/to\/libbf' \\
+     LDFLAGS='\/path\/to\/libbf.a -lm'
+@
+
+An external C caller should include the generated header and link the generated
+object or archive, followed by its required libraries. Static archives do not
+embed their GMP or LibBF dependencies. For a dependency-free library named
+@example@, for instance:
+
+@
+clang -std=c11 -O2 -ffp-contract=off caller.c example.a -o caller
+@
+
+Use the generated Makefile's link flags for libraries that need dependencies.
+Custom builds must also follow the floating-point and ownership contracts below.
+
 == Public C names
 
 Function, library, input, and output names must be portable ASCII C identifiers.
@@ -229,7 +286,7 @@ Lookup callbacks must respect SMT key equality, including returning the same
 value for all NaN encodings of a floating-point key.
 
 'cgArrayEqualityLimit' controls the maximum domain size, defaulting to 256
-keys per comparison. For example, setting it to 65536 permits 'SWord16' keys,
+keys per comparison. For example, setting it to 65536 permits 'Data.SBV.SWord16' keys,
 at the cost of up to 65,536 lookups in each array. The setting also applies
 inside defined functions and array lambdas, independently for each library
 component. A zero limit disables exhaustive comparison. This is a generation

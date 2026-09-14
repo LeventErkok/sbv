@@ -196,6 +196,8 @@ privateParameters prefix = zipWith (\index (_, value) -> (prefix ++ show index, 
 -- until library merging. The user's requested output configuration is retained.
 data SBVToC = SBVToC | SBVToCLibraryComponent
 
+-- | Select the current lowering pipeline, retaining component build metadata
+-- until a library's dependencies have been combined.
 instance CgTarget SBVToC where
   targetName _                       = "C"
   translate SBVToC                   = cgen False
@@ -2747,9 +2749,9 @@ ppExpr cfg adts functionNames structuredLambdaNames consts (SBVApp op opArgs) re
                                                KApp      s _   -> die $ "ADT app: " ++ s
                                                KADT      s _ _ -> die $ "ADT: "     ++ s
 
-        -- Div/Rem should be careful on 0, in the SBV world x `div` 0 is 0, x `rem` 0 is x
-        -- NB: Quot is supposed to truncate toward 0; Not clear to me if C guarantees this behavior.
-        -- Brief googling suggests C99 does indeed truncate toward 0, but other C compilers might differ.
+        -- Integral quotient/remainder use the dedicated GMP or bit-vector
+        -- helpers above. Keep zero-divisor protection in the scalar fallback;
+        -- native IEEE division itself must retain its infinities and NaNs.
         p (Divides n) [a]    = mappedIntegerDivides n a
         p Quot        [a, b] = let k = kindOf (hd "Quot" opArgs)
                                    z = mkConst cfg $ mkConstCV k (0::Integer)
