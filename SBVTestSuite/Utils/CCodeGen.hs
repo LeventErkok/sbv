@@ -18,6 +18,7 @@ module Utils.CCodeGen (locateLibBF, generatedMakeOptions) where
 import Control.Exception (IOException, catch)
 import Data.List (isInfixOf, isPrefixOf, isSuffixOf)
 import System.Directory (doesDirectoryExist, doesFileExist, listDirectory)
+import System.Environment (lookupEnv)
 import System.FilePath ((</>), takeDirectory)
 import System.Process (readProcessWithExitCode)
 
@@ -67,11 +68,14 @@ catchIO action fallback = action `catch` \(_ :: IOException) -> fallback
 
 -- | Build generated Makefiles with strict warnings, resolving LibBF from the
 -- Cabal store when needed. Keep compiler overrides and GMP discovery intact.
+-- Append @SBV_C_TEST_FLAGS@ to both compilation and linking commands, allowing
+-- optimization and sanitizer runs to cover generated programs and library callers.
 generatedMakeOptions :: FilePath -> IO [String]
 generatedMakeOptions dir = do
   makefile <- readFile (dir </> "Makefile")
+  extraFlags <- maybe "" (" " ++) <$> lookupEnv "SBV_C_TEST_FLAGS"
+  let flags = "CCFLAGS=-std=c11 -Wall -Werror -O2" ++ extraFlags
   if "-lbf" `isInfixOf` makefile
     then do (includeDir, archive) <- locateLibBF
             pure [flags ++ " -I\"" ++ includeDir ++ "\"", "LDFLAGS=\"" ++ archive ++ "\" -lm ${GMP_LIBS}"]
     else pure [flags]
- where flags = "CCFLAGS=-std=c11 -Wall -Werror -O2"

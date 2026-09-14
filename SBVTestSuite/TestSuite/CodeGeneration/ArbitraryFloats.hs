@@ -35,7 +35,7 @@ import Data.SBV.Internals
 import Data.SBV.Tuple (tuple, untuple)
 
 import Utils.SBVTestFramework hiding ((#))
-import Utils.CCodeGen (locateLibBF)
+import Utils.CCodeGen (locateLibBF, generatedMakeOptions)
 
 -- | Arbitrary floating-point C backend tests.
 tests :: TestTree
@@ -97,11 +97,12 @@ optionalLibraryFiles = mapM_ check [False, True]
            makefile <- readFile (dir </> "Makefile")
            assertBool "Hidden component lost its LibBF link dependency" ("-lbf" `isInfixOf` makefile)
          let driverPath = dir </> "driver"
+         extraFlags <- maybe [] words <$> lookupEnv "SBV_C_TEST_FLAGS"
          (buildExit, _, buildError) <- readProcessWithExitCode "cc"
-           [ "-std=c11", "-Wall", "-Werror", "-I" ++ includeDir
+           ([ "-std=c11", "-Wall", "-Werror", "-I" ++ includeDir
            , dir </> "scalar.c", dir </> "half.c", dir </> "optionalLibrary_driver.c"
            , archive, "-lm", "-o", driverPath
-           ] ""
+           ] ++ extraFlags) ""
          assertEqual buildError ExitSuccess buildExit
          (runExit, outputText, runError) <- readProcessWithExitCode driverPath [] ""
          assertEqual runError ExitSuccess runExit
@@ -832,15 +833,10 @@ mixedRepeatedTypeLibrary = withSystemTempDirectory "sbv-mixed-repeated-library" 
                    , ("realAdd",       realAddProgram)
                    ]
 
-  (includeDir, archive) <- locateLibBF
   (_, cfg, bundle) <- compileToCLib' "mixedRepeatedTypeLibrary" components
   renderCgPgmBundle (Just dir) (cfg, bundle)
-  writeFile (dir </> "libbf.mk") $ unlines
-    [ "CCFLAGS=-std=c11 -Wall -Werror -I" ++ includeDir ++ " ${GMP_CFLAGS}"
-    , "LDFLAGS=" ++ archive ++ " -lm ${GMP_LIBS}"
-    ]
-
-  (makeExit, _, makeError) <- readProcessWithExitCode "make" ["-C", dir] ""
+  makeOptions <- generatedMakeOptions dir
+  (makeExit, _, makeError) <- readProcessWithExitCode "make" (["-C", dir] ++ makeOptions) ""
   assertEqual makeError ExitSuccess makeExit
 
   let driverExecutable = dir </> "mixedRepeatedTypeLibrary_driver"
@@ -878,7 +874,8 @@ repeatedTypeLibraryWithoutDriver = withSystemTempDirectory "sbv-repeated-library
   (_, cfg, bundle) <- compileToCLib' "repeatedTypeLibraryWithoutDriver" components
   renderCgPgmBundle (Just dir) (cfg, bundle)
 
-  (makeExit, _, makeError) <- readProcessWithExitCode "make" ["-C", dir] ""
+  makeOptions <- generatedMakeOptions dir
+  (makeExit, _, makeError) <- readProcessWithExitCode "make" (["-C", dir] ++ makeOptions) ""
   assertEqual makeError ExitSuccess makeExit
   archiveExists <- doesFileExist (dir </> "repeatedTypeLibraryWithoutDriver.a")
   driverExists  <- doesFileExist (dir </> "repeatedTypeLibraryWithoutDriver_driver.c")

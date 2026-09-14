@@ -282,7 +282,8 @@ escapedAssertionMessages = withSystemTempDirectory "sbv-assertion-escaping" $ \d
     cgSetDriverValues [7]
     value <- cgInput "value" :: SBVCodeGen SWord8
     cgReturn (sAssert Nothing message (value .< 5) value)
-  (makeExit, _, makeError) <- readProcessWithExitCode "make" ["-C", dir, "CCFLAGS=-std=c11 -Wall -Werror -O2"] ""
+  makeOptions <- generatedMakeOptions dir
+  (makeExit, _, makeError) <- readProcessWithExitCode "make" (["-C", dir] ++ makeOptions) ""
   assertEqual makeError ExitSuccess makeExit
   (runExit, _, runError) <- readProcessWithExitCode (dir </> "escapedAssertion_driver") [] ""
   assertBool "Expected the violated assertion to terminate the driver" (runExit /= ExitSuccess)
@@ -533,7 +534,8 @@ collectionRoundingModes = withSystemTempDirectory "sbv-collection-rounding" $ \d
     modes  <- cgInput "modes"  :: SBVCodeGen (SList [RoundingMode])
     cgOutput "modesResult" modes
     cgReturn values
-  (makeExit, _, makeError) <- readProcessWithExitCode "make" ["-C", dir, "CCFLAGS=-std=c11 -Wall -Werror -O2"] ""
+  makeOptions <- generatedMakeOptions dir
+  (makeExit, _, makeError) <- readProcessWithExitCode "make" (["-C", dir] ++ makeOptions) ""
   assertEqual makeError ExitSuccess makeExit
   _ <- compileAndRunGenerated dir "collectionRounding"
   pure ()
@@ -546,7 +548,8 @@ libraryDriverDependencies = withSystemTempDirectory "sbv-library-dependencies" $
     [("component", do cgOverwriteFiles True
                       value <- cgInput "value" :: SBVCodeGen SWord8
                       cgReturn (value + 1))]
-  (makeExit, _, makeError) <- readProcessWithExitCode "make" ["-j2", "-C", dir] ""
+  makeOptions <- generatedMakeOptions dir
+  (makeExit, _, makeError) <- readProcessWithExitCode "make" (["-j2", "-C", dir] ++ makeOptions) ""
   assertEqual makeError ExitSuccess makeExit
   (queryExit, _, queryError) <- readProcessWithExitCode "make" ["-q", "-C", dir, "-W", "component.c", "dependencyLibrary_driver"] ""
   assertEqual queryError (ExitFailure 1) queryExit
@@ -631,7 +634,8 @@ libraryExternalPrototypes = withSystemTempDirectory "sbv-library-prototypes" $ \
                          cgAddPrototype ["SWord8 external(SWord8);"]
                          value <- cgInput "value" :: SBVCodeGen SWord8
                          cgReturn (uninterpret "external" value :: SWord8))]
-  (makeExit, _, makeError) <- readProcessWithExitCode "make" ["-C", dir, "CCFLAGS=-std=c11 -Wall -Werror -O2", "externalCall.o"] ""
+  makeOptions <- generatedMakeOptions dir
+  (makeExit, _, makeError) <- readProcessWithExitCode "make" (["-C", dir, "externalCall.o"] ++ makeOptions) ""
   assertEqual makeError ExitSuccess makeExit
 
 -- | Reject invalid library layouts before rendering any files. Driver symbols
@@ -649,7 +653,8 @@ libraryValidation = do
   withSystemTempDirectory "sbv-library-no-drivers" $ \dir -> do
     _ <- compileToCLib (Just dir) "noDriverLibrary"
       [("noDriverLibrary_driver", program False), ("entry", program False), ("entry_driver", program False)]
-    (makeExit, _, makeError) <- readProcessWithExitCode "make" ["-C", dir, "CCFLAGS=-std=c11 -Wall -Werror -O2"] ""
+    makeOptions <- generatedMakeOptions dir
+    (makeExit, _, makeError) <- readProcessWithExitCode "make" (["-C", dir] ++ makeOptions) ""
     assertEqual makeError ExitSuccess makeExit
  where program driver = do
          cgOverwriteFiles True
@@ -887,7 +892,8 @@ libraryRuntimeFailures = mapM_ check [False, True]
                                    then cgReturn (sAssert Nothing "library assertion" (value .< 5) value)
                                    else do constrain (value .< 5)
                                            cgReturn value)]
-         (makeExit, _, makeError) <- readProcessWithExitCode "make" ["-C", dir, "CCFLAGS=-std=c11 -Wall -Werror -O2"] ""
+         makeOptions <- generatedMakeOptions dir
+         (makeExit, _, makeError) <- readProcessWithExitCode "make" (["-C", dir] ++ makeOptions) ""
          assertEqual makeError ExitSuccess makeExit
          (runExit, _, runError) <- readProcessWithExitCode (dir </> "failFastLibrary_driver") [] ""
          assertBool "Expected a failed library call to terminate the process" (runExit /= ExitSuccess)
@@ -2751,7 +2757,8 @@ guardedRuntimeChecks = mapM_ check [(library, noResult, sample) | library <- [Fa
                                then compileToCLib' functionName [("guardedComponent", program)]
                                else compileToC' functionName ((:[]) <$> program)
          renderCgPgmBundle (Just dir) (cfg, bundle)
-         (makeExit, _, makeError) <- readProcessWithExitCode "make" ["-C", dir, "CCFLAGS=-std=c11 -Wall -Werror -O2"] ""
+         makeOptions <- generatedMakeOptions dir
+         (makeExit, _, makeError) <- readProcessWithExitCode "make" (["-C", dir] ++ makeOptions) ""
          assertEqual makeError ExitSuccess makeExit
          (runExit, _, runError) <- readProcessWithExitCode (dir </> functionName ++ "_driver") [] ""
          if sample == 0
@@ -3147,7 +3154,8 @@ explicitHardConstraints = withSystemTempDirectory "sbv-explicit-hard-constraints
 
   (_, invalidCfg, invalidBundle) <- compileToC' "explicitHardConstraints" (program [1, 6])
   renderCgPgmBundle (Just invalidDir) (invalidCfg, invalidBundle)
-  (makeExit, _, makeError) <- readProcessWithExitCode "make" ["-C", invalidDir] ""
+  makeOptions <- generatedMakeOptions invalidDir
+  (makeExit, _, makeError) <- readProcessWithExitCode "make" (["-C", invalidDir] ++ makeOptions) ""
   assertEqual makeError ExitSuccess makeExit
   (runExit, _, runError) <- readProcessWithExitCode (invalidDir </> "explicitHardConstraints_driver") [] ""
   assertBool "Expected a violated hard constraint to terminate the generated driver"

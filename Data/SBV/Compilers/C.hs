@@ -33,6 +33,9 @@
 --   recursive groups, closed nested array lambdas, explicit closure
 --   environments, hard constraints as executable preconditions, scalar and
 --   grouped results, and multi-function static libraries.
+-- * Regular-expression membership and language equality, compiled using bounded
+--   automata without additional dependencies. Generation budgets are configurable;
+--   successfully generated matchers accept strings of arbitrary length.
 --
 -- Numeric lowering includes exact-width arithmetic, comparisons, shifts,
 -- rotations, joins and extractions, overflow predicates, conversions,
@@ -44,10 +47,11 @@
 -- == Deliberate boundaries
 --
 -- Quantifiers, special solver relations, uninterpreted sorts, and soft
--- constraints are rejected. Regular-expression operations and general
--- extensional array equality are also not implemented. Arrays nested in
--- compared values remain unsupported. The C backend compiles higher-order uses after SBV has
--- firstified them; it does not expose symbolic functions as runtime C values.
+-- constraints are rejected. General extensional array equality and arrays nested
+-- in compared values remain unsupported. Array lambdas must be closed; capturing
+-- outer symbolic values is rejected during generation. The C backend compiles
+-- higher-order uses after SBV has firstified them; it does not expose symbolic
+-- functions as runtime C values.
 --
 -- Import "Data.SBV.Compilers.C.Legacy" to retain the previous compiler while
 -- migrating code that encounters one of these boundaries.

@@ -20,6 +20,7 @@ module TestSuite.CodeGeneration.ExactNumbers (tests) where
 
 import Data.List                 (isInfixOf)
 import Numeric                   (showHex)
+import System.Environment        (lookupEnv)
 import System.Exit               (ExitCode(..))
 import System.FilePath           ((</>))
 import System.IO.Temp            (withSystemTempDirectory)
@@ -30,6 +31,7 @@ import Data.SBV.Internals
 import Data.SBV.Tuple (tuple, untuple)
 
 import Utils.SBVTestFramework
+import Utils.CCodeGen (generatedMakeOptions)
 
 -- | An exact-number ADT nested inside 'ExactAggregate'.
 data ExactLeaf = ExactLeaf Integer AlgReal deriving Show
@@ -554,7 +556,8 @@ exactNumberLibrary = withSystemTempDirectory "sbv-exact-library" $ \dir -> do
     ]
   renderCgPgmBundle (Just dir) (cfg, bundle)
 
-  (makeExit, _, makeError) <- readProcessWithExitCode "make" ["-C", dir] ""
+  makeOptions <- generatedMakeOptions dir
+  (makeExit, _, makeError) <- readProcessWithExitCode "make" (["-C", dir] ++ makeOptions) ""
   assertEqual makeError ExitSuccess makeExit
 
   let driverExecutable = dir </> "exactNumberLibrary_driver"
@@ -572,6 +575,8 @@ exactNumberLibrary = withSystemTempDirectory "sbv-exact-library" $ \dir -> do
                          ++ "), (" ++ show (adtSeed + 3) ++ ", " ++ show (adtSeed + 4) ++ "))")
 
 -- | Generate, compile, and execute a program against the system GMP package.
+-- Exercise both a direct compiler invocation and the generated Makefile, honoring
+-- @SBV_C_TEST_FLAGS@ in both paths so rebuilding cannot hide sanitizer failures.
 compileAndRunGMP :: FilePath -> String -> SBVCodeGen () -> [String] -> Assertion
 compileAndRunGMP dir functionName program expected = do
   (_, cfg, bundle) <- compileToC' functionName program
@@ -580,19 +585,22 @@ compileAndRunGMP dir functionName program expected = do
   (pkgExit, pkgOutput, pkgError) <- readProcessWithExitCode "pkg-config" ["--cflags", "--libs", "gmp"] ""
   assertEqual pkgError ExitSuccess pkgExit
 
+  extraFlags <- maybe [] words <$> lookupEnv "SBV_C_TEST_FLAGS"
   let source = dir </> functionName ++ ".c"
       driver = dir </> functionName ++ "_driver.c"
       exe    = dir </> functionName ++ "_driver"
-      args   = ["-std=c11", "-Wall", "-Werror", source, driver, "-o", exe] ++ words pkgOutput
+      args   = ["-std=c11", "-Wall", "-Werror", "-ffp-contract=off", source, driver, "-o", exe] ++ extraFlags ++ words pkgOutput
+      checkRun = do (runExit, stdoutText, runError) <- readProcessWithExitCode exe [] ""
+                    assertEqual runError ExitSuccess runExit
+                    mapM_ (assertOutput stdoutText) expected
   (ccExit, _, ccError) <- readProcessWithExitCode "cc" args ""
   assertEqual ccError ExitSuccess ccExit
+  checkRun
 
-  (makeExit, _, makeError) <- readProcessWithExitCode "make" ["-C", dir] ""
+  makeOptions <- generatedMakeOptions dir
+  (makeExit, _, makeError) <- readProcessWithExitCode "make" (["-C", dir] ++ makeOptions) ""
   assertEqual makeError ExitSuccess makeExit
-
-  (runExit, stdoutText, runError) <- readProcessWithExitCode exe [] ""
-  assertEqual runError ExitSuccess runExit
-  mapM_ (assertOutput stdoutText) expected
+  checkRun
 
   makefile <- readFile (dir </> "Makefile")
   assertBool "Generated Makefile does not request GMP compiler flags" ("pkg-config --cflags gmp" `isInfixOf` makefile)
