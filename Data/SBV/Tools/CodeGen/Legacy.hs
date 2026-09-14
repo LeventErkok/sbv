@@ -15,6 +15,8 @@
 -- @
 --
 -- New code should normally import "Data.SBV.Tools.CodeGen" instead.
+-- Native real-to-integer flooring uses the same overflow-safe, low-bit mapping
+-- as the current backend; flooring a non-finite mapped real fails explicitly.
 -----------------------------------------------------------------------------
 
 {-# OPTIONS_GHC -Wall -Werror #-}

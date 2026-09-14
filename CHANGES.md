@@ -3,6 +3,15 @@
 
 ### Version 14.8, Not yet released
 
+  * Fix C generation of diagnostic labels and assertion messages. Comment delimiters,
+    control characters, and preprocessing sequences cannot alter generated code, and
+    assertion text is passed as data rather than interpreted as a printf format string.
+
+  * Fix native-mapped real-to-integer flooring in generated C. Negative fractions now
+    floor instead of truncating toward zero. Finite results retain the low bits selected
+    by `cgIntegerSize` without out-of-range C casts, including with `CgLongDouble`.
+    Non-finite mapped reals terminate with an explicit diagnostic when floored.
+
   * Escape labels on tuples, ADTs, and arrays in the current C backend. Diagnostic
     comments cannot inject C statements through comment delimiters; nested-comment
     markers and control characters are also escaped consistently with scalar labels.

@@ -45,6 +45,7 @@ import qualified Text.PrettyPrint.HughesPJ as P ((<>))
 import Data.SBV.Compilers.C.BV        (isWideBV, mappedIntegerKind)
 import Data.SBV.Compilers.C.GMP       (isExactGMPKind)
 import Data.SBV.Compilers.C.Lowering  (CLowering, CRequirement(..), expressionLowering)
+import Data.SBV.Compilers.C.Real      (mappedRealFloorWidth)
 import Data.SBV.Compilers.CodeGen      (CgConfig(..), CgSRealType(..))
 import Data.SBV.Core.Data
 import Data.SBV.Core.SizedFloats       (FP(..), mkBFOpts)
@@ -171,8 +172,9 @@ arbitraryFPRuntime cfg ks asgns
        casts (_, SBVApp (IEEEFP (FP_Cast fr to _)) _)
          | supportedCast fr to
          , not (exactNativeFPCast (floatCastKind cfg fr) (floatCastKind cfg to)) = [FloatCast fr to]
-       casts (_, SBVApp (KindCast fr to) _)
-         | mappedFloatCast cfg fr to = [FloatCast fr to]
+       casts (_, SBVApp castOp@(KindCast fr to) _)
+         | Nothing <- mappedRealFloorWidth cfg castOp
+         , mappedFloatCast cfg fr to = [FloatCast fr to]
        casts _ = []
 
        floatCasts = nub (concatMap casts asgns)
@@ -210,6 +212,8 @@ arbitraryFPConst _ _ = Nothing
 -- hardware rounding mode, even for RNE.
 arbitraryFPExpr :: CgConfig -> [(SV, CV)] -> Op -> [SV] -> Kind -> [Doc] -> Maybe CLowering
 arbitraryFPExpr cfg consts op svs resultKind args
+  | Just _ <- mappedRealFloorWidth cfg op
+  = Nothing
   | IEEEFP (FP_Cast fr to rm) <- op
   , let target = floatCastKind cfg to
   , exactNativeFPCast (floatCastKind cfg fr) target

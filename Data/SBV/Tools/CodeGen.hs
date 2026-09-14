@@ -340,6 +340,11 @@ with historical generated code is more important than exactness. Such native
 mappings are subject to overflow for 'Data.SBV.SInteger' and rounding for
 'Data.SBV.SReal'.
 
+Real-to-integer flooring preserves the mathematical floor of the represented
+native real, then retains the low bits selected by 'cgIntegerSize'. This applies
+to @CgFloat@, @CgDouble@, and @CgLongDouble@ without an out-of-range C integer
+cast. Flooring a non-finite mapped real terminates the process with a diagnostic.
+
 The compatibility backend in "Data.SBV.Tools.CodeGen.Legacy" retains the
 original requirement that these mappings be supplied explicitly.
 -}

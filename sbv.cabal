@@ -328,6 +328,7 @@ Library
                   , Data.SBV.Compilers.C.NonLinear
                   , Data.SBV.Compilers.C.New
                   , Data.SBV.Compilers.C.PseudoBoolean
+                  , Data.SBV.Compilers.C.Real
                   , Data.SBV.Compilers.C.RegExp
                   , Data.SBV.Compilers.C.Set
                   , Data.SBV.Compilers.C.Syntax
@@ -458,6 +459,7 @@ Test-Suite SBVTest
                   , TestSuite.CodeGeneration.PopulationCount
                   , TestSuite.CodeGeneration.PseudoBoolean
                   , TestSuite.CodeGeneration.RegExp
+                  , TestSuite.CodeGeneration.ScalarSafety
                   , TestSuite.CodeGeneration.Uninterpreted
                   , TestSuite.CompileTests.SCase
                   , TestSuite.CompileTests.PCase

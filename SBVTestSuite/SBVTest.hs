@@ -77,6 +77,7 @@ import qualified TestSuite.CodeGeneration.GCD
 import qualified TestSuite.CodeGeneration.PopulationCount
 import qualified TestSuite.CodeGeneration.PseudoBoolean
 import qualified TestSuite.CodeGeneration.RegExp
+import qualified TestSuite.CodeGeneration.ScalarSafety
 import qualified TestSuite.CodeGeneration.Uninterpreted
 import qualified TestSuite.CRC.CCITT
 import qualified TestSuite.CRC.CCITT_Unidir
@@ -209,6 +210,7 @@ main = do sCaseTests <- TestSuite.CompileTests.SCase.tests
                       , TestSuite.CodeGeneration.PopulationCount.tests
                       , TestSuite.CodeGeneration.PseudoBoolean.tests
                       , TestSuite.CodeGeneration.RegExp.tests
+                      , TestSuite.CodeGeneration.ScalarSafety.tests
                       , TestSuite.CodeGeneration.Uninterpreted.tests
                       , TestSuite.CRC.CCITT.tests
                       , TestSuite.CRC.CCITT_Unidir.tests

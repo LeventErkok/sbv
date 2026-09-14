@@ -120,6 +120,7 @@ tests = testGroup "CodeGeneration.CgTests"
   , goldenVsStringShow "codeGen1"       foo
   , testCase "compile through the public legacy facade" legacyPublicFacade
   , testCase "execute guarded pseudo-Boolean reductions in functions and array lambdas" scopedPseudoBoolean
+  , testCase "floor long doubles inside functions and array lambdas" scopedMappedRealFloor
   , testCase "collect C runtime requirements" dependencyRequirements
   , testCase "escape assertion messages in generated C" escapedAssertionMessages
   , escapedValueLabels
@@ -2609,6 +2610,31 @@ managedScalarDefinedSBVFunctions = withSystemTempDirectory "sbv-managed-scalar-d
   assertBool "Expected private defined-function calls to thread the shared ownership context"
              ("sbv_function_ctx *const __sbv_parent_function_ctx" `isInfixOf` sourceText
            && "(&__sbv_function_ctx," `isInfixOf` sourceText)
+
+-- | Private bodies must request the shared floor helper and math linkage even
+-- when their entry point contains only a function call or array lookup.
+scopedMappedRealFloor :: Assertion
+scopedMappedRealFloor = mapM_ check [(library, useLambda, width) | library <- [False, True], useLambda <- [False, True], width <- [8, 64]]
+ where check (library, useLambda, width) = withSystemTempDirectory "sbv-scoped-real-floor" $ \dir -> do
+         let functionName = "scopedRealFloor"
+             floorHalf :: SReal -> SInteger
+             floorHalf value = sRealToSIntegerFloor (value / 2)
+             program = do
+               cgOverwriteFiles True
+               cgSRealType CgLongDouble
+               cgIntegerSize width
+               cgSetDriverValues [-5]
+               value <- cgInput "value"
+               let result = if useLambda
+                               then readArray (lambdaArray floorHalf) value
+                               else smtFunction "C long-double floor" floorHalf value
+               cgReturn (result .== -3)
+         (_, cfg, bundle) <- if library
+                               then compileToCLib' functionName [("floorComponent", program)]
+                               else compileToC' functionName ((:[]) <$> program)
+         renderCgPgmBundle (Just dir) (cfg, bundle)
+         outputText <- compileAndRunGenerated dir functionName
+         assertBool outputText (") = 1" `isInfixOf` outputText)
 
 -- | Check overflow-safe statement blocks in conditionals, private functions,
 -- and closed array lambdas. Every five-bit input is compared against equivalent

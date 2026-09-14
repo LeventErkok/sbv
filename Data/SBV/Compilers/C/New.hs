@@ -45,6 +45,7 @@ import Data.SBV.Compilers.C.List
 import Data.SBV.Compilers.C.Lowering
 import Data.SBV.Compilers.C.NonLinear
 import Data.SBV.Compilers.C.PseudoBoolean (assignPseudoBoolean)
+import Data.SBV.Compilers.C.Real (mappedRealFloorWidth, mappedRealFloorCall, mappedRealFloorRuntime)
 import Data.SBV.Compilers.C.RegExp (regexExpr)
 import Data.SBV.Compilers.C.Set
 import Data.SBV.Compilers.C.Syntax (cCommentText, cStringLiteral)
@@ -1203,6 +1204,7 @@ genCProg cfg adts lists sets fn proto
              $$ nativeFPCompilePragmas
              $$ vcat (map codeSeg cgs)
              $$ extDecls
+             $$ mappedRealFloorRuntime cfg allAssignments
              $$ bitVectorRuntime (cgInteger cfg) wideKinds allAssignments
              $$ (if requires CRequiresGMP    then gmpRuntime cfg kindInfo allAssignments else empty)
              $$ (if requires CRequiresLibBF  then arbitraryFPRuntime cfg fpKinds allAssignments else empty)
@@ -1673,9 +1675,18 @@ ppTable cfg allowStatic constants ((tableIndex, _, resultKind), elements)
 -- functions and retained array callbacks. The retain bridge creates empty
 -- arenas so an escaping lambda can produce fresh managed values without
 -- retaining storage owned by the call that created it.
+-- Define its unused-function annotation even when no other runtime is needed.
 definedFunctionContextType :: Set.Set CRequirement -> Doc
 definedFunctionContextType requirements = text . unlines $
-     [ "typedef struct {"
+     [ "#ifndef SBV_CGEN_UNUSED"
+     , "#if defined(__GNUC__) || defined(__clang__)"
+     , "#define SBV_CGEN_UNUSED __attribute__((unused))"
+     , "#else"
+     , "#define SBV_CGEN_UNUSED"
+     , "#endif"
+     , "#endif"
+     , ""
+     , "typedef struct {"
      , "  void *gmp;"
      , "  void *text;"
      , "  void *list;"
@@ -2661,6 +2672,9 @@ ppExpr cfg adts functionNames structuredLambdaNames consts (SBVApp op opArgs) re
         p (PseudoBoolean pb)    as = assignPseudoBoolean pb as var
         p OverflowOp{}         _   = die "Overflow operation escaped the exact bit-vector lowering pipeline"
         p NonLinear{}          _   = die "Non-linear operation escaped the dedicated lowering pipeline"
+        p castOp@KindCast{}    [a]
+          | Just width <- mappedRealFloorWidth cfg castOp
+          = mappedRealFloorCall width a
         p (KindCast _ to)      [a]  = parens (text (showCType to)) <+> a
         p (Uninterpreted s) []
           | isJust (lookup s functionNames)
@@ -3088,6 +3102,8 @@ mergeDrivers libName inc ds = pre : concatMap mkDFun ds ++ [callDrivers (map fst
 operationRequirements :: CgConfig -> (Op, Kind) -> Set.Set CRequirement
 operationRequirements cfg (o, k) = Set.fromList (required o)
   where required (IEEEFP FP_Cast{}) = math
+        required castOp@KindCast{}
+          | Just _ <- mappedRealFloorWidth cfg castOp = math
         required (IEEEFP fop)
           | fop `elem` requiresMath = math
         required Abs
