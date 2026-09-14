@@ -373,6 +373,7 @@ Test-Suite SBVTest
                   , TestSuite.ADT.Expr
                   , TestSuite.ADT.MutRec
                   , TestSuite.ADT.PExpr
+                  , TestSuite.ADT.Registration
                   , TestSuite.Arrays.InitVals
                   , TestSuite.Arrays.Memory
                   , TestSuite.Arrays.Query

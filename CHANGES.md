@@ -3,6 +3,13 @@
 
 ### Version 14.8, Not yet released
 
+  * Fix `mkSymbolic` dependency registration for ADTs with other ADTs nested inside
+    tuple, list, set, or array fields, including type synonyms and transitive dependencies.
+    Previously these could fail with an unregistered-subkind error unless an unrelated
+    use happened to register the missing type. Recursive dependency traversal terminates
+    without requiring explicit `registerType` calls. Query-mode `freshVar` and `freshVar_`
+    now perform the same initialization, with tuple declarations preceding dependent ADTs.
+
   * Functions defined with `smtFunction` and its variants can now be first encountered after entering
     query mode. SBV sends their definitions and dependencies incrementally, while retaining termination
     and productivity checks. Calling `registerFunction` before the query is no longer required for this case.

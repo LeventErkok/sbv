@@ -447,10 +447,11 @@ cvtInc :: SMTLibIncConverter [Text]
 cvtInc curProgInfo inps newKs (_, consts) tbls uis defs (SBVPgm asgnsSeq) cstrs cfg =
             -- any new settings?
                settings
+            -- Tuples precede ADTs that may use them, as in non-incremental output.
+            -- Only declare the new sizes; old sizes persist.
+            <> concatMap declTuple (findTupleArities newKs)
             -- sorts
             <> declADT [(s, pks, cs) | k@(KADT s pks cs) <- newKinds, not (isRoundingMode k)]
-            -- tuples. NB. Only declare the new sizes, old sizes persist.
-            <> concatMap declTuple (findTupleArities newKs)
             -- constants
             <> concatMap (declConst cfg) consts
             -- inputs

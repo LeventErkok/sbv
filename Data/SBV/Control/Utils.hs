@@ -239,12 +239,18 @@ inNewContext act = do st@State{rconstMap, rProgInfo} <- queryState
 
 -- | Generalization of 'Data.SBV.Control.freshVar_'
 freshVar_ :: forall a m. (MonadIO m, MonadQuery m, SymVal a) => m (SBV a)
-freshVar_ = inNewContext $ fmap SBV . svMkSymVar QueryVar k Nothing
+freshVar_ = inNewContext $ \st -> do
+              v <- SBV <$> svMkSymVar QueryVar k Nothing st
+              mkSymValInit st v
+              pure v
   where k = kindOf (Proxy @a)
 
 -- | Generalization of 'Data.SBV.Control.freshVar'
 freshVar :: forall a m. (MonadIO m, MonadQuery m, SymVal a) => String -> m (SBV a)
-freshVar nm = inNewContext $ fmap SBV . svMkSymVar QueryVar k (Just nm)
+freshVar nm = inNewContext $ \st -> do
+                v <- SBV <$> svMkSymVar QueryVar k (Just nm) st
+                mkSymValInit st v
+                pure v
   where k = kindOf (Proxy @a)
 
 -- | Generalization of 'Data.SBV.Control.queryDebug'
