@@ -75,6 +75,7 @@ import qualified TestSuite.CodeGeneration.Fibonacci
 import qualified TestSuite.CodeGeneration.Floats
 import qualified TestSuite.CodeGeneration.GCD
 import qualified TestSuite.CodeGeneration.PopulationCount
+import qualified TestSuite.CodeGeneration.LibraryBuild
 import qualified TestSuite.CodeGeneration.PseudoBoolean
 import qualified TestSuite.CodeGeneration.RegExp
 import qualified TestSuite.CodeGeneration.ScalarSafety
@@ -208,6 +209,7 @@ main = do sCaseTests <- TestSuite.CompileTests.SCase.tests
                       , TestSuite.CodeGeneration.Floats.tests
                       , TestSuite.CodeGeneration.GCD.tests
                       , TestSuite.CodeGeneration.PopulationCount.tests
+                      , TestSuite.CodeGeneration.LibraryBuild.tests
                       , TestSuite.CodeGeneration.PseudoBoolean.tests
                       , TestSuite.CodeGeneration.RegExp.tests
                       , TestSuite.CodeGeneration.ScalarSafety.tests
