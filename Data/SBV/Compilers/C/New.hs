@@ -2927,16 +2927,16 @@ ppArrayEquality _ _ kind = die $ "Expected an array equality kind, received " ++
 -- Array-valued data can still be constructed, selected, and transported.
 requiresExtensionalEquality :: [Kind] -> Op -> [Kind] -> Bool
 requiresExtensionalEquality adts op kinds = comparesElements op && any (containsArray Set.empty) kinds
- where comparesElements Equal{}                = True
-       comparesElements NotEqual               = True
+ where comparesElements Equal{}               = True
+       comparesElements NotEqual              = True
        comparesElements (SeqOp SeqIndexOf{})   = True
        comparesElements (SeqOp SeqContains{})  = True
        comparesElements (SeqOp SeqPrefixOf{})  = True
        comparesElements (SeqOp SeqSuffixOf{})  = True
        comparesElements (SeqOp SeqReplace{})   = True
-       comparesElements _                      = False
+       comparesElements _                     = False
 
-       containsArray _       KArray{}             = True
+       containsArray _       KArray{}            = True
        containsArray visited (KList elementKind)  = containsArray visited elementKind
        containsArray visited (KSet elementKind)   = containsArray visited elementKind
        containsArray visited (KTuple fields)      = any (containsArray visited) fields

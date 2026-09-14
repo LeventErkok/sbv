@@ -22,6 +22,7 @@ module TestSuite.CodeGeneration.CgTests(tests) where
 
 import Control.Exception (ErrorCall, displayException, evaluate, try)
 import Control.Monad (forM, unless, void, when)
+import qualified Data.Bifunctor as B
 import Data.List (isInfixOf)
 import Data.Proxy (Proxy(..))
 import Data.SBV.Internals
@@ -123,7 +124,7 @@ tests = testGroup "CodeGeneration.CgTests"
   , testCase "execute IEEE native floating-point remainders" nativeFloatingRemainders
   , testCase "declare rounding modes in nested collections" collectionRoundingModes
   , testCase "relink library drivers after component changes" libraryDriverDependencies
-  , testCase "reject comparisons of array-valued collections" arrayCollectionComparisons
+  , arrayCollectionComparisons
   , testCase "preserve external prototypes in libraries" libraryExternalPrototypes
   , testCase "reject empty or conflicting libraries before rendering" libraryValidation
   , testCase "terminate on failed library preconditions and assertions" libraryRuntimeFailures
@@ -550,20 +551,76 @@ libraryDriverDependencies = withSystemTempDirectory "sbv-library-dependencies" $
   (queryExit, _, queryError) <- readProcessWithExitCode "make" ["-q", "-C", dir, "-W", "component.c", "dependencyLibrary_driver"] ""
   assertEqual queryError (ExitFailure 1) queryExit
 
--- | Reject both direct and nested array comparisons before emitting runtime
--- helpers, while retaining support for transporting the same collection kinds.
-arrayCollectionComparisons :: Assertion
-arrayCollectionComparisons = mapM_ check [(.==), (./=), (.===)]
- where check comparison = do
-         result <- try (do
-           (_, _, bundle) <- compileToC' "arrayComparison" $ do
-             left  <- cgInput "left"  :: SBVCodeGen (SList (ArrayModel Word8 Word8))
-             right <- cgInput "right" :: SBVCodeGen (SList (ArrayModel Word8 Word8))
-             cgReturn (comparison left right)
-           evaluate (length (show bundle))) :: IO (Either ErrorCall Int)
+-- | Reject direct and nested array comparisons, including sequence operations
+-- that implicitly compare elements and comparisons inside defined functions.
+-- Every rejection must precede file creation, even after a valid library entry.
+arrayCollectionComparisons :: TestTree
+arrayCollectionComparisons = testGroup "reject comparisons of array-valued collections"
+  [ testCase (testName ++ if library then " library" else " standalone") (checkOutput testName program library)
+  | (testName, program) <- programs, library <- [False, True]
+  ]
+ where binary :: forall a b. (SymVal a, SymVal b) => Proxy a -> (SBV a -> SBV a -> SBV b) -> SBVCodeGen ()
+       binary _ operation = do
+         cgGenerateDriver False
+         left  <- cgInput "left"  :: SBVCodeGen (SBV a)
+         right <- cgInput "right" :: SBVCodeGen (SBV a)
+         cgReturn (operation left right)
+
+       comparisons :: SymVal a => Proxy a -> [(String, SBVCodeGen ())]
+       comparisons proxy = [("equal", binary proxy (.==)), ("distinct", binary proxy (./=)), ("objectEqual", binary proxy (.===))]
+
+       -- ArrayModel deliberately has no Haskell Eq instance, so construct the
+       -- sequence primitives directly to test the backend boundary independently
+       -- of the public list API's concrete-folding constraints.
+       sequenceExpr :: forall a b. (SymVal a, SymVal b)
+                    => (Kind -> SeqOp) -> SList a -> SList a -> [SVal] -> SBV b
+       sequenceExpr operation left right extra = SBV $ SVal resultKind $ Right $ cache $ \st -> do
+         arguments <- mapM (svToSV st) ([unSBV left, unSBV right] ++ extra)
+         newExpr st resultKind (SBVApp (SeqOp (operation (kindOf (Proxy @a)))) arguments)
+        where resultKind = kindOf (Proxy @b)
+
+       sequences :: forall a. SymVal a => Proxy [a] -> [(String, SBVCodeGen ())]
+       sequences proxy = comparisons proxy ++
+         [ ("indexOf",  binary proxy (\left right -> sequenceExpr SeqIndexOf left right [unSBV (1 :: SInteger)] :: SInteger))
+         , ("contains", predicate SeqContains)
+         , ("prefix",   predicate SeqPrefixOf)
+         , ("suffix",   predicate SeqSuffixOf)
+         , ("replace",  binary proxy (\left right -> sequenceExpr SeqReplace left right [unSBV left] :: SList a))
+         ]
+        where predicate operation = binary proxy (\left right -> sequenceExpr operation left right [] :: SBool)
+
+       named prefix = map (B.first (prefix ++))
+
+       programs = named "list_"      (sequences   (Proxy @[ArrayModel Word8 Word8]))
+               ++ named "listTuple_" (sequences   (Proxy @[(Word8, ArrayModel Word8 Word8)]))
+               ++ named "nested_"    (sequences   (Proxy @[[ArrayModel Word8 Word8]]))
+               ++ named "tuple_"     (comparisons (Proxy @(Word8, ArrayModel Word8 Word8)))
+               ++ named "adt_"       (comparisons (Proxy @CodeGenArrayBox))
+               ++ named "envelope_"  (comparisons (Proxy @CodeGenArrayEnvelope))
+               ++ named "recursive_" (comparisons (Proxy @(Either CodeGenTree CodeGenArrayBox)))
+               ++ [ ("defined", binary (Proxy @[ArrayModel Word8 Word8]) (smtFunction "compareArrayElements" (.===)))
+                  , ("definedSearch", binary (Proxy @[ArrayModel Word8 Word8])
+                      (smtFunction "findArrayElements" (\left right -> sequenceExpr SeqIndexOf left right [unSBV (0 :: SInteger)] :: SInteger)))
+                  , ("lambda", cgReturn (lambdaArray (\index -> tuple (constArray index :: SArray Word8 Word8, index)
+                                                          .=== tuple (constArray (index + 1) :: SArray Word8 Word8, index))
+                                         :: SArray Word8 Bool))
+                  , ("arrayKeys", do value <- cgInput "value" :: SBVCodeGen (SArray (Word8, ArrayModel Word8 Word8) Word8)
+                                     cgReturn value)
+                  ]
+
+       checkOutput testName program library = withSystemTempDirectory "sbv-array-comparison-rejection" $ \dir -> do
+         let valid = cgGenerateDriver False >> cgReturn sTrue
+             action | library = void $ compileToCLib (Just dir) "rejectedLibrary" [("validComponent", valid), (testName, program)]
+                    | True    = compileToC (Just dir) testName program
+         result <- try action :: IO (Either ErrorCall ())
          case result of
-           Left exception -> assertBool (displayException exception) ("extensional array equality" `isInfixOf` displayException exception)
-           Right _        -> assertBool "Expected generation to reject array-element comparison" False
+           Left exception -> do
+             let message = displayException exception
+             assertBool (testName ++ ": " ++ message) ("extensional array equality" `isInfixOf` message)
+             assertBool (testName ++ ": intentional rejection must not be an internal compiler error")
+                        (not ("Unexpected" `isInfixOf` message))
+           Right _ -> assertFailure (testName ++ ": expected generation to reject array-element comparison")
+         assertEqual (testName ++ ": rejected comparisons must not create any files") [] =<< listDirectory dir
 
 -- | A library header must retain user prototypes needed by its translation
 -- units, even when the external implementation is supplied at final linking.

@@ -311,6 +311,11 @@ Array comparisons with infinite or unsupported key domains, or values that
 themselves contain arrays, are rejected during generation. Comparing arrays
 nested inside collections or aggregates is also not implemented. Quantifiers,
 special solver relations, uninterpreted sorts, and soft constraints are rejected.
+The comparison restriction includes list searches, prefix/suffix checks, and
+replacement: these operations compare elements even when their result is not
+a Boolean. Arrays may still be transported inside lists and aggregates without
+comparing them. Array-containing set elements and array keys are rejected, since
+their representations require element or key equality.
 
 Exact GMP reals represent rational values, not arbitrary algebraic or
 transcendental values. Select 'cgSRealType' for native approximations and
