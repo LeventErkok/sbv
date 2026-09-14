@@ -3,6 +3,11 @@
 
 ### Version 14.8, Not yet released
 
+  * The current C backend explicitly rejects array lambdas capturing outer symbolic
+    values before emitting files, including captures embedded in nested lambdas,
+    lookup tables, and rounding modes. Closed array lambdas remain supported;
+    support for captured environments is deferred.
+
   * The current C backend supports dependency-free regex membership and generation-time
     language equality/inequality, including Boolean regex operations and nullable repetition.
     Generated matchers use static automaton tables and accept arbitrary-length canonical SBV

@@ -23,7 +23,7 @@ import qualified Data.Graph            as DG
 import Data.List                       (intercalate, intersperse, isPrefixOf, nub, nubBy, sortOn)
 import qualified Data.Map.Strict       as Map
 import Data.Maybe                      (fromJust, fromMaybe, isJust, isNothing)
-import qualified Data.Set              as Set (Set, empty, fromList, insert, intersection, map, member, notMember, null, toList, union, unions)
+import qualified Data.Set              as Set (Set, difference, empty, fromList, insert, intersection, map, member, notMember, null, toList, union, unions)
 import qualified Data.Text             as T
 import qualified Data.Text.Encoding    as TE
 import Numeric                         (showOct)
@@ -1146,6 +1146,14 @@ genCProg cfg adts lists sets fn proto
   = error "SBV->C: Cannot compile in the presence of special relations."
   | not (null unstructuredDefinitions)
   = error $ "SBV->C: Cannot compile SMT-text-only function definitions: " ++ intercalate ", " unstructuredDefinitions
+  | (callbackName, captures) : _ <- capturingArrayLambdas
+  = error $ unlines
+      [ "SBV->C: Array lambdas that capture outer symbolic values are not supported."
+      , "  Callback: " ++ callbackName
+      , "  Captured values: " ++ intercalate ", " [show sv ++ " :: " ++ show (kindOf sv) | sv <- captures]
+      , "Only closed lambdaArray bodies can be compiled: use the index, literal constants, and local computations."
+      , "Support for captured array-lambda environments is deferred; captured values are never approximated or ignored."
+      ]
   | not (null softConstraints)
   = tbd "Soft constraints"
   | not (null unsupportedConstraintAttributes)
@@ -1284,6 +1292,11 @@ genCProg cfg adts lists sets fn proto
        arrayLambdaAssignments = concatMap (\(_, _, lambdaInfo) -> F.toList (liAssignments lambdaInfo)) arrayLambdaDefinitions
        lambdaAssignments      = functionAssignments ++ arrayLambdaAssignments
        allAssignments         = assignments ++ lambdaAssignments
+       capturingArrayLambdas  = [ (callbackName, captures)
+                               | (callbackName, _, lambdaInfo) <- arrayLambdaDefinitions
+                               , let captures = cArrayLambdaFreeValues lambdaInfo
+                               , not (null captures)
+                               ]
        equalityArrayKinds     = nubBy (\left right -> arrayEqualName left == arrayEqualName right)
                                     [kindOf value | (_, SBVApp op (value:_)) <- allAssignments
                                                 , op `elem` [Equal False, Equal True, NotEqual]
@@ -2285,6 +2298,7 @@ scopedArrayLambdaName :: String -> SV -> String
 scopedArrayLambdaName scope arraySV = scope ++ "_nested_" ++ show arraySV
 
 -- | Render the private C signature for a structured array callback.
+-- Captures are rejected separately before any callback is lowered.
 arrayLambdaSignature :: String -> SV -> LambdaInfo -> Doc
 arrayLambdaSignature callbackName arraySV LambdaInfo{liParams = parameters}
   = case (kindOf arraySV, parameters) of
@@ -2299,6 +2313,24 @@ arrayLambdaResultType :: Kind -> String
 arrayLambdaResultType kind
   | isArray kind = CTypes.elementCType kind
   | True         = showCType kind
+
+-- | Conservatively check the complete retained body for free symbolic values,
+-- independently of scheduling or dead-code elimination. Include values hidden
+-- in operators, every table entry/default, the result itself, and free values
+-- of nested array lambdas. Each nested callback is also checked separately,
+-- so capturing its enclosing lambda's parameter is rejected too.
+cArrayLambdaFreeValues :: LambdaInfo -> [SV]
+cArrayLambdaFreeValues lambdaInfo = Set.toList $ Set.fromList uses `Set.difference` bound
+ where assignments = F.toList (liAssignments lambdaInfo)
+       bound       = Set.fromList (falseSV : trueSV : map fst assignments ++ map snd (liParams lambdaInfo) ++ map fst (liConsts lambdaInfo))
+       uses        = liOutput lambdaInfo : concatMap (dependencies . snd) assignments ++ concatMap snd (liTables lambdaInfo)
+
+       dependencies (SBVApp op arguments) = arguments ++ case op of
+         LkUp _ index defaultValue -> [index, defaultValue]
+         IEEEFP (FP_Cast _ _ rm)   -> [rm]
+         ArrayInit (Right lambdaDef)
+           | Just nested <- smtLambdaInfo lambdaDef -> cArrayLambdaFreeValues nested
+         _                        -> []
 
 -- | Lower a retained one-argument array lambda into a C lookup callback. Its
 -- local DAG uses the ordinary lowering pipeline, so scalar and managed values

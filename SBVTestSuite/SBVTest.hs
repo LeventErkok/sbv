@@ -66,6 +66,7 @@ import qualified TestSuite.Char.Char
 import qualified TestSuite.CodeGeneration.AddSub
 import qualified TestSuite.CodeGeneration.ArbitraryBits
 import qualified TestSuite.CodeGeneration.ArbitraryFloats
+import qualified TestSuite.CodeGeneration.ArrayCaptures
 import qualified TestSuite.CodeGeneration.CgTests
 import qualified TestSuite.CodeGeneration.CRC_USB5
 import qualified TestSuite.CodeGeneration.ExactNumbers
@@ -195,6 +196,7 @@ main = do sCaseTests <- TestSuite.CompileTests.SCase.tests
                       , TestSuite.CodeGeneration.AddSub.tests
                       , TestSuite.CodeGeneration.ArbitraryBits.tests
                       , TestSuite.CodeGeneration.ArbitraryFloats.tests
+                      , TestSuite.CodeGeneration.ArrayCaptures.tests
                       , TestSuite.CodeGeneration.CgTests.tests
                       , TestSuite.CodeGeneration.CRC_USB5.tests
                       , TestSuite.CodeGeneration.ExactNumbers.tests

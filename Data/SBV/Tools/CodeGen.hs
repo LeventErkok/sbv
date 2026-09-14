@@ -192,6 +192,15 @@ can compile to private C functions, including recursive definitions. Explicit
 closure environments remain SBV values; this is not an ABI for runtime Haskell
 function values. Hard constraints become executable preconditions.
 
+Array lambdas must be closed: their bodies may use their index, literal
+constants, and local computations, but may not capture outer symbolic values.
+The C backend checks every retained callback before generation, including
+nested lambdas, table entries/defaults, and rounding-mode operands. Unsupported
+captures are rejected explicitly, never replaced with default values or ignored.
+This check is conservative even when a retained capture would not be evaluated.
+Capturing array environments are deferred; SBV's existing frontend restrictions
+on nested and higher-order captures remain unchanged.
+
 == Runtime failures
 
 Generated programs and libraries use a fail-fast contract: a detected runtime

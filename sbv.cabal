@@ -445,6 +445,7 @@ Test-Suite SBVTest
                   , TestSuite.CodeGeneration.AddSub
                   , TestSuite.CodeGeneration.ArbitraryBits
                   , TestSuite.CodeGeneration.ArbitraryFloats
+                  , TestSuite.CodeGeneration.ArrayCaptures
                   , TestSuite.CodeGeneration.CgTests
                   , TestSuite.CodeGeneration.CRC_USB5
                   , TestSuite.CodeGeneration.ExactNumbers
