@@ -214,6 +214,7 @@ tests = testGroup "CodeGeneration.CgTests"
   , testCase "retain grouped callback inputs across independent library calls" groupedArrayInputOwnership
   , testCase "initialize and release managed input groups" (groupedManagedInputs False)
   , testCase "share driver initialization for mixed aggregate fields" sharedDriverInitialization
+  , testCase "pair collection driver cleanup with storage selection" collectionDriverStorageModes
   , testCase "initialize and release managed input groups in a library" (groupedManagedInputs True)
   , testCase "compile and execute a free array with a C definition" definedFreeArray
   , testCase "return and output owned arrays" ownedArrayResults
@@ -889,6 +890,33 @@ sharedDriverInitialization = withSystemTempDirectory "sbv-shared-driver-init" $ 
              (not ("sbv_driver_input_0_field_3_element_" `isInfixOf` driverText))
   assertBool "ADT collection elements retain their explicit initialization"
              ("sbv_driver_input_0_field_5_element_0" `isInfixOf` driverText)
+
+-- | The same tuple-element collections require individual initialization and
+-- cleanup with exact integers, but borrow compound literals with mapped ones.
+-- Keep both decisions tied to the selected representation, including when the
+-- collections occur inside an independently owned outer tuple.
+collectionDriverStorageModes :: Assertion
+collectionDriverStorageModes = mapM_ check [False, True]
+ where check mapped = withSystemTempDirectory "sbv-collection-driver-storage" $ \dir -> do
+         let program = do
+               cgOverwriteFiles True
+               when mapped (cgIntegerSize 64)
+               cgSetDriverValues [10]
+               value <- cgInput "value" :: SBVCodeGen (SBV (String, [(Integer, Word8)], RCSet (Integer, Word8)))
+               let (_, listValue, setValue) = untuple value
+                   (firstValue, _) = untuple (SL.head listValue)
+               cgOutput "copy" value
+               cgReturn (firstValue .== 11 .&& SS.member (tuple (12, 13)) setValue)
+         stdoutText <- compileProgramAndRunGenerated dir "collectionDriverStorage" program
+         assertBool ("Expected the collection driver samples to agree: " ++ stdoutText) (") = 1" `isInfixOf` stdoutText)
+         driverText <- readFile (dir </> "collectionDriverStorage_driver.c")
+         forM_ [2, 3 :: Int] $ \fieldIndex -> forM_ [0 .. 2 :: Int] $ \elementIndex -> do
+           let elementName = "sbv_driver_input_0_field_" ++ show fieldIndex ++ "_element_" ++ show elementIndex
+               clearsElement line = "sbv_tuple_owned_release_" `isInfixOf` line && ("(&" ++ elementName ++ ");") `isInfixOf` line
+           assertEqual ("Element variables follow storage selection: " ++ elementName)
+                       (not mapped) (elementName `isInfixOf` driverText)
+           assertEqual ("Element cleanup follows initialization: " ++ elementName)
+                       (not mapped) (any clearsElement (lines driverText))
 
 -- | Exercise all three instances of the shared arena emitter, including empty
 -- allocation, element alignment, independent payloads, repeated cleanup, and

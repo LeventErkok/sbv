@@ -176,7 +176,8 @@ valueDriverInit _   renderValue _               kind                       exter
   = text "const" <+> text (elementCType kind) <+> text externalName <+> text "=" <+> renderValue kind seed P.<> semi
 
 -- | Release storage created by 'valueDriverInit'. Borrowed scalar and string
--- literals require no cleanup.
+-- literals require no cleanup. Collections use the same initialization test
+-- as construction, so cleanup names only separately declared element variables.
 valueDriverClear :: CgConfig -> Kind -> String -> Doc
 valueDriverClear cfg kind externalName
   | isExactGMPKind cfg kind
@@ -189,9 +190,11 @@ valueDriverClear _   kind                externalName
   = managedValueRelease kind (text "&" P.<> text externalName)
 valueDriverClear _   kind@KArray{}       externalName
   = managedValueRelease kind (text "&" P.<> text externalName)
-valueDriverClear cfg (KList elementKind) externalName
+valueDriverClear cfg kind@(KList elementKind) externalName
+  | valueDriverNeedsInitialization cfg kind
   = vcat [valueDriverClear cfg elementKind (collectionElementName externalName index) | index <- [0 :: Int .. collectionElementCount - 1]]
-valueDriverClear cfg (KSet elementKind)  externalName
+valueDriverClear cfg kind@(KSet elementKind) externalName
+  | valueDriverNeedsInitialization cfg kind
   = vcat [valueDriverClear cfg elementKind (collectionElementName externalName index) | index <- [0 :: Int .. collectionElementCount - 1]]
 valueDriverClear _   _                   _            = empty
 

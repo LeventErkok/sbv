@@ -852,6 +852,7 @@ genDriver cfg adts randVals fn publicInputs publicOutputs mbRet
 
        -- Only these constructors need the complete ADT registry or the public
        -- versus stored array ABI. All other dispatch belongs to Value.
+       -- Resolving KApp re-enters the generic dispatcher with the concrete kind.
        initializeComposite kind externalName seed
          | KApp{} <- kind                   = driverValueInit (resolveADTReferences adts kind) externalName seed
          | isArray kind                    = initializeArray kind externalName seed
