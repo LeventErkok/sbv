@@ -11,23 +11,39 @@
 
 {-# OPTIONS_GHC -Wall -Werror #-}
 
-module Data.SBV.Compilers.C.Syntax (cCommentText, cStringLiteral) where
+module Data.SBV.Compilers.C.Syntax (cCommentText, cStringLiteral, cUnusedAttribute) where
 
 import qualified Data.ByteString as BS
 import Data.Char (chr, isControl, ord)
+import Data.List (intercalate)
 import qualified Data.Text as T
 import qualified Data.Text.Encoding as TE
 import Numeric (showOct)
 import Text.PrettyPrint.HughesPJ (Doc, doubleQuotes, text)
 
+-- | Shared portability preamble for helpers unused by a particular program.
+cUnusedAttribute :: String
+cUnusedAttribute = intercalate "\n"
+  [ "#ifndef SBV_CGEN_UNUSED"
+  , "#if defined(__GNUC__) || defined(__clang__)"
+  , "#define SBV_CGEN_UNUSED __attribute__((unused))"
+  , "#else"
+  , "#define SBV_CGEN_UNUSED"
+  , "#endif"
+  , "#endif"
+  ]
+
 -- | Render comment contents without allowing comment delimiters, line splices,
 -- trigraphs, or embedded control characters to affect the surrounding C source.
 -- Octal spellings here are readable text, not escapes interpreted by C comments.
 cCommentText :: String -> Doc
-cCommentText = text . concatMap escape
- where escape '*'  = "\\052"
+cCommentText = text . protect
+ where protect []             = []
+       protect ('*':'/':rest) = "\\052/" ++ protect rest
+       protect ('/':'*':rest) = "/\\052" ++ protect rest
+       protect ('?':'?':rest) = "\\077" ++ protect ('?' : rest)
+       protect (c:rest)       = escape c ++ protect rest
        escape '\\' = "\\134"
-       escape '?'  = "\\077"
        escape '\n' = "\n"
        escape '\t' = "\t"
        escape c

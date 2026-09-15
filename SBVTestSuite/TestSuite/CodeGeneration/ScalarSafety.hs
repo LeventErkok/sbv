@@ -24,17 +24,24 @@ import System.Process (readProcessWithExitCode)
 import Test.Tasty.HUnit (assertBool, assertEqual)
 
 import Data.SBV.Tools.CodeGen
+import qualified Data.SBV.Tools.CodeGen.Legacy as Legacy
 import Utils.SBVTestFramework
 
 -- | Generate a standalone function or a single-component static library.
 type Generator = FilePath -> Bool -> SBVCodeGen () -> IO ()
 
--- | Exercise the default public backend.
+-- | Exercise both public backends with the same scalar safety matrix.
 tests :: TestTree
-tests = testsWith "CodeGeneration.ScalarSafety" $ \dir library program ->
-  if library
-     then void $ compileToCLib (Just dir) "scalarLibrary" [("scalarChecks", program)]
-     else compileToC (Just dir) "scalarChecks" program
+tests = testGroup "CodeGeneration.ScalarSafety"
+  [ testsWith "current" $ \dir library program ->
+      if library
+         then void $ compileToCLib (Just dir) "scalarLibrary" [("scalarChecks", program)]
+         else compileToC (Just dir) "scalarChecks" program
+  , testsWith "legacy" $ \dir library program ->
+      if library
+         then void $ Legacy.compileToCLib (Just dir) "scalarLibrary" [("scalarChecks", program)]
+         else Legacy.compileToC (Just dir) "scalarChecks" program
+  ]
 
 -- | Reuse the same strict-warning, optimization, and sanitizer matrix for a
 -- compatibility backend. Independent C callers supply fractional inputs and

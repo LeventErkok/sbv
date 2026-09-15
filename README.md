@@ -116,7 +116,7 @@ Functions proven terminating: sbv.reverse
 
 **Theorem proving (TP)** — Semi-automated inductive proofs (including strong induction) with equational reasoning chains. Includes termination checking, recursive and mutually recursive definitions, productive (co-recursive) functions, and user-defined measures.
 
-**Code generation** — Compile symbolic programs to C as straight-line programs or libraries (`compileToC`, `compileToCLib`), and generate test vectors (`genTest`).
+**Code generation** — Compile symbolic programs to C functions or static libraries (`compileToC`, `compileToCLib`), including recursive functions, arbitrary-width arithmetic, structured values, and bounded regex compilation. The previous compiler remains available through `Data.SBV.Tools.CodeGen.Legacy`. Generate test vectors with `genTest`.
 
 **SMT interaction** — Incremental mode via `runSMT`/`query` for programmatic solver interaction with a high-level typed API. Run multiple solvers simultaneously with `proveWithAny`/`proveWithAll`.
 

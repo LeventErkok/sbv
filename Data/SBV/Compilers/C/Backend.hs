@@ -1,0 +1,3143 @@
+-----------------------------------------------------------------------------
+-- |
+-- Module    : Data.SBV.Compilers.C.Backend
+-- Copyright : (c) Levent Erkok
+-- License   : BSD3
+-- Maintainer: erkokl@gmail.com
+-- Stability : experimental
+--
+-- Compilation of symbolic programs to C
+-----------------------------------------------------------------------------
+
+{-# LANGUAGE TupleSections #-}
+
+{-# OPTIONS_GHC -Wall -Werror #-}
+
+module Data.SBV.Compilers.C.Backend(compileToC, compileToCLib, compileToC', compileToCLib') where
+
+import Data.SBV.Compilers.C.Types (isConcreteADTReference)
+import Control.DeepSeq                 (rnf)
+import Data.Char                       (isAsciiLower, isAsciiUpper, isDigit, isSpace, toLower)
+import qualified Data.Foldable         as F (toList)
+import qualified Data.Graph            as DG
+import Data.List                       (intercalate, intersperse, isPrefixOf, nub, sortOn)
+import qualified Data.Map.Strict       as Map
+import Data.Maybe                      (fromJust, fromMaybe, isJust, isNothing, maybeToList)
+import qualified Data.Set              as Set (Set, difference, empty, fromList, insert, intersection, map, member, notMember, null, toList, union, unions)
+import qualified Data.Text             as T
+import System.FilePath                 (replaceExtension, takeBaseName)
+import System.Random
+
+import Data.SBV.Core.Symbolic (LambdaInfo(..), ResultInp(..), ProgInfo(..), SMTDef(SMTDef), smtDefInfo, smtLambdaInfo)
+
+-- Work around the fact that GHC 8.4.1 started exporting <>.. Hmm..
+import Text.PrettyPrint.HughesPJ
+import qualified Text.PrettyPrint.HughesPJ as P ((<>))
+
+import Data.SBV.Core.Data
+import Data.SBV.Core.Kind (expandKinds, kRoundingMode)
+import Data.SBV.Compilers.C.ADT
+import Data.SBV.Compilers.C.Array
+import Data.SBV.Compilers.C.BV
+import Data.SBV.Compilers.C.FP
+import Data.SBV.Compilers.C.Finite (finiteDomainSize)
+import Data.SBV.Compilers.C.GMP
+import Data.SBV.Compilers.C.List
+import Data.SBV.Compilers.C.Lowering
+import Data.SBV.Compilers.C.NonLinear
+import Data.SBV.Compilers.C.PseudoBoolean (assignPseudoBoolean)
+import Data.SBV.Compilers.C.Real (mappedRealFloorWidth, mappedRealFloorCall, mappedRealFloorRuntime)
+import Data.SBV.Compilers.C.RegExp (regexExpr)
+import Data.SBV.Compilers.C.Set
+import Data.SBV.Compilers.C.Syntax (cUnusedAttribute, cCommentText, cStringLiteral)
+import Data.SBV.Compilers.C.Table
+import Data.SBV.Compilers.C.Text
+import qualified Data.SBV.Compilers.C.Types as CTypes (constElementCType, definedFunctionCName, elementCType, kindTag)
+import Data.SBV.Compilers.C.Tuple
+import Data.SBV.Compilers.C.Value ( byValueEqual, managedValueClone, managedValueRelease, valueNeedsOwnership
+                                , valueDriverNeedsInitialization, valueDriverInit, valueDriverClear
+                                )
+import Data.SBV.Compilers.CodeGen
+
+import Data.SBV.Utils.PrettyNum   (chex, showCFloat, showCDouble)
+
+import GHC.Stack
+
+---------------------------------------------------------------------------
+-- * API
+---------------------------------------------------------------------------
+
+-- | Given a symbolic computation, render it as an equivalent collection of files
+-- that make up a C program:
+--
+--   * The first argument is the directory name under which the files will be saved. To save
+--     files in the current directory pass @'Just' \".\"@. Use 'Nothing' for printing to stdout.
+--
+--   * The second argument is the name of the C function to generate.
+--
+--   * The final argument is the function to be compiled.
+--
+-- Compilation will also generate a @Makefile@,  a header file, and a driver (test) program, etc. As a
+-- result, we return whatever the code-gen function returns. Most uses should simply have @()@ as
+-- the return type here, but the value can be useful if you want to chain the result of
+-- one compilation act to the next.
+-- Names must obey the public naming contract in "Data.SBV.Tools.CodeGen";
+-- invalid or reserved names are rejected before any files are written.
+--
+-- Detected runtime failures in the generated code terminate the calling process;
+-- there is no recoverable error-return interface. See the runtime contract in
+-- "Data.SBV.Tools.CodeGen".
+-- Callers must enter generated code in @FE_TONEAREST@ hardware rounding mode;
+-- generated code does not check or change that mode.
+compileToC :: Maybe FilePath -> String -> SBVCodeGen a -> IO a
+compileToC mbDirName nm f = do (retVal, cfg, bundle) <- compileToC' nm f
+                               renderCgPgmBundle mbDirName (cfg, bundle)
+                               pure retVal
+
+-- | Lower level version of 'compileToC', producing a t'CgPgmBundle'
+compileToC' :: String -> SBVCodeGen a -> IO (a, CgConfig, CgPgmBundle)
+compileToC' nm f = do validateCName "function" nm `seq` pure ()
+                      rands <- randoms <$> newStdGen
+                      result@(_, _, bundle) <- codeGen SBVToC (defaultCgConfig { cgDriverVals = rands }) nm f
+                      bundle `seq` pure result
+
+-- | Create code to generate a library archive (.a) from given symbolic functions. Useful when generating code
+-- from multiple functions that work together as a library.
+--
+--   * The first argument is the directory name under which the files will be saved. To save
+--     files in the current directory pass @'Just' \".\"@. Use 'Nothing' for printing to stdout.
+--
+--   * The second argument is the name of the archive to generate.
+--
+--   * The third argument is the list of functions to include, in the form of function-name/code pairs, similar
+--     to the second and third arguments of 'compileToC', except in a list.
+--
+-- The component list must be nonempty and component names must be distinct.
+-- Generated file names and driver entry points must not collide either.
+-- As with 'compileToC', detected runtime failures terminate the calling process,
+-- including when the generated functions are used as a library.
+compileToCLib :: Maybe FilePath -> String -> [(String, SBVCodeGen a)] -> IO [a]
+compileToCLib mbDirName libName comps = do (retVal, cfg, pgm) <- compileToCLib' libName comps
+                                           renderCgPgmBundle mbDirName (cfg, pgm)
+                                           pure retVal
+
+-- | Lower level version of 'compileToCLib', producing a t'CgPgmBundle'
+compileToCLib' :: String -> [(String, SBVCodeGen a)] -> IO ([a], CgConfig, CgPgmBundle)
+compileToCLib' libName comps
+  | null comps
+  = error "SBV.compileToCLib: A library must contain at least one component."
+  | not (null duplicates)
+  = error $ "SBV.compileToCLib: Duplicate component names: " ++ unwords duplicates
+  | True
+  = do validateCName "library" libName `seq` pure ()
+       mapM_ (\(fn, _) -> validateCName "component" fn `seq` pure ()) comps
+       resCfgBundles <- mapM component comps
+       let (finalCfg, finalPgm) = mergeToLib libName [(c, b) | (_, c, b) <- resCfgBundles]
+       finalPgm `seq` pure ([r | (r, _, _) <- resCfgBundles], finalCfg, finalPgm)
+ where duplicates = duplicateNames (map fst comps)
+
+       component (componentName, program) = do
+         rands <- randoms <$> newStdGen
+         codeGen SBVToCLibraryComponent (defaultCgConfig { cgDriverVals = rands }) componentName program
+
+-- | Report each repeated name once, preserving its first occurrence order.
+duplicateNames :: [String] -> [String]
+duplicateNames names = [nm | nm <- nub names, length (filter (== nm) names) > 1]
+
+-- | Retain the first value for each key without repeated linear scans or
+-- repeated rendering of documents. Original order is significant in C output.
+uniqueOn :: Ord key => (value -> key) -> [value] -> [value]
+uniqueOn key = go Set.empty
+ where go _ [] = []
+       go seen (value:rest)
+         | valueKey `Set.member` seen = go seen rest
+         | True                       = value : go (Set.insert valueKey seen) rest
+         where valueKey = key value
+
+-- | Validate public C names before rendering. Use a portable ASCII spelling,
+-- excluding language keywords and namespaces owned by the generated runtime
+-- and its headers. User-supplied C declarations remain the caller's responsibility.
+validateCName :: String -> String -> ()
+validateCName role nm
+  | not validIdentifier = reject "expected an ASCII C identifier"
+  | nm `elem` keywords  = reject "C keyword"
+  | reserved            = reject "reserved C/backend name"
+  | True                = ()
+ where reject reason = error $ "SBV->C: Invalid " ++ role ++ " name " ++ show nm ++ ": " ++ reason ++ "."
+       letter c = isAsciiLower c || isAsciiUpper c
+       validIdentifier = case nm of
+                           initial : rest -> (letter initial || initial == '_') && all (\c -> letter c || isDigit c || c == '_') rest
+                           []           -> False
+       keywords = words ("auto break case char const continue default do double else enum extern float for goto if inline int long register"
+                  ++ " restrict return short signed sizeof static struct switch typedef union unsigned void volatile while alignas alignof"
+                  ++ " bool constexpr false nullptr static_assert thread_local true typeof typeof_unqual")
+       reserved = any (`isPrefixOf` nm)
+                    ["_", "sbv_", "SBV", "SWord", "SInt", "SFP", "mp_", "mpz_", "mpq_", "mpf_", "gmp_", "bf_", "BF_", "GMP_"
+                    , "FLT_", "DBL_", "LDBL_", "FP_", "FE_", "va_"]
+               || nm `elem` integerMacros
+               || nm `elem` words ("SBool SFloat SDouble SReal SRational SChar SString RoundingMode div_t ldiv_t lldiv_t size_t ptrdiff_t intmax_t"
+                  ++ " uintmax_t intptr_t uintptr_t FILE fpos_t NULL EOF stdin stdout stderr BUFSIZ FILENAME_MAX FOPEN_MAX L_tmpnam"
+                  ++ " SEEK_CUR SEEK_END SEEK_SET TMP_MAX EXIT_SUCCESS EXIT_FAILURE RAND_MAX MB_CUR_MAX HUGE_VAL HUGE_VALF HUGE_VALL"
+                  ++ " INFINITY NAN MATH_ERRNO MATH_ERREXCEPT math_errhandling errno limb_t slimb_t fenv_t fexcept_t"
+                  ++ " SIZE_MAX PTRDIFF_MAX PTRDIFF_MIN SIG_ATOMIC_MIN SIG_ATOMIC_MAX WCHAR_MIN WCHAR_MAX WINT_MIN WINT_MAX")
+               || nm `elem` [sign ++ "int" ++ flavor ++ show bits ++ "_t" | sign <- ["", "u"], flavor <- ["", "_least", "_fast"], bits <- [8, 16, 32, 64 :: Int]]
+               || (role /= "parameter" && (nm `elem` libraryFunctions || nm `elem` mathFunctions))
+
+       -- External library identifiers may be shadowed in a prototype's
+       -- parameter scope, but cannot be redefined as generated entry points.
+       libraryFunctions = words ("main abort exit quick_exit _Exit atexit at_quick_exit malloc calloc realloc free aligned_alloc abs labs llabs div ldiv"
+                  ++ " lldiv atoi atol atoll atof strtol strtoll strtoul strtoull strtof strtod strtold rand srand"
+                  ++ " getenv system bsearch qsort mblen mbtowc wctomb mbstowcs wcstombs remove rename tmpfile tmpnam fclose fflush fopen"
+                  ++ " freopen setbuf setvbuf fprintf fscanf printf scanf snprintf sprintf sscanf vfprintf vfscanf vprintf vscanf vsnprintf"
+                  ++ " vsprintf vsscanf fgetc fgets fputc fputs getc getchar putc putchar puts ungetc fread fwrite fgetpos fseek fsetpos"
+                  ++ " ftell rewind clearerr feof ferror perror memcpy memmove memcmp memchr memset strcat strncat strchr strrchr strcmp"
+                  ++ " strncmp strcoll strcpy strncpy strcspn strerror strlen strpbrk strspn strstr strtok strxfrm fpclassify isfinite"
+                  ++ " isinf isnan isnormal signbit isgreater isgreaterequal isless islessequal islessgreater isunordered")
+       mathFunctions = [base ++ suffix | base <- words ("acos asin atan atan2 cos sin tan acosh asinh atanh cosh sinh tanh exp exp2 expm1 frexp ldexp log log10 log1p log2"
+                  ++ " logb modf scalbn scalbln cbrt fabs hypot pow sqrt erf erfc lgamma tgamma ceil floor nearbyint rint lrint llrint"
+                  ++ " round lround llround trunc fmod remainder remquo copysign nan nextafter nexttoward fdim fmax fmin fma"), suffix <- ["", "f", "l"]]
+
+       integerMacros = [sign ++ flavor ++ width ++ suffix
+                       | sign <- ["INT", "UINT"], flavor <- ["", "_LEAST", "_FAST"]
+                       , width <- ["8", "16", "32", "64", "MAX", "PTR"], suffix <- ["_MIN", "_MAX", "_C"]]
+                    ++ [prefix ++ conversion ++ flavor ++ width
+                       | prefix <- ["PRI", "SCN"], conversion <- ["d", "i", "o", "u", "x", "X"]
+                       , flavor <- ["", "LEAST", "FAST"], width <- ["8", "16", "32", "64", "MAX", "PTR"]]
+
+-- | Bind each public parameter to a disjoint implementation-only name. C
+-- parameter names do not affect linkage or the positional calling convention.
+privateParameters :: String -> [(String, CgVal)] -> [(String, CgVal)]
+privateParameters prefix = zipWith (\index (_, value) -> (prefix ++ show index, value)) [0 :: Int ..]
+
+---------------------------------------------------------------------------
+-- * Implementation
+---------------------------------------------------------------------------
+
+-- | C targets differ only in whether optional build metadata must survive
+-- until library merging. The user's requested output configuration is retained.
+data SBVToC = SBVToC | SBVToCLibraryComponent
+
+-- | Select the current lowering pipeline, retaining component build metadata
+-- until a library's dependencies have been combined.
+instance CgTarget SBVToC where
+  targetName _                       = "C"
+  translate SBVToC                   = cgen False
+  translate SBVToCLibraryComponent   = cgen True
+
+-- | Report an unexpected compiler input or violated internal invariant.
+die :: String -> a
+die msg = error $ "SBV->C: Unexpected: " ++ msg
+
+-- | Report an operation without an executable lowering.
+tbd :: String -> a
+tbd msg = error $ "SBV->C: Not yet supported: " ++ msg
+
+-- | Assemble the generated translation unit, public header, and optional
+-- driver and build instructions from the symbolic result.
+cgen :: Bool -> CgConfig -> String -> CgState -> Result -> CgPgmBundle
+cgen retainBuildMetadata cfg nm st sbvProg
+   -- Force type declarations, the signature, and the main program so any
+   -- type-conversion exceptions appear while constructing the bundle.
+   = foldr (seq . validateCName "parameter") () interfaceNames `seq`
+     rnf (render extraTypes) `seq` rnf (render sig) `seq` rnf (render (vcat body)) `seq` result
+  where result = CgPgmBundle bundleKind
+                        $ filt [ ("Makefile"   , (CgMakefile flags          , [genMake usesFloating (cgGenDriver cfg) nm nmd flags]))
+                               , (nm  ++ ".h"  , (CgCHeader (CgCHeaderInfo usesFloating extraTypes [sig] extProtos), [genHeader usesFloating bundleKind nm [sig] extProtos extraTypes]))
+                               , (nmd ++ ".c"  , (CgDriver                  , driver))
+                               , (nm  ++ ".c"  , (CgSource                  , body))
+                               ]
+
+        (body, requirements) = genCProg cfg adts lists sets nm implementationSig sbvProg privateIns privateOuts mbRet extDecls
+        privateIns          = privateParameters "sbv_input_" ins
+        privateOuts         = privateParameters "sbv_output_" allOuts
+        implementationSig   = pprCFunHeader cfg nm privateIns privateOuts mbRet
+
+        bundleKind = (cgInteger cfg, cgReal cfg)
+
+        extraTypes =  roundingModeTypeDecls usesRoundingModeType
+                   $$ (if hasRequirement CRequiresWideBV then wideBVTypeDecls (wideBVKinds kinds) else empty)
+                   $$ (if hasRequirement CRequiresLibBF  then arbitraryFPTypeDecls (arbitraryFPKinds kinds) else empty)
+                   $$ (if hasRequirement CRequiresGMP    then gmpTypeDecls cfg kinds else empty)
+                   $$ (if hasRequirement CRequiresText   then textTypeDecls kinds else empty)
+                   $$ (if hasRequirement CRequiresArrays then arrayForwardTypeDecls arrays else empty)
+                   $$ tupleForwardTypeDecls tuples
+                   $$ adtForwardTypeDecls adts
+                   $$ listForwardTypeDecls lists
+                   $$ setForwardTypeDecls sets
+                   $$ (if hasRequirement CRequiresLists  then listTypeDecls cfg lists else empty)
+                   $$ (if hasRequirement CRequiresSets   then setTypeDecls cfg sets else empty)
+                   $$ structuralTypeDecls cfg adts tuples
+                   $$ adtOwnershipTypePrototypes adts
+                   $$ tupleOwnershipTypeDecls cfg tuples
+                   $$ adtOwnershipTypeDecls cfg adts
+                   $$ (if hasRequirement CRequiresLists then listOwnershipTypeDecls cfg lists else empty)
+                   $$ (if hasRequirement CRequiresSets  then setOwnershipTypeDecls cfg sets else empty)
+                   $$ (if hasRequirement CRequiresArrays then arrayTypeDecls arrays else empty)
+        kinds           = Set.unions [reskinds sbvProg, usedKinds]
+        usesFloating    = any (cFloatingKind cfg) kinds
+        usedKinds       = Set.union interfaceKinds (cProgramUsedKinds sbvProg)
+        interfaceKinds  = Set.fromList . concatMap expandKinds
+                        $ concatMap cgValKinds (map snd ins ++ map snd outs ++ cgReturns st)
+          where cgValKinds (CgAtomic sv) = [kindOf sv]
+                cgValKinds (CgArray svs) = map kindOf svs
+        arrays          = arrayKinds kinds
+        lists           = listKinds kinds
+        sets            = setKinds kinds
+        adts            = adtKinds kinds usedKinds
+        tuples          = tupleKinds (Set.map (resolveADTReferences adts) kinds)
+
+        hasRequirement requirement = requirement `Set.member` requirements
+
+        usesRoundingModeType = any (any isRoundingMode . expandKinds) kinds
+
+        randVals = cgDriverVals cfg
+        driver   = genDriver cfg adts randVals nm ins allOuts mbRet
+
+        filt xs  = [c | c@(_, (k, _)) <- xs, need k]
+          where need k | isCgDriver   k = cgGenDriver cfg
+                       | isCgMakefile k = retainBuildMetadata || cgGenMakefile cfg
+                       | True           = True
+
+        nmd      = nm ++ "_driver"
+        sig      = pprCFunHeader cfg nm ins allOuts mbRet
+        ins      = cgInputs st
+        outs     = cgOutputs st
+        allOuts  = outs ++ returnOuts
+        mbRet    = case cgReturns st of
+                     [CgAtomic resultSV] -> Just resultSV
+                     _                   -> Nothing
+
+        returnOuts = case cgReturns st of
+                       []           -> []
+                       [CgAtomic{}] -> []
+                       results      -> zipWith (\index returnValue -> (returnName index, returnValue)) [0 :: Int ..] results
+
+        returnName index = availableName 0
+          where availableName prefixLength
+                  | candidate `elem` interfaceNames = availableName (prefixLength + 1)
+                  | True                            = candidate
+                  where candidate = concat (replicate prefixLength "sbv_") ++ "result_" ++ show index
+
+        interfaceNames = map fst (ins ++ outs)
+
+        extProtos = case cgPrototypes st of
+                     [] -> empty
+                     xs -> vcat $ text "/* User given prototypes: */" : map text xs
+        extDecls  = case cgDecls st of
+                     [] -> empty
+                     xs -> vcat $ text "/* User given declarations: */" : map text xs
+        flags    = requirementLDFlags requirements ++ cgLDFlags st
+
+-- | Collect types used by the entry point and all retained function/lambda
+-- bodies. A private computation can construct and consume an ADT without that
+-- type appearing in any public signature or top-level assignment. Constants,
+-- parameters, and table entries count even when their body has no assignments.
+cProgramUsedKinds :: Result -> Set.Set Kind
+cProgramUsedKinds result = Set.fromList . concatMap expandKinds $
+     assignmentKinds assignments
+  ++ map (kindOf . fst) (snd (resConsts result))
+  ++ tableKinds (resTables result)
+  ++ concat [lambdaKinds body | (_, (definition, _)) <- resDefinitions result, Just body <- [smtDefInfo definition]]
+ where SBVPgm program = resAsgns result
+       assignments = F.toList program
+
+       assignmentKinds expressions = concat
+         [ map kindOf (value : arguments)
+        ++ case operation of
+             ArrayInit (Right lambdaDef) | Just body <- smtLambdaInfo lambdaDef -> lambdaKinds body
+             _                                                                 -> []
+         | (value, SBVApp operation arguments) <- expressions]
+
+       lambdaKinds body = map kindOf (liOutput body : map snd (liParams body) ++ map fst (liConsts body))
+                       ++ assignmentKinds (F.toList (liAssignments body))
+                       ++ tableKinds (liTables body)
+
+       tableKinds tables = concat [keyKind : valueKind : map kindOf entries | ((_, keyKind, valueKind), entries) <- tables]
+
+-- | Emit tuple and ADT layouts in their joint by-value dependency order.
+-- Forward-declared recursive ADT pointers impose no ordering constraint.
+structuralTypeDecls :: CgConfig -> [Kind] -> [Kind] -> Doc
+structuralTypeDecls cfg adts tuples = vcat (map declaration orderedKinds)
+ where allKinds        = tuples ++ adts
+       availableKinds  = Set.fromList allKinds
+       dependencyNodes = [(kind, kind, filter (`Set.member` availableKinds) (dependencies kind)) | kind <- allKinds]
+       orderedKinds     = concatMap orderedComponent (DG.stronglyConnComp dependencyNodes)
+
+       dependencies (KTuple fieldKinds) = [ resolved
+                                           | fieldKind <- fieldKinds
+                                           , let resolved = resolveADTReferences adts fieldKind
+                                           , isTuple resolved || isConcreteADTReference resolved
+                                           ]
+       dependencies kind
+         | isConcreteADTReference kind = adtDeclarationDependencies adts kind
+         | True                   = []
+
+       orderedComponent (DG.AcyclicSCC kind) = [kind]
+       orderedComponent (DG.CyclicSCC kinds) = error $ "SBV->C: Recursive by-value tuple/ADT layout: " ++ show kinds
+
+       declaration kind
+         | isTuple kind           = tupleTypeDecls [kind]
+         | isConcreteADTReference kind = adtTypeDeclsFor cfg adts [kind]
+         | True                   = error $ "SBV->C: Expected a tuple or ADT layout, received " ++ show kind
+
+-- | Pretty print a function type. A single return value uses C's return
+-- position when its representation permits; aggregate return groups and
+-- multiple returns are passed as output parameters by the caller.
+pprCFunHeader :: CgConfig -> String -> [(String, CgVal)] -> [(String, CgVal)] -> Maybe SV -> Doc
+pprCFunHeader cfg fn ins outs mbRet = retType <+> text fn P.<> parens (fsep (punctuate comma params))
+  where params  = map (mkParam cfg) ins ++ map (mkPParam cfg) outs ++ exactResult
+        retType = case mbRet of
+                    Just sv | isArray sv                           -> text (arrayOutputCType (kindOf sv))
+                    Just sv | not (isExactGMPKind cfg (kindOf sv)) -> pprCWord False sv
+                    _                                              -> text "void"
+
+        exactResult = case mbRet of
+                        Just sv | isExactGMPKind cfg (kindOf sv) -> [text (gmpOutputType (kindOf sv)) <+> text "sbv_result"]
+                        _                                        -> []
+
+-- | Render a generated C input parameter.
+mkParam :: CgConfig -> (String, CgVal) -> Doc
+mkParam _   (n, CgAtomic sv)
+  | isArray sv = text "const" <+> text (arrayInputCType (kindOf sv)) <+> text n
+mkParam _   (n, CgAtomic sv)     = pprCWord True sv <+> text n
+mkParam _   (_, CgArray [])        = die "mkParam: CgArray with no elements!"
+mkParam cfg (n, CgArray (sv:_))
+  | isExactGMPKind cfg kind = text "const" <+> text (gmpArrayType kind) <+> text "*" P.<> text n
+  | isArray kind            = text "const" <+> text (arrayInputCType kind) <+> text "*" P.<> text n
+  | True                    = pprCWord True sv <+> text "*" P.<> text n
+  where kind = kindOf sv
+
+-- | Render a generated C output parameter.
+mkPParam :: CgConfig -> (String, CgVal) -> Doc
+mkPParam _   (n, CgAtomic sv)
+  | isArray sv = text (arrayOutputCType (kindOf sv)) <+> text "*" P.<> text n
+mkPParam cfg (n, CgAtomic sv)
+  | isExactGMPKind cfg (kindOf sv) = text (gmpOutputType (kindOf sv)) <+> text n
+  | True                           = pprCWord False sv <+> text "*" P.<> text n
+mkPParam _   (_, CgArray [])        = die "mkPParam: CgArray with no elements!"
+mkPParam cfg (n, CgArray (sv:_))
+  | isExactGMPKind cfg kind = text (gmpArrayType kind) <+> text "*" P.<> text n
+  | isArray kind            = text (arrayOutputCType kind) <+> text "*" P.<> text n
+  | True                    = pprCWord False sv <+> text "*" P.<> text n
+  where kind = kindOf sv
+
+-- | Renders as "const SWord8 s0", etc. the first parameter is the width of the typefield
+declSV :: Int -> SV -> Doc
+declSV w sv = text "const" <+> pad (showCType sv) <+> text (show sv)
+  where pad s = text $ s ++ replicate (w - length s) ' '
+
+-- | Return the proper declaration and the result as a pair. No consts
+declSVNoConst :: Int -> SV -> (Doc, Doc)
+declSVNoConst w sv = (text "     " <+> pad (showCType sv), text (show sv))
+  where pad s = text $ s ++ replicate (w - length s) ' '
+
+-- | Shared rendering information for one generated function. Constants are
+-- scoped to that function, while the ADT registry describes the whole bundle.
+data CRenderEnv = CRenderEnv
+  { renderConfig    :: CgConfig   -- ^ Representation and runtime-check choices.
+  , renderADTs      :: [Kind]     -- ^ Complete concrete ADT registry.
+  , renderConstants :: [(SV, CV)] -- ^ Constants still eligible for inline rendering.
+  }
+
+-- | Renders as "s0", etc, or the corresponding constant.
+showSV :: CRenderEnv -> SV -> Doc
+showSV env sv
+  | sv == falseSV                              = text "false"
+  | sv == trueSV                               = text "true"
+  | Just cv <- sv `lookup` renderConstants env = mkConst env cv
+  | True                                       = text $ show sv
+
+-- | Words as it would map to a C word
+pprCWord :: HasKind a => Bool -> a -> Doc
+pprCWord cnst v = (if cnst then text "const" else empty) <+> text (showCType v)
+
+-- | Almost a "show", but map "SWord1" to "SBool"
+-- which is used for extracting one-bit words. This is OK since C's bool type
+-- handles arithmetic fine, and maps nicely to our `SWord 1`. (Same isn't true for `SInt 1`, which
+-- doesn't have an easy counter-part on the C side.
+showCType :: HasKind a => a -> String
+showCType i = case kindOf i of
+                KBounded False 1 -> "SBool"
+                KBounded False w -> "SWord" ++ show w
+                KBounded True  w -> "SInt"  ++ show w
+                k@KArray{}        -> arrayCType k
+                k@KTuple{}        -> tupleCType k
+                k@KADT{}
+                  | not (isRoundingMode k) && not (isUninterpreted k) -> adtCType k
+                k@KFP{}           -> arbitraryFPCType k
+                KString           -> "SString"
+                KChar             -> "SChar"
+                k@KList{}         -> listCType k
+                k@KSet{}          -> setCType k
+                k                -> show k
+
+-- | The printf specifier for the type
+specifier :: CgConfig -> SV -> Doc
+specifier cfg = specifierKind cfg . kindOf
+
+-- | Return the @printf@ conversion for a supported scalar kind.
+specifierKind :: CgConfig -> Kind -> Doc
+specifierKind cfg kind = case kind of
+  KVar{}        -> die $ "variable sort: " ++ show kind
+  KBool         -> spec (False, 1)
+  KBounded b i  -> spec (b, i)
+  KUnbounded    -> spec (True, fromJust (cgInteger cfg))
+  KReal         -> specF (fromJust (cgReal cfg))
+  KFloat        -> specF CgFloat
+  KDouble       -> specF CgDouble
+  KString       -> text "%s"
+  KChar         -> text "%c"
+  KRational     -> die   "rational sort"
+  KFP{}         -> die   "arbitrary float sort"
+  KList k       -> die $ "list sort: "   ++ show k
+  KSet  k       -> die $ "set sort: "    ++ show k
+  KApp s _      -> die $ "ADT app: "     ++ s
+  k@(KADT s _ _)
+    | isRoundingMode k -> text "%d"
+    | True             -> die $ "ADT: " ++ s
+  KTuple k      -> die $ "tuple sort: "  ++ show k
+  KArray  k1 k2 -> die $ "array sort: "  ++ show (k1, k2)
+  where u8InHex = cgShowU8InHex cfg
+
+        spec :: (Bool, Int) -> Doc
+        spec (False,  1) = text "%d"
+        spec (False,  8)
+          | u8InHex      = text "0x%02\"PRIx8\""
+          | True         = text "%\"PRIu8\""
+        spec (True,   8) = text "%\"PRId8\""
+        spec (False, 16) = text "0x%04\"PRIx16\"U"
+        spec (True,  16) = text "%\"PRId16\""
+        spec (False, 32) = text "0x%08\"PRIx32\"UL"
+        spec (True,  32) = text "%\"PRId32\"L"
+        spec (False, 64) = text "0x%016\"PRIx64\"ULL"
+        spec (True,  64) = text "%\"PRId64\"LL"
+        spec (s, sz)     = die $ "Format specifier at type " ++ (if s then "SInt" else "SWord") ++ show sz
+
+        specF :: CgSRealType -> Doc
+        specF CgFloat      = text "%a"
+        specF CgDouble     = text "%a"
+        specF CgLongDouble = text "%Lf"
+
+-- | Make a constant value of the given type. Explicitly mapped integers are
+-- reduced to their requested width; bounded constants are already normalized.
+-- The enclosing program's ADT registry is reused throughout nested literals.
+--   There are many options here, using binary, decimal, etc. We simply use decimal for values 8-bits or less,
+--   and hex otherwise.
+mkConst :: CRenderEnv -> CV -> Doc
+mkConst env = renderConstant
+ where
+  cfg  = renderConfig env
+  adts = renderADTs env
+
+  renderConstant (CV KReal (CAlgReal (AlgRational False _)))
+    = error "SBV->C: Inexact SReal literals do not specify an exact value and cannot be compiled."
+  renderConstant (CV KReal (CAlgReal AlgInterval{}))
+    = error "SBV->C: Interval SReal literals do not specify an exact value and cannot be compiled."
+  renderConstant (CV KReal (CAlgReal AlgPolyRoot{}))
+    = error "SBV->C: Algebraic SReal literals are not supported; use an explicitly chosen rational approximation."
+  renderConstant cv
+    | Just d <- roundingModeConst cv = d
+  renderConstant cv
+    | Just d <- arrayConst renderConstant cv = d
+  renderConstant cv
+    | Just d <- tupleConst renderConstant cv = d
+  renderConstant cv
+    | Just d <- adtConst adts renderConstant cv = d
+  renderConstant cv
+    | Just d <- listConst renderConstant cv = d
+  renderConstant cv
+    | Just d <- setConst renderConstant cv = d
+  renderConstant cv
+    | Just d <- gmpConst cfg cv = d
+  renderConstant (CV k (CInteger i))
+    | Just d <- wideBVConst k i = d
+  renderConstant (CV KReal (CAlgReal (AlgRational _ r))) = double (fromRational r :: Double) P.<> sRealSuffix (fromJust (cgReal cfg))
+    where sRealSuffix CgFloat      = text "F"
+          sRealSuffix CgDouble     = empty
+          sRealSuffix CgLongDouble = text "L"
+  renderConstant (CV KUnbounded       (CInteger i)) = renderConstant (normCV (CV (KBounded True (fromJust (cgInteger cfg))) (CInteger i)))
+  renderConstant (CV (KBounded sg sz) (CInteger i)) = showSizedConst (cgShowU8InHex cfg) i (sg, sz)
+  renderConstant (CV KBool            (CInteger i)) = showSizedConst (cgShowU8InHex cfg) i (False, 1)
+  renderConstant (CV KFloat           (CFloat f))   = text $ showCFloat f
+  renderConstant (CV KDouble          (CDouble d))  = text $ showCDouble d
+  renderConstant (CV k@KFP{}          (CFP fp))     = fromJust (arbitraryFPConst k fp)
+  renderConstant cv@(CV KString       CString{})     = fromJust (textConst cv)
+  renderConstant cv@(CV KChar         CChar{})       = fromJust (textConst cv)
+  renderConstant cv                                 = die $ "mkConst: " ++ show cv
+
+-- | Render a bounded literal using its signedness, width, and display mode.
+showSizedConst :: Bool -> Integer -> (Bool, Int) -> Doc
+showSizedConst _   i   (False,  1) = text (if i == 0 then "false" else "true")
+showSizedConst u8h i t@(False,  8)
+  | u8h                            = text $ T.unpack (chex False True t i)
+  | True                           = integer i
+showSizedConst _   i   (True,   8) = integer i
+showSizedConst _   i t@(False, 16) = text $ T.unpack $ chex False True t i
+showSizedConst _   i t@(True,  16) = text $ T.unpack $ chex False True t i
+showSizedConst _   i t@(False, 32) = text $ T.unpack $ chex False True t i
+showSizedConst _   i t@(True,  32) = text $ T.unpack $ chex False True t i
+showSizedConst _   i t@(False, 64) = text $ T.unpack $ chex False True t i
+showSizedConst _   i t@(True,  64) = text $ T.unpack $ chex False True t i
+showSizedConst _   i   (s, sz)     = die $ "Constant " ++ show i ++ " at type " ++ (if s then "SInt" else "SWord") ++ show sz
+
+-- | Invoke the C compiler with contraction disabled after user flags, including
+-- during LTO linking. Explicit calls to @fma@ are not implicit contraction.
+cCompilerCommand :: Bool -> Bool -> String
+cCompilerCommand floating gmp = "${CC} ${CCFLAGS}" ++ (if gmp then " ${GMP_CFLAGS}" else "")
+                                                 ++ (if floating then " -ffp-contract=off" else "")
+
+-- | Does a representation require the floating-point compilation contract?
+cFloatingKind :: CgConfig -> Kind -> Bool
+cFloatingKind cfg kind = isFloat kind || isDouble kind || isFP kind || (isReal kind && isJust (cgReal cfg))
+
+-- | Generate a makefile. The first argument is True if we have a driver.
+genMake :: Bool -> Bool -> String -> String -> [String] -> Doc
+genMake floating ifdr fn dn ldFlags = foldr1 ($$) [l | (True, l) <- lns]
+ where ifld = not (null ldFlags)
+       gmp  = "-lgmp" `elem` ldFlags
+       ld = text "${LDFLAGS}" <+> if ifld then text "${SBV_LIBS}" else empty
+       renderedLDFlags = unwords $ filter (/= "-lgmp") ldFlags ++ ["${GMP_LIBS}" | gmp]
+       lns = [ (True, text "# Makefile for" <+> nm P.<> text ". Automatically generated by SBV. Do not edit!")
+             , (True, text "")
+             , (True, text "# include any user-defined .mk file in the current directory.")
+             , (True, text "-include *.mk")
+             , (True, text "")
+             , (True, text "CC?=gcc")
+             , (True, text "CCFLAGS?=-Wall -O3 -DNDEBUG -fomit-frame-pointer")
+             , (gmp,  text "GMP_CFLAGS?=$(shell pkg-config --cflags gmp)")
+             , (gmp,  text "GMP_LIBS?=$(shell pkg-config --libs gmp)")
+             , (ifld, text "SBV_LIBS?=" P.<> text renderedLDFlags)
+             , (True, text "")
+             , (ifdr, text "all:" <+> nmd)
+             , (ifdr, text "")
+             , (True, nmo P.<> text (": " ++ ppSameLine (hsep [nmc, nmh])))
+             , (True, text ("\t" ++ cCompilerCommand floating gmp) <+> text "-c $< -o $@")
+             , (True, text "")
+             , (ifdr, nmdo P.<> text (": " ++ ppSameLine (hsep [nmdc, nmh])))
+             , (ifdr, text ("\t" ++ cCompilerCommand floating gmp) <+> text "-c $< -o $@")
+             , (ifdr, text "")
+             , (ifdr, nmd P.<> text (": " ++ ppSameLine (hsep [nmo, nmdo])))
+             , (ifdr, text ("\t" ++ cCompilerCommand floating False) <+> text "$^ -o $@" <+> ld)
+             , (ifdr, text "")
+             , (True, text "clean:")
+             , (True, text "\trm -f *.o")
+             , (True, text "")
+             , (ifdr, text "veryclean: clean")
+             , (ifdr, text "\trm -f" <+> nmd)
+             , (ifdr, text "")
+             ]
+       nm   = text fn
+       nmd  = text dn
+       nmh  = nm P.<> text ".h"
+       nmc  = nm P.<> text ".c"
+       nmo  = nm P.<> text ".o"
+       nmdc = nmd P.<> text ".c"
+       nmdo = nmd P.<> text ".o"
+
+-- | Generate the header
+genHeader :: Bool -> (Maybe Int, Maybe CgSRealType) -> String -> [Doc] -> Doc -> Doc -> Doc
+genHeader floating (ik, rk) fn sigs protos extraTypes =
+     text "/* Header file for" <+> nm P.<> text ". Automatically generated by SBV. Do not edit! */"
+  $$ text ""
+  $$ text "#ifndef" <+> tag
+  $$ text "#define" <+> tag
+  $$ text ""
+  $$ (if floating then vcat [text "#if defined(__FAST_MATH__) || (defined(__FINITE_MATH_ONLY__) && __FINITE_MATH_ONLY__ > 0)"
+                           , text "#error \"SBV-generated C requires IEEE floating-point semantics; disable fast-math and finite-math-only.\""
+                           , text "#endif"] else empty)
+  $$ text ""
+  $$ text "#include <stdio.h>"
+  $$ text "#include <stdlib.h>"
+  $$ text "#include <inttypes.h>"
+  $$ text "#include <stdint.h>"
+  $$ text "#include <stdbool.h>"
+  $$ text "#include <string.h>"
+  $$ text "#include <math.h>"
+  $$ (if floating then vcat [text "#include <float.h>"
+                           , text "#if FLT_EVAL_METHOD != 0"
+                           , text "#error \"SBV-generated C requires FLT_EVAL_METHOD == 0; indeterminate or excess-precision floating evaluation is unsupported.\""
+                           , text "#endif"] else empty)
+  $$ text ""
+  $$ text "/* Floating-point calling convention:"
+  $$ text " * Enter generated code in FE_TONEAREST (round-to-nearest, ties-to-even)."
+  $$ text " * Callbacks must preserve this mode before returning or re-entering."
+  $$ text " * Generated code does not check or change the hardware rounding mode."
+  $$ text " * Custom builds must disable implicit FP contraction, including at LTO link time."
+  $$ text " */"
+  $$ text ""
+  $$ text "/* The boolean type */"
+  $$ text "typedef bool SBool;"
+  $$ text ""
+  $$ text "/* The float type */"
+  $$ text "typedef float SFloat;"
+  $$ text ""
+  $$ text "/* The double type */"
+  $$ text "typedef double SDouble;"
+  $$ text ""
+  $$ text "/* Unsigned bit-vectors */"
+  $$ text "typedef uint8_t  SWord8;"
+  $$ text "typedef uint16_t SWord16;"
+  $$ text "typedef uint32_t SWord32;"
+  $$ text "typedef uint64_t SWord64;"
+  $$ text ""
+  $$ text "/* Signed bit-vectors */"
+  $$ text "typedef int8_t  SInt8;"
+  $$ text "typedef int16_t SInt16;"
+  $$ text "typedef int32_t SInt32;"
+  $$ text "typedef int64_t SInt64;"
+  $$ text ""
+  $$ imapping
+  $$ rmapping
+  $$ extraTypes
+  $$ text ("/* Entry point prototype" ++ plu ++ ": */")
+  $$ vcat (map (P.<> semi) sigs)
+  $$ text ""
+  $$ protos
+  $$ text "#endif /*" <+> tag <+> text "*/"
+  $$ text ""
+ where nm  = text fn
+       tag = text "SBV_GENERATED_" P.<> nm P.<> text "_HEADER_INCLUDED"
+       plu = if length sigs /= 1 then "s" else ""
+       imapping = case ik of
+                    Nothing -> empty
+                    Just i  ->    text "/* User requested mapping for SInteger.                                 */"
+                               $$ text "/* NB. Loss of precision: Target type is subject to modular arithmetic. */"
+                               $$ text ("typedef SInt" ++ show i ++ " SInteger;")
+                               $$ text ""
+       rmapping = case rk of
+                    Nothing -> empty
+                    Just t  ->    text "/* User requested mapping for SReal.                          */"
+                               $$ text "/* NB. Loss of precision: Target type is subject to rounding. */"
+                               $$ text ("typedef " ++ show t ++ " SReal;")
+                               $$ text ""
+
+-- | Insert an empty separating line when the condition holds.
+sepIf :: Bool -> Doc
+sepIf b = if b then text "" else empty
+
+-- | Test whether an ADT value needs the caller-owned deep-storage ABI.
+isOwnedADT :: CgConfig -> [Kind] -> SV -> Bool
+isOwnedADT cfg adts sv = isADT sv
+                     && not (isRoundingMode sv)
+                     && adtNeedsOwnership cfg adts (kindOf sv)
+
+-- | Generate an example driver program
+genDriver :: CgConfig -> [Kind] -> [Integer] -> String -> [(String, CgVal)] -> [(String, CgVal)] -> Maybe SV -> [Doc]
+genDriver cfg adts randVals fn publicInputs publicOutputs mbRet
+  = [pre, include, callbacks, printHelpers, header, body, post]
+ where env  = CRenderEnv cfg adts []
+       inps = privateParameters "sbv_driver_input_" publicInputs
+       outs = privateParameters "sbv_driver_output_" publicOutputs
+       publicName local = fromMaybe local (lookup local publicNames)
+       publicNames = zip (map fst (inps ++ outs)) (map fst (publicInputs ++ publicOutputs))
+
+       pre         =  text "/* Example driver program for" <+> nm P.<> text ". */"
+                   $$ text "/* Automatically generated by SBV. Edit as you see fit! */"
+                   $$ text ""
+                   $$ text "#include <stdio.h>"
+       include     = text "#include" <+> doubleQuotes (nm P.<> text ".h")
+       callbacks   = vcat (map (arrayDriverCallback cfg) inputArrayKinds)
+       header      =  text ""
+                   $$ text "int main(void)"
+                   $$ text "{"
+       body        =  text ""
+                   $$ nest 2 (   vcat (map mkInp pairedInputs)
+                           $$ vcat (map mkOut outs)
+                           $$ sepIf (not (null [() | (_, _, CgArray{}) <- pairedInputs]) || not (null outs))
+                           $$ call
+                           $$ text ""
+                           $$ (case mbRet of
+                              Just sv | isArray sv
+                                      -> displayArray "sbv_result" displayCall resultVar (kindOf sv)
+                              Just sv | isTuple sv
+                                      -> displayTuple displayCall resultVar (kindOf sv)
+                              Just sv | isADT sv && not (isRoundingMode sv)
+                                      -> displayADT displayCall resultVar (kindOf sv)
+                              Just sv | isList sv
+                                      -> displayList displayCall resultVar (kindOf sv)
+                              Just sv | isSet sv
+                                      -> displaySet displayCall resultVar (kindOf sv)
+                              Just sv | isWideBV (kindOf sv)
+                                      -> text "printf" P.<> parens (printQuotes (displayCall <+> text "=")) P.<> semi
+                                      $$ wideBVPrint (kindOf sv) resultVar P.<> semi
+                                      $$ text "printf(\"\\n\");"
+                              Just sv | isFP (kindOf sv)
+                                      -> text "printf" P.<> parens (printQuotes (displayCall <+> text "=")) P.<> semi
+                                      $$ arbitraryFPPrint (kindOf sv) resultVar P.<> semi
+                                      $$ text "printf(\"\\n\");"
+                              Just sv | isExactGMPKind cfg (kindOf sv)
+                                      -> text "printf" P.<> parens (printQuotes (displayCall <+> text "=")) P.<> semi
+                                      $$ gmpPrint (kindOf sv) resultVar P.<> semi
+                                      $$ text "printf(\"\\n\");"
+                              Just sv | kindOf sv `elem` [KChar, KString]
+                                      -> text "printf" P.<> parens (printQuotes (displayCall <+> text "=")) P.<> semi
+                                      $$ textPrint (kindOf sv) resultVar P.<> semi
+                                      $$ text "printf(\"\\n\");"
+                              Just sv -> text "printf" P.<> parens (printQuotes (displayCall <+> text "=" <+> specifier cfg sv P.<> text "\\n")
+                                                                              P.<> comma <+> resultVar) P.<> semi
+                              Nothing -> text "printf" P.<> parens (printQuotes (displayCall <+> text "->\\n")) P.<> semi)
+                           $$ vcat (map display outs)
+                           $$ driverCleanup
+                           )
+       post        =   text ""
+                   $+$ nest 2 (text "return 0" P.<> semi)
+                   $$  text "}"
+                   $$  text ""
+       nm                 = text fn
+       inputArrayKinds    = nub . concatMap collectInputArrays $ concatMap inputKinds inps
+       inputKinds (_, CgAtomic sv) = [kindOf sv]
+       inputKinds (_, CgArray svs) = map kindOf svs
+
+       collectInputArrays = collect Set.empty
+        where collect visited kind
+                | kind `Set.member` visited = []
+                | KApp{} <- kind
+                = collect nextVisited (resolveADTReferences adts kind)
+                | KArray keyKind valueKind <- kind
+                = kind : collect nextVisited keyKind ++ collect nextVisited valueKind
+                | KTuple fieldKinds <- kind
+                = concatMap (collect nextVisited) fieldKinds
+                | KList elementKind <- kind
+                = collect nextVisited elementKind
+                | KSet elementKind <- kind
+                = collect nextVisited elementKind
+                | isConcreteADTReference kind
+                = concatMap (concatMap (collect nextVisited) . snd) (adtConstructors adts kind)
+                | True
+                = []
+               where nextVisited = Set.insert kind visited
+       pairedInputs = matchRands randVals inps
+       inputSeeds   = matchInputSeeds randVals inps
+       matchRands _      []                                 = []
+       matchRands []     _                                  = die "Run out of driver values!"
+       matchRands (r:rs) ((n, CgAtomic sv)            : cs)
+         | KArray _ valueKind <- kindOf sv                   = ([mkRValKind valueKind r], n, CgAtomic sv) : matchRands rs cs
+       matchRands (r:rs) ((n, CgAtomic sv)            : cs) = ([mkRVal sv r], n, CgAtomic sv) : matchRands rs cs
+       matchRands _      ((n, CgArray [])             : _ ) = die $ "Unsupported empty array input " ++ show n
+       matchRands rs     ((n, a@(CgArray sws@(sv:_))) : cs)
+          | length frs /= l                                 = die "Run out of driver values!"
+          | True                                            = (map (mkRVal sv) frs, n, a) : matchRands srs cs
+          where l          = length sws
+                (frs, srs) = splitAt l rs
+       matchInputSeeds _      []                            = []
+       matchInputSeeds []     _                             = die "Run out of driver values!"
+       matchInputSeeds (r:rs) ((n, CgAtomic{})        : cs) = (n, [r]) : matchInputSeeds rs cs
+       matchInputSeeds _      ((n, CgArray [])        : _ ) = die $ "Unsupported empty array input " ++ show n
+       matchInputSeeds rs     ((n, CgArray values@(_:_)) : cs)
+         | length seeds == length values                       = (n, seeds) : matchInputSeeds rest cs
+         | True                                                = die "Run out of driver values!"
+        where (seeds, rest) = splitAt (length values) rs
+       inputSeed n = case inputGroupSeeds n of
+                       seed:_ -> seed
+                       []     -> die $ "Missing driver seed for composite input " ++ show n
+       inputGroupSeeds n = case lookup n inputSeeds of
+                            Just seeds -> seeds
+                            Nothing    -> die $ "Missing driver seed for composite input " ++ show n
+       inputElementName n index = n ++ "_element_" ++ show (index :: Int)
+       inputNeedsInitialization kind
+         | isConcreteADTReference kind = adtNeedsOwnership cfg adts kind
+         | True                        = valueDriverNeedsInitialization cfg kind
+       mkRVal sv = mkRValKind (kindOf sv)
+       mkRValKind kind r
+         | isRoundingMode kind            = roundingModeDriverValue r
+         | isExactGMPKind cfg kind         = integer r
+         | kind `elem` [KChar, KString]    = textDriverValue kind r
+         | isList kind                     = listDriverValue mkRValKind kind r
+         | isSet kind                      = setDriverValue mkRValKind kind r
+         | KTuple fieldKinds <- kind       = tupleValue kind (zipWith mkField fieldKinds [0 :: Integer ..])
+         | isADT kind                      = adtDriverValue adts mkRValKind kind r
+         | True                            = mkConst env $ mkConstCV kind r
+         where mkField fieldKind offset = mkRValKind fieldKind (r + offset)
+       driverValueInit = valueDriverInit cfg mkRValKind initializeComposite
+
+       -- Only these constructors need the complete ADT registry or the public
+       -- versus stored array ABI. All other dispatch belongs to Value.
+       -- Resolving KApp re-enters the generic dispatcher with the concrete kind.
+       initializeComposite kind externalName seed
+         | KApp{} <- kind                   = driverValueInit (resolveADTReferences adts kind) externalName seed
+         | isArray kind                    = initializeArray kind externalName seed
+         | isConcreteADTReference kind
+         , adtNeedsOwnership cfg adts kind  = adtDriverInit cfg adts mkRValKind driverValueInit kind externalName seed
+         | isConcreteADTReference kind      = text (adtCType kind) <+> text externalName <+> text "="
+                                           <+> adtDriverValue adts mkRValKind kind seed P.<> semi
+         | True                            = die $ "Expected an array or ADT driver kind, received " ++ show kind
+       initializeArray kind@(KArray _ valueKind) externalName seed
+         = let defaultName = externalName ++ "_default"
+               inputName   = externalName ++ "_input"
+           in driverValueInit valueKind defaultName seed
+              $$ arrayDriverInput cfg kind inputName defaultName
+              $$ arrayDriverStoredInput kind externalName inputName
+              $$ driverValueClear valueKind defaultName
+       initializeArray kind _ _ = die $ "Expected an array driver kind, received " ++ show kind
+       driverValueClear kind externalName
+         | isConcreteADTReference kind
+         , not (adtNeedsOwnership cfg adts kind) = empty
+         | True                                 = valueDriverClear cfg kind externalName
+       mkInp (_, n, CgAtomic sv)
+         | KArray _ valueKind <- kindOf sv
+         = let defaultName = n ++ "_default"
+           in driverValueInit valueKind defaultName (inputSeed n)
+              $$ arrayDriverInput cfg (kindOf sv) n defaultName
+       mkInp ([_], n, CgAtomic sv)
+         | inputNeedsInitialization (kindOf sv) = driverValueInit (kindOf sv) n (inputSeed n)
+       mkInp (_,   _, CgAtomic{})         = empty  -- constant, no need to declare
+       mkInp (_,   n, CgArray [])         = die $ "Unsupported empty array value for " ++ show n
+       mkInp (vs, n, CgArray sws@(sv:_))
+         | isExactGMPKind cfg kind = text (gmpArrayType kind) <+> text n P.<> brackets (int lengthOfArray) P.<> semi
+                                  $$ vcat (zipWith initialize [0 :: Int ..] vs)
+                                  $$ displayInputArray
+         | inputNeedsInitialization kind
+         = vcat [initializeElement elementName seed | (elementName, seed) <- zip elementNames (inputGroupSeeds n)]
+        $$ text "const" <+> text inputType <+> text n P.<> brackets (int lengthOfArray)
+           <+> text "=" <+> braces (fsep (punctuate comma (map text elementNames))) P.<> semi
+        $$ displayInputArray
+         | True                    = pprCWord True sv <+> text n P.<> brackets (int lengthOfArray) <+> text "= {"
+                                  $$ nest 4 (fsep (punctuate comma (align vs)))
+                                  $$ text "};"
+                                  $$ displayInputArray
+         where kind          = kindOf sv
+               lengthOfArray = length sws
+
+               initialize index = gmpDriverInitialize kind (text n P.<> brackets (int index))
+
+               elementNames = [inputElementName n index | index <- [0 .. lengthOfArray - 1]]
+               inputType
+                 | isArray kind = arrayInputCType kind
+                 | True         = showCType kind
+               initializeElement elementName seed
+                 | KArray _ valueKind <- kind
+                 = driverValueInit valueKind (elementName ++ "_default") seed
+                $$ arrayDriverInput cfg kind elementName (elementName ++ "_default")
+                 | True
+                 = driverValueInit kind elementName seed
+
+               displayInputArray = text ""
+                                $$ text "printf" P.<> parens (printQuotes (text "Contents of input array" <+> text (publicName n) P.<> text ":\\n")) P.<> semi
+                                $$ display (n, CgArray sws)
+                                $$ text ""
+       mkOut (v, CgAtomic sv)
+         | isArray sv                          = text (arrayOutputCType (kindOf sv)) <+> text v <+> text "=" <+> braces (text "0") P.<> semi
+         | isExactGMPKind cfg (kindOf sv)      = gmpDriverInit (kindOf sv) (text v) (text "0")
+         | kindOf sv == KString                = text "SString" <+> text v <+> text "=" <+> braces (text "0") P.<> semi
+         | isList sv                           = text (listCType (kindOf sv)) <+> text v <+> text "=" <+> braces (text "0") P.<> semi
+         | isSet sv                            = text (setCType (kindOf sv)) <+> text v <+> text "=" <+> braces (text "0") P.<> semi
+         | tupleNeedsOwnership cfg (kindOf sv) = text (tupleCType (kindOf sv)) <+> text v
+                                             <+> text "=" <+> braces (text "0") P.<> semi
+         | isOwnedADT cfg adts sv              = text (adtCType (kindOf sv)) <+> text v
+                                             <+> text "=" <+> braces (text "0") P.<> semi
+         | True                                = pprCWord False sv <+> text v P.<> semi
+       mkOut (v, CgArray [])         = die $ "Unsupported empty array value for " ++ show v
+       mkOut (v, CgArray sws@(sv:_))
+         | isExactGMPKind cfg kind = text (gmpArrayType kind) <+> text v P.<> brackets (int lengthOfArray) P.<> semi
+                                  $$ vcat [gmpDriverInitialize kind (text v P.<> brackets (int index)) (text "0") | index <- [0 .. lengthOfArray - 1]]
+         | isArray kind            = text (arrayOutputCType kind) <+> text v P.<> brackets (int lengthOfArray)
+                                  <+> text "=" <+> braces (text "0") P.<> semi
+         | True                    = pprCWord False sv <+> text v P.<> brackets (int lengthOfArray) P.<> semi
+         where kind          = kindOf sv
+               lengthOfArray = length sws
+       resultVar = text "sbv_result"
+       call = case mbRet of
+                Nothing -> fcall P.<> semi
+                Just sv
+                  | isExactGMPKind cfg (kindOf sv)      -> gmpDriverInit (kindOf sv) resultVar (text "0")
+                                                        $$ fcall P.<> semi
+                  | isArray sv                          -> text (arrayOutputCType (kindOf sv)) <+> resultVar
+                                                       <+> text "=" <+> fcall P.<> semi
+                  | tupleNeedsOwnership cfg (kindOf sv) -> text (tupleCType (kindOf sv)) <+> resultVar
+                                                       <+> text "=" <+> fcall P.<> semi
+                  | isOwnedADT cfg adts sv              -> text (adtCType (kindOf sv)) <+> resultVar
+                                                       <+> text "=" <+> fcall P.<> semi
+                  | kindOf sv == KString                -> text "SString" <+> resultVar <+> text "=" <+> fcall P.<> semi
+                  | isList sv                           -> text (listCType (kindOf sv)) <+> resultVar
+                                                       <+> text "=" <+> fcall P.<> semi
+                  | isSet sv                            -> text (setCType (kindOf sv)) <+> resultVar
+                                                       <+> text "=" <+> fcall P.<> semi
+                  | True                                -> pprCWord True sv <+> resultVar <+> text "=" <+> fcall P.<> semi
+       fcall       = functionCall id
+       displayCall = nm P.<> parens (fsep (punctuate comma (map displayInput pairedInputs ++ map (mkOVal publicName) outs ++ exactResultArg)))
+       displayInput input@(_, inputName, CgAtomic sv)
+         | kindOf sv == KString || isTuple sv || isADT sv || isWideBV (kindOf sv) || isFP sv
+         = text (publicName inputName)
+         | True = mkCVal publicName input
+       displayInput input = mkCVal publicName input
+       functionCall rename = nm P.<> parens (fsep (punctuate comma (map (mkCVal rename) pairedInputs ++ map (mkOVal rename) outs ++ exactResultArg)))
+       exactResultArg = case mbRet of
+                          Just sv | isExactGMPKind cfg (kindOf sv) -> [resultVar]
+                          _                                        -> []
+       mkCVal rename ([v], n, CgAtomic sv)
+         | inputNeedsInitialization (kindOf sv) = text (rename n)
+         | True                                = v
+       mkCVal _      (vs, n, CgAtomic{}) = die $ "Unexpected driver value computed for " ++ show n ++ render (hcat vs)
+       mkCVal rename (_,  n, CgArray{})  = text (rename n)
+       mkOVal rename (n, CgAtomic sv)
+         | isExactGMPKind cfg (kindOf sv) = text (rename n)
+         | True                           = text "&" P.<> text (rename n)
+       mkOVal rename (n, CgArray{}) = text (rename n)
+       display (n, CgAtomic sv)
+         | isArray sv                           = displayArray n label (text n) (kindOf sv)
+         | isTuple sv                           = displayTuple label (text n) (kindOf sv)
+         | isADT sv && not (isRoundingMode sv) = displayADT label (text n) (kindOf sv)
+         | isList sv                            = displayList label (text n) (kindOf sv)
+         | isSet sv                             = displaySet label (text n) (kindOf sv)
+         | isWideBV (kindOf sv)                 = text "printf" P.<> parens (printQuotes (text " " <+> label <+> text "=")) P.<> semi
+                                                $$ wideBVPrint (kindOf sv) (text n) P.<> semi
+                                                $$ text "printf(\"\\n\");"
+         | isFP (kindOf sv)                     = text "printf" P.<> parens (printQuotes (text " " <+> label <+> text "=")) P.<> semi
+                                                $$ arbitraryFPPrint (kindOf sv) (text n) P.<> semi
+                                                $$ text "printf(\"\\n\");"
+         | isExactGMPKind cfg (kindOf sv)       = text "printf" P.<> parens (printQuotes (text " " <+> label <+> text "=")) P.<> semi
+                                                $$ gmpPrint (kindOf sv) (text n) P.<> semi
+                                                $$ text "printf(\"\\n\");"
+         | kindOf sv `elem` [KChar, KString]     = text "printf" P.<> parens (printQuotes (text " " <+> label <+> text "=")) P.<> semi
+                                                $$ textPrint (kindOf sv) (text n) P.<> semi
+                                                $$ text "printf(\"\\n\");"
+         | True                                 = text "printf" P.<> parens (printQuotes (text " " <+> label <+> text "=" <+> specifier cfg sv
+                                                                                         P.<> text "\\n") P.<> comma <+> text n) P.<> semi
+         where label = text (publicName n)
+       display (n, CgArray [])         = die $ "Unsupported empty array value for " ++ show n
+       display (n, CgArray sws@(sv:_)) = text "int" <+> nctr P.<> semi
+                                      $$ text "for(" P.<> nctr <+> text "= 0;" <+> nctr <+> text "<" <+> int len <+> text "; ++" P.<> nctr P.<> text ")"
+                                      $$ text "{"
+                                      $$ nest 2 displayEntry
+                                      $$ text "}"
+         where nctr      = text n P.<> text "_ctr"
+               entry     = text n P.<> text "[" P.<> nctr P.<> text "]"
+               entrySpec = text (publicName n) P.<> text "[%" P.<> int tab P.<> text "d]"
+               kind      = kindOf sv
+               len       = length sws
+               tab       = length $ show (len - 1)
+
+               displayEntry
+                 | isArray kind = displayArrayEntry kind
+                 | True         = text "printf" P.<> parens (printQuotes (text " " <+> entrySpec <+> text "= ") P.<> comma <+> nctr) P.<> semi
+                               $$ printValue kind entry
+                               $$ text "printf(\"\\n\");"
+
+               displayArrayEntry arrayKind@(KArray keyKind valueKind)
+                 =  keySetup
+                 $$ text "printf" P.<> parens (printQuotes (text " " <+> (entrySpec P.<> text "[0] =")) P.<> comma <+> nctr) P.<> semi
+                 $$ printValue valueKind arrayValue
+                 $$ text "printf(\"\\n\");"
+                 $$ keyCleanup
+                where keyName    = "sbv_local_array_key_" ++ n
+                      key        = text keyName
+                      keySetup   = driverValueInit keyKind keyName 0
+                      keyCleanup = driverValueClear keyKind keyName
+                      arrayValue
+                        | n `elem` map fst inps
+                        = entry P.<> text ".lookup" P.<> parens (fsep (punctuate comma [entry P.<> text ".context", key]))
+                        | True
+                        = text (arrayOutputReadName arrayKind) P.<> parens (fsep (punctuate comma [entry, key]))
+               displayArrayEntry arrayKind = die $ "Expected an array return-group element, received " ++ show arrayKind
+
+       displayArray stem label descriptor kind@(KArray keyKind valueKind)
+         =  keySetup
+         $$ text "printf" P.<> parens (printQuotes (text " " <+> label P.<> text "[0] =")) P.<> semi
+         $$ printArrayValue
+         $$ text "printf(\"\\n\");"
+         $$ keyCleanup
+        where keyName = "sbv_local_array_key_" ++ stem
+              key     = text keyName
+
+              keySetup   = driverValueInit  keyKind keyName 0
+              keyCleanup = driverValueClear keyKind keyName
+
+              value = text (arrayOutputReadName kind) P.<> parens (fsep (punctuate comma [descriptor, key]))
+              printArrayValue = printValue valueKind value
+       displayArray _ _ _ kind = die $ "Expected an array output, received " ++ show kind
+
+       displayTuple label value kind@KTuple{}
+         =  text "printf" P.<> parens (printQuotes (text " " <+> label <+> text "=")) P.<> semi
+         $$ printTupleValue value kind
+         $$ text "printf(\"\\n\");"
+       displayTuple _ _ kind = die $ "Expected a tuple output, received " ++ show kind
+
+       displayADT label value kind
+         =  text "printf" P.<> parens (printQuotes (text " " <+> label <+> text "=")) P.<> semi
+         $$ adtPrint adts printValue kind value
+         $$ text "printf(\"\\n\");"
+
+       displayList label value kind@KList{}
+         =  text "printf" P.<> parens (printQuotes (text " " <+> label <+> text "=")) P.<> semi
+         $$ listPrint printValue kind value
+         $$ text "printf(\"\\n\");"
+       displayList _ _ kind = die $ "Expected a list output, received " ++ show kind
+
+       displaySet label value kind@KSet{}
+         =  text "printf" P.<> parens (printQuotes (text " " <+> label <+> text "=")) P.<> semi
+         $$ setPrint printValue kind value
+         $$ text "printf(\"\\n\");"
+       displaySet _ _ kind = die $ "Expected a set output, received " ++ show kind
+
+       printHelpers = adtPrintHelpers adts printValue
+
+       printTupleValue _     (KTuple []) = text "printf(\"()\");"
+       printTupleValue value (KTuple fieldKinds)
+         =  text "printf(\"(\");"
+         $$ vcat (intersperse (text "printf(\", \");") (zipWith printField [1 :: Int ..] fieldKinds))
+         $$ text "printf(\")\");"
+        where printField index fieldKind = printValue fieldKind (parens value P.<> text "." P.<> text (tupleFieldName index))
+       printTupleValue _ kind = die $ "Expected a tuple value, received " ++ show kind
+
+       printValue kind value
+         | KTuple{} <- kind                        = printTupleValue value kind
+         | KList{} <- kind                         = listPrint printValue kind value
+         | KSet{} <- kind                          = setPrint printValue kind value
+         | KArray{} <- kind                        = printStoredArray value kind
+         | isADT kind && not (isRoundingMode kind) = adtPrint adts printValue kind value
+         | isWideBV kind                           = wideBVPrint kind value P.<> semi
+         | isFP kind                               = arbitraryFPPrint kind value P.<> semi
+         | isExactGMPKind cfg kind                 = gmpPrint kind value P.<> semi
+         | kind `elem` [KChar, KString]             = textPrint kind value P.<> semi
+         | True                                    = text "printf" P.<> parens (printQuotes (specifierKind cfg kind) P.<> comma <+> value) P.<> semi
+
+       printStoredArray descriptor kind@(KArray keyKind valueKind)
+         =  text "{"
+         $$ nest 2 (   text "if" P.<> parens (descriptor <+> text "== NULL") <+> text "abort" P.<> parens empty P.<> semi
+                    $$ keySetup
+                    $$ text "printf(\"[0] =\");"
+                    $$ printValue valueKind storedValue
+                    $$ keyCleanup
+                   )
+         $$ text "}"
+        where keyName     = "sbv_local_array_stored_key_" ++ kindTag kind
+              key         = text keyName
+              keySetup    = driverValueInit keyKind keyName 0
+              keyCleanup  = driverValueClear keyKind keyName
+              storedValue = text (arrayOutputReadName kind)
+                         P.<> parens (fsep (punctuate comma [text "*" P.<> parens descriptor, key]))
+       printStoredArray _ kind = die $ "Expected a stored array, received " ++ show kind
+
+       driverCleanup = vcat $ inputCleanup ++ outputCleanup ++ returnCleanup
+         where inputCleanup = [ clearInputElement (kindOf sv) n
+                              | (_, n, CgAtomic sv) <- pairedInputs
+                              , inputNeedsInitialization (kindOf sv)
+                              ]
+                           ++ [ clearInputElement (kindOf sv) elementName
+                              | (_, n, CgArray svs) <- pairedInputs
+                              , (index, sv) <- zip [0 :: Int ..] svs
+                              , inputNeedsInitialization (kindOf sv)
+                              , let elementName
+                                      | isExactGMPKind cfg (kindOf sv) = n ++ "[" ++ show index ++ "]"
+                                      | True                          = inputElementName n index
+                              ]
+               clearInputElement (KArray _ valueKind) elementName = driverValueClear valueKind (elementName ++ "_default")
+               clearInputElement kind                elementName = driverValueClear kind elementName
+
+               outputCleanup = concatMap clearOutput outs
+               clearOutput (n, CgAtomic sv) = [outputValueClear (kindOf sv) n]
+               clearOutput (n, CgArray svs) = [outputValueClear (kindOf sv) (n ++ "[" ++ show index ++ "]")
+                                             | (index, sv) <- zip [0 :: Int ..] svs
+                                             ]
+               returnCleanup = [outputValueClear (kindOf sv) "sbv_result" | sv <- maybeToList mbRet]
+
+               -- Public array outputs own an exported descriptor. Collection
+               -- outputs own their elements; driver inputs merely borrow them.
+               outputValueClear kind externalName
+                 | isArray kind                                = text (arrayOutputReleaseName kind) P.<> parens address P.<> semi
+                 | kind == KString || isList kind || isSet kind = managedValueRelease kind address
+                 | True                                        = driverValueClear kind externalName
+                where address = text "&" P.<> text externalName
+
+-- | Generate the C program
+genCProg :: CgConfig
+         -> [Kind]
+         -> [Kind]
+         -> [Kind]
+         -> String
+         -> Doc
+         -> Result
+         -> [(String, CgVal)]
+         -> [(String, CgVal)]
+         -> Maybe SV
+         -> Doc
+         -> ([Doc], Set.Set CRequirement)
+genCProg cfg adts lists sets fn proto
+         (Result pinfo kindInfo _tvals _ovals cgs topInps (_, preConsts) tbls _uis definitions
+                 (SBVPgm asgns) cstrs origAsserts _)
+         inVars outVars mbRet extDecls
+  | not (null usorts)
+  = error $ "SBV->C: Cannot compile functions with uninterpreted sorts: " ++ intercalate ", " usorts
+  | not (null unsupportedSets)
+  = notyet $ "Sets with element kinds " ++ intercalate ", " (map (show . setElementKind) unsupportedSets)
+  | any (requiresExtensionalEquality adts (Equal True) . pure . setElementKind) sets
+  = error "SBV->C: Set elements require general extensional array equality."
+  | or [requiresExtensionalEquality adts (Equal True) [keyKind] | KArray keyKind _ <- arrays]
+  = error "SBV->C: Array keys require general extensional array equality."
+  | any containsNestedSet kindInfo
+  = notyet "Sets nested in arrays or unsupported aggregate types"
+  | not (null unsupportedLists)
+  = notyet $ "Lists with element kinds " ++ intercalate ", " (map (show . listElementKind) unsupportedLists)
+  | any containsNestedList kindInfo
+  = notyet "Lists nested in arrays or unsupported aggregate types"
+  | not $ null (progSpecialRels pinfo)
+  = error "SBV->C: Cannot compile in the presence of special relations."
+  | hasQuants pinfo
+  = error "SBV->C: Cannot compile in the presence of quantified variables."
+  | not (null unstructuredDefinitions)
+  = error $ "SBV->C: Cannot compile SMT-text-only function definitions: " ++ intercalate ", " unstructuredDefinitions
+  | (callbackName, captures) : _ <- capturingArrayLambdas
+  = error $ unlines
+      [ "SBV->C: Array lambdas that capture outer symbolic values are not supported."
+      , "  Callback: " ++ callbackName
+      , "  Captured values: " ++ intercalate ", " [show sv ++ " :: " ++ show (kindOf sv) | sv <- captures]
+      , "Only closed lambdaArray bodies can be compiled: use the index, literal constants, and local computations."
+      , "Support for captured array-lambda environments is deferred; captured values are never approximated or ignored."
+      ]
+  | (functionName, captures) : _ <- capturingFunctions
+  = error $ unlines
+      [ "SBV->C: Defined functions with implicit captures of outer symbolic values are not supported."
+      , "  Function: " ++ functionName
+      , "  Captured values: " ++ intercalate ", " [show sv ++ " :: " ++ show (kindOf sv) | sv <- captures]
+      , "Pass captured values as explicit function arguments, or use Closure with an explicit closureEnv for higher-order operations."
+      ]
+  | not (null softConstraints)
+  = tbd "Soft constraints"
+  | not (null unsupportedConstraintAttributes)
+  = tbd $ "Constraint attributes: " ++ intercalate ", " unsupportedConstraintAttributes
+  | True
+  = ([pre, header, post], requirements)
+ where notyet m = error $ "SBV->C: " ++ m ++ " are currently not supported by the C compiler. Please get in touch if you'd like support for this feature!"
+
+       asserts | cgIgnoreAsserts cfg = []
+               | True                = origAsserts
+
+       usorts = [s | k@(KADT s _ _) <- Set.toList kindInfo, isUninterpreted k]
+
+       pre    =  text "/* File:" <+> doubleQuotes (nm P.<> text ".c") P.<> text ". Automatically generated by SBV. Do not edit! */"
+              $$ text ""
+
+       header = text "#include" <+> doubleQuotes (nm P.<> text ".h")
+             $$ (if requires CRequiresLibBF then text "#include <libbf.h>" else empty)
+
+       wideKinds        = wideBVKinds kindInfo
+       fpKinds          = arbitraryFPKinds kindInfo
+       arrays           = arrayKinds kindInfo
+       unsupportedLists = filter (not . listSupported cfg) lists
+       unsupportedSets  = filter (not . setSupported cfg) sets
+       post   = text ""
+             $$ (if any (cFloatingKind cfg) kindInfo then nativeFPCompilePragmas else empty)
+             $$ vcat (map codeSeg cgs)
+             $$ extDecls
+             $$ mappedRealFloorRuntime cfg allAssignments
+             $$ bitVectorRuntime (cgInteger cfg) wideKinds allAssignments
+             $$ (if requires CRequiresGMP    then gmpRuntime cfg kindInfo allAssignments else empty)
+             $$ (if requires CRequiresLibBF  then arbitraryFPRuntime cfg fpKinds allAssignments else empty)
+             $$ (if requires CRequiresNativeFPRounding then nativeFPRuntime else empty)
+             $$ (if requires CRequiresIntegerPower     then mappedIntegerPowerRuntime cfg else empty)
+             $$ (if requires CRequiresText             then textRuntime cfg usesExactInteger else empty)
+             $$ adtEqualityRuntimeDecls adts
+             $$ (if requires CRequiresLists            then listRuntimeDecls cfg lists else empty)
+             $$ (if requires CRequiresSets             then setRuntimeDecls cfg sets else empty)
+             $$ (if requires CRequiresLists            then listRuntime cfg usesExactInteger lists else empty)
+             $$ (if requires CRequiresSets             then setRuntime cfg (map snd . adtConstructors adts . resolveADTReferences adts) sets else empty)
+             $$ (if requires CRequiresArrays           then arrayRuntime cfg arrays else empty)
+             $$ adtEqualityRuntime cfg adts
+             $$ vcat [ppArrayEquality cfg adts kind | kind <- equalityArrayKinds]
+             $$ definedFunctionResultRuntime functionResultKinds
+             $$ (if hasStructuredCallbacks then definedFunctionContextType requirements else empty)
+             $$ vcat functionPrototypes
+             $$ vcat arrayLambdaPrototypes
+             $$ vcat functionDocs
+             $$ vcat arrayLambdaDocs
+             $$ proto
+             $$ text "{"
+             $$ text ""
+             $$ nest 2 (   gmpStart
+                        $$ textStart
+                        $$ listStart
+                        $$ setStart
+                        $$ arrayStart
+                        $$ functionResultStart
+                        $$ functionContextStart
+                        $$ vcat (concatMap (genIO True . (\v -> (isAlive v, v))) inVars)
+                        $$ constantDeclarations
+                        $$ scheduledAssignments
+                        $$ sepIf (not (null assignments) || not (null tbls))
+                        $$ vcat (concatMap (genIO False . (True,)) outVars)
+                        $$ exactReturn
+                        $$ arrayReturn
+                        $$ ownedTupleReturn
+                        $$ exactADTReturn
+                        $$ textReturn
+                        $$ listReturn
+                        $$ setReturn
+                        $$ functionResultEnd
+                        $$ arrayEnd
+                        $$ setEnd
+                        $$ listEnd
+                        $$ textEnd
+                        $$ gmpEnd
+                        $$ normalReturn
+                       )
+             $$ text "}"
+             $$ text ""
+
+       nm = text fn
+
+       assignments = F.toList asgns
+
+       constraints = F.toList cstrs
+
+       softConstraints = [() | (True, _, _) <- constraints]
+
+       unsupportedConstraintAttributes = nub [attribute
+                                              | (_, attributes, _) <- constraints
+                                              , (attribute, _) <- attributes
+                                              , attribute /= ":named"
+                                              ]
+
+       runtimeChecks = sortOn (cLocation allConsts . fst)
+                    $ [(sv, snd (genAssert assertion)) | assertion@(_, _, sv) <- asserts]
+                   ++ [(sv, snd (genConstraint constraint)) | constraint@(_, _, sv) <- constraints]
+
+       functionNames = [(T.pack functionName, CTypes.definedFunctionCName functionName) | (functionName, _) <- definitions]
+
+       structuredDefinitions = [ (functionName, resultKind, dependencies, functionType, lambdaInfo)
+                               | (functionName, (definition@(SMTDef resultKind dependencies _ _), functionType)) <- definitions
+                               , Just lambdaInfo <- [smtDefInfo definition]
+                               ]
+
+       unstructuredDefinitions = [ functionName
+                                 | (functionName, (definition, _)) <- definitions
+                                 , Nothing <- [smtDefInfo definition]
+                                 ]
+
+       topLevelArrayLambdaDefinitions = [ (arrayLambdaName sv, sv, lambdaInfo)
+                                        | (sv, SBVApp (ArrayInit (Right lambdaDef)) []) <- assignments
+                                        , Just lambdaInfo <- [smtLambdaInfo lambdaDef]
+                                        ]
+
+       topLevelArrayLambdaNames = [(sv, callbackName) | (callbackName, sv, _) <- topLevelArrayLambdaDefinitions]
+
+       arrayLambdaDefinitions =
+            topLevelArrayLambdaDefinitions
+         ++ concat [nestedArrayLambdaDefinitions callbackName lambdaInfo
+                   | (callbackName, _, lambdaInfo) <- topLevelArrayLambdaDefinitions
+                   ]
+         ++ concat [nestedArrayLambdaDefinitions (CTypes.definedFunctionCName functionName) lambdaInfo
+                   | (functionName, _, _, _, lambdaInfo) <- structuredDefinitions
+                   ]
+
+       nestedArrayLambdaDefinitions scope LambdaInfo{liAssignments = nestedAssignments}
+         = concat [ (callbackName, sv, lambdaInfo) : nestedArrayLambdaDefinitions callbackName lambdaInfo
+                  | (sv, SBVApp (ArrayInit (Right lambdaDef)) []) <- F.toList nestedAssignments
+                  , let callbackName = scopedArrayLambdaName scope sv
+                  , Just lambdaInfo <- [smtLambdaInfo lambdaDef]
+                  ]
+
+       functionAssignments    = concatMap (\(_, _, _, _, lambdaInfo) -> F.toList (liAssignments lambdaInfo)) structuredDefinitions
+       arrayLambdaAssignments = concatMap (\(_, _, lambdaInfo) -> F.toList (liAssignments lambdaInfo)) arrayLambdaDefinitions
+       lambdaAssignments      = functionAssignments ++ arrayLambdaAssignments
+       allAssignments         = assignments ++ lambdaAssignments
+       capturingArrayLambdas  = [ (callbackName, captures)
+                               | (callbackName, _, lambdaInfo) <- arrayLambdaDefinitions
+                               , let captures = cLambdaFreeValues lambdaInfo
+                               , not (null captures)
+                               ]
+       capturingFunctions     = [ (functionName, captures)
+                               | (functionName, _, _, _, lambdaInfo) <- structuredDefinitions
+                               , let captures = cLambdaFreeValues lambdaInfo
+                               , not (null captures)
+                               ]
+       equalityArrayKinds     = uniqueOn arrayEqualName
+                                    [kindOf value | (_, SBVApp op (value:_)) <- allAssignments
+                                                , op `elem` [Equal False, Equal True, NotEqual]
+                                                , isArray value]
+
+       functionPrototypes  = [ definedFunctionSignature functionName resultKind (liParams lambdaInfo) P.<> semi
+                             | (functionName, resultKind, _, _, lambdaInfo) <- structuredDefinitions
+                             ]
+
+       generatedFunctions =
+         [ ppDefinedFunction cfg adts functionNames functionName resultKind functionType lambdaInfo
+         | (functionName, resultKind, _, functionType, lambdaInfo) <- structuredDefinitions
+         ]
+       functionDocs        = map fst generatedFunctions
+
+       functionResultKinds = nub $
+            [ resultKind
+            | (_, resultKind, _, _, _) <- structuredDefinitions
+            , definedFunctionResultNeedsClone cfg adts resultKind
+            ]
+         ++ [ kindOf (liOutput lambdaInfo)
+            | (_, _, lambdaInfo) <- arrayLambdaDefinitions
+            , definedFunctionResultNeedsClone cfg adts (kindOf (liOutput lambdaInfo))
+            ]
+
+       generatedArrayLambdas = [ppArrayLambda cfg adts functionNames callbackName sv lambdaInfo
+                               | (callbackName, sv, lambdaInfo) <- arrayLambdaDefinitions
+                               ]
+       arrayLambdaPrototypes  = [arrayLambdaSignature callbackName sv lambdaInfo P.<> semi
+                                | (callbackName, sv, lambdaInfo) <- arrayLambdaDefinitions
+                                ]
+       arrayLambdaDocs        = map fst generatedArrayLambdas
+
+       (scheduledAssignments, scheduledRequirements) =
+         scheduleC env functionNames topLevelArrayLambdaNames
+                   (map fst allConsts ++ concatMap (cgValues . snd) inVars) assignments tbls True typeWidth
+                   evaluationRoots
+
+       evaluationRoots = runtimeChecks ++ [(sv, empty) | sv <- concatMap (cgValues . snd) outVars ++ maybe [] pure mbRet]
+
+       cgValues (CgAtomic sv) = [sv]
+       cgValues (CgArray svs) = svs
+
+       requirements = Set.unions
+         [ kindRequirements
+         , scheduledRequirements
+         , Set.unions (map snd generatedFunctions)
+         , Set.unions (map snd generatedArrayLambdas)
+         , Set.unions [operationRequirements cfg (op, kindOf sv) | (sv, SBVApp op _) <- assignments]
+         ]
+
+       kindRequirements = Set.fromList $
+            [CRequiresWideBV | not (null wideKinds)]
+         ++ [CRequiresLibBF  | not (null fpKinds)]
+         ++ [CRequiresLibM   | not (null fpKinds)]
+         ++ [CRequiresGMP    | usesGMP]
+         ++ [CRequiresText   | KString `Set.member` kindInfo || KChar `Set.member` kindInfo]
+         ++ [CRequiresLists  | not (null lists)]
+         ++ [CRequiresSets   | not (null sets)]
+         ++ [CRequiresArrays | not (null arrays)]
+
+       requires requirement = requirement `Set.member` requirements
+
+       usesGMP          = any (isExactGMPKind cfg) kindInfo
+       usesExactInteger = isExactGMPKind cfg KUnbounded && KUnbounded `Set.member` kindInfo
+
+       containsNestedList = containsUnsupportedCollection isList
+
+       containsNestedSet = containsUnsupportedCollection isSet
+
+       containsUnsupportedCollection isCollection = walk Set.empty
+        where walk _ kind
+                | isCollection kind
+                = False
+              walk visited (KTuple fields)
+                = any (walk visited) fields
+              walk visited (KList elementKind)
+                = walk visited elementKind
+              walk visited (KSet elementKind)
+                = walk visited elementKind
+              walk visited (KArray keyKind valueKind)
+                = walk visited keyKind || walk visited valueKind
+              walk visited kind
+                | isADT kind
+                , not (isRoundingMode kind)
+                , not (isUninterpreted kind)
+                =    not (kind `Set.member` visited)
+                  && any (any (walk (Set.insert kind visited)) . snd) (adtConstructors adts kind)
+              walk _ kind
+                = any isCollection (expandKinds kind)
+
+       listElementKind (KList elementKind) = elementKind
+       listElementKind kind                = die $ "Expected a list kind, received " ++ show kind
+
+       setElementKind (KSet elementKind) = elementKind
+       setElementKind kind               = die $ "Expected a set kind, received " ++ show kind
+
+       gmpStart
+         | requires CRequiresGMP = gmpContextStart
+         | True                     = empty
+       gmpEnd
+         | requires CRequiresGMP = gmpContextEnd
+         | True                     = empty
+
+       textStart
+         | requires CRequiresText = textContextStart
+         | True                    = empty
+       textEnd
+         | requires CRequiresText = textContextEnd
+         | True                    = empty
+
+       listStart
+         | requires CRequiresLists = listContextStart
+         | True                    = empty
+       listEnd
+         | requires CRequiresLists = listContextEnd
+         | True                    = empty
+
+       setStart
+         | requires CRequiresSets = setContextStart
+         | True                   = empty
+       setEnd
+         | requires CRequiresSets = setContextEnd
+         | True                   = empty
+
+       arrayStart
+         | requires CRequiresArrays = arrayContextStart
+         | True                     = empty
+
+       arrayEnd
+         | requires CRequiresArrays = arrayContextEnd
+         | True                     = empty
+
+       functionContextStart
+         | hasStructuredCallbacks = definedFunctionContextInitialization requirements
+         | True                   = empty
+
+       hasStructuredCallbacks = not (null structuredDefinitions && null arrayLambdaDefinitions)
+
+       functionResultStart
+         | requires CRequiresFunctionResults = text "sbv_function_result_ctx sbv_local_function_result_ctx = {NULL};"
+         | True                               = empty
+
+       functionResultEnd
+         | requires CRequiresFunctionResults = text "sbv_function_result_ctx_end(&sbv_local_function_result_ctx);"
+         | True                               = empty
+
+       exactReturn = case mbRet of
+                       Just sv | isExactGMPKind cfg (kindOf sv)
+                               -> gmpSet (kindOf sv) (text "sbv_result") (showSV env sv) P.<> semi
+                       _       -> empty
+
+       arrayReturn = case mbRet of
+                       Just sv | isArray sv
+                               -> text "const" <+> text (arrayOutputCType (kindOf sv)) <+> text "sbv_result" <+> text "="
+                                  <+> text (arrayExportName (kindOf sv)) P.<> parens (showSV env sv) P.<> semi
+                       _       -> empty
+
+       ownedTupleReturn = case mbRet of
+                            Just sv
+                              | tupleNeedsOwnership cfg (kindOf sv)
+                              -> text "const" <+> text (tupleCType (kindOf sv)) <+> text "sbv_result" <+> text "="
+                                 <+> text (tupleOwnedCloneName (kindOf sv)) P.<> parens (showSV env sv) P.<> semi
+                            _ -> empty
+
+       exactADTReturn = case mbRet of
+                          Just sv
+                            | isOwnedADT cfg adts sv
+                            -> text "const" <+> text (adtCType (kindOf sv)) <+> text "sbv_result" <+> text "="
+                           <+> text (adtOwnedCloneName (kindOf sv))
+                                 P.<> parens (showSV env sv)
+                                 P.<> semi
+                          _ -> empty
+
+       textReturn = case mbRet of
+                      Just sv | kindOf sv == KString
+                              -> text "const SString sbv_result =" <+> textClone (showSV env sv) P.<> semi
+                      _       -> empty
+
+       listReturn = case mbRet of
+                      Just sv | isList sv
+                              -> text "const" <+> text (listCType (kindOf sv)) <+> text "sbv_result ="
+                              <+> listClone (kindOf sv) (showSV env sv) P.<> semi
+                      _       -> empty
+
+       setReturn = case mbRet of
+                     Just sv | isSet sv
+                             -> text "const" <+> text (setCType (kindOf sv)) <+> text "sbv_result ="
+                             <+> setClone (kindOf sv) (showSV env sv) P.<> semi
+                     _       -> empty
+
+       normalReturn = case mbRet of
+                        Just sv | isArray sv                           -> text "return sbv_result;"
+                        Just sv | tupleNeedsOwnership cfg (kindOf sv) -> text "return sbv_result;"
+                        Just sv | isOwnedADT cfg adts sv               -> text "return sbv_result;"
+                        Just sv | kindOf sv == KString                 -> text "return sbv_result;"
+                        Just sv | isList sv                            -> text "return sbv_result;"
+                        Just sv | isSet sv                             -> text "return sbv_result;"
+                        Just sv | not (isExactGMPKind cfg (kindOf sv)) -> mkRet sv
+                        _                                             -> empty
+
+       codeSeg (fnm, ls) =  text "/* User specified custom code for" <+> doubleQuotes (text fnm) <+> text "*/"
+                         $$ vcat (map text ls)
+                         $$ text ""
+
+       ins = case topInps of
+               ResultTopInps (is, []) -> is
+               ResultTopInps is       -> die $ "Unexpected trackers: " ++ show is
+               ResultLamInps is       -> die $ "Unexpected inputs  : " ++ show is
+
+       typeWidth = getMax 0 $ [len (kindOf s) | (s, _) <- assignments] ++ [len (kindOf s) | NamedSymVar s _ <- ins]
+                where len (KVar s)           = die $ "Variable: " ++ s
+                      len KReal{}            = 5
+                      len KFloat{}           = 6 -- SFloat
+                      len KDouble{}          = 7 -- SDouble
+                      len KString{}          = 7 -- SString
+                      len KChar{}            = 5 -- SChar
+                      len k@KList{}          = length (listCType k)
+                      len k@KSet{}           = length (setCType k)
+                      len KUnbounded{}       = 8
+                      len KBool              = 5 -- SBool
+                      len (KBounded False n) = 5 + length (show n) -- SWordN
+                      len (KBounded True  n) = 4 + length (show n) -- SIntN
+                      len KRational{}        = length "SRational"
+                      len (KFP eb sb)         = 6 + length (show eb) + length (show sb)
+                      len k@KArray{}         = length (arrayCType k)
+                      len k@KTuple{}         = length (tupleCType k)
+                      len (KApp s _)         = die $ "Uninterpreted ADT app: " ++ s
+                      len k@(KADT s _ _)
+                        | isRoundingMode k = length (show k)
+                        | isUninterpreted k = die $ "Uninterpreted ADT: " ++ s
+                        | True             = length (adtCType k)
+
+                      getMax m []     = m
+                      getMax m (x:xs) = getMax (m `max` x) xs
+
+       allConsts = (falseSV, falseCV) : (trueSV, trueCV) : preConsts
+       (constantDeclarations, consts) = stabilizeCConstants cfg adts typeWidth (filter ((`Set.member` usedVariables) . fst) allConsts)
+       env = CRenderEnv cfg adts consts
+
+       usedVariables = cReachableValues cfg (Map.fromList assignments) tbls (map fst evaluationRoots)
+
+       isAlive :: (String, CgVal) -> Bool
+       isAlive (_, CgAtomic sv) = sv `Set.member` usedVariables
+       isAlive (_, _)           = True
+
+       genIO :: Bool -> (Bool, (String, CgVal)) -> [Doc]
+       genIO True  (alive, (cNm, CgAtomic sv))
+         | isArray sv = [statement | alive, statement <- arrayInputSetup typeWidth sv cNm]
+         | isSet sv   = [declSV typeWidth sv <+> text "=" <+> setNormalize (kindOf sv) (text cNm) P.<> semi | alive]
+         | True       = [declSV typeWidth sv <+> text "=" <+> inputValue cNm sv P.<> semi | alive]
+       genIO False (alive, (cNm, CgAtomic sv))
+         | isArray sv                          = [text "*" P.<> text cNm <+> text "=" <+> text (arrayExportName (kindOf sv)) P.<> parens (showSV env sv) P.<> semi | alive]
+         | isExactGMPKind cfg (kindOf sv)      = [gmpSet (kindOf sv) (text cNm) (showSV env sv) P.<> semi | alive]
+         | kindOf sv == KString                = [text "*" P.<> text cNm <+> text "=" <+> textClone (showSV env sv) P.<> semi | alive]
+         | isList sv                           = [text "*" P.<> text cNm <+> text "=" <+> listClone (kindOf sv) (showSV env sv) P.<> semi | alive]
+         | isSet sv                            = [text "*" P.<> text cNm <+> text "=" <+> setClone (kindOf sv) (showSV env sv) P.<> semi | alive]
+         | tupleNeedsOwnership cfg (kindOf sv) = [text "*" P.<> text cNm <+> text "=" <+> text (tupleOwnedCloneName (kindOf sv)) P.<> parens (showSV env sv) P.<> semi | alive]
+         | isOwnedADT cfg adts sv              = [ text "*" P.<> text cNm <+> text "="
+                                               <+> text (adtOwnedCloneName (kindOf sv))
+                                                     P.<> parens (showSV env sv)
+                                                     P.<> semi
+                                                 | alive
+                                                 ]
+         | True                                = [text "*" P.<> text cNm <+> text "=" <+> showSV env sv P.<> semi | alive]
+       genIO isInp (_,     (cNm, CgArray sws)) = zipWith genElt sws [(0::Int)..]
+         where genElt sv i
+                 | isInp                         = vcat (genIO True (sv `Set.member` usedVariables, (entry, CgAtomic sv)))
+                 | isExactGMPKind cfg kind      = gmpSet kind (text entry) value P.<> semi
+                 | isArray kind                 = text entry <+> text "=" <+> text (arrayExportName kind) P.<> parens value P.<> semi
+                 | kind == KString              = text entry <+> text "=" <+> textClone value P.<> semi
+                 | isList kind                  = text entry <+> text "=" <+> listClone kind value P.<> semi
+                 | isSet kind                   = text entry <+> text "=" <+> setClone kind value P.<> semi
+                 | tupleNeedsOwnership cfg kind = text entry <+> text "=" <+> text (tupleOwnedCloneName kind) P.<> parens value P.<> semi
+                 | isOwnedADT cfg adts sv        = text entry <+> text "=" <+> text (adtOwnedCloneName kind) P.<> parens value P.<> semi
+                 | True                         = text entry <+> text "=" <+> value P.<> semi
+                 where entry = cNm ++ "[" ++ show i ++ "]"
+                       kind  = kindOf sv
+                       value = showSV env sv
+
+       inputValue cNm sv
+         | isWideBV k = wideBVNormalize k (text cNm)
+         | isFP k      = arbitraryFPNormalize k (text cNm)
+         | True        = text cNm
+         where k = kindOf sv
+
+       mkRet sv = text "return" <+> showSV env sv P.<> semi
+
+       genAssert (msg, cs, sv) = (cLocation consts sv, doc)
+         where doc =     text "/* ASSERTION:" <+> cCommentText msg
+                     $$  maybe empty (vcat . map cCommentText) (locInfo (getCallStack <$> cs))
+                     $$  text " */"
+                     $$  text "if" P.<> parens (showSV env sv)
+                     $$  text "{"
+                     $+$ nest 2 (vcat [errOut, text "exit(-1);"])
+                     $$  text "}"
+                     $$  text ""
+               errOut = text "fprintf" P.<> parens (fsep (punctuate comma [ text "stderr"
+                                                                          , cStringLiteral "%s:%d:ASSERTION FAILED: %s\n"
+                                                                          , text "__FILE__"
+                                                                          , text "__LINE__"
+                                                                          , cStringLiteral msg
+                                                                          ])) P.<> semi
+               locInfo (Just ps) = let loc (f, sl) = concat [srcLocFile sl, ":", show (srcLocStartLine sl), ":", show (srcLocStartCol sl), ":", f ]
+                                   in case map loc ps of
+                                         []     -> Nothing
+                                         (f:rs) -> Just $ (" * SOURCE   : " ++ f) : map (" *            " ++)  rs
+               locInfo _         = Nothing
+
+       genConstraint (_, attributes, sv) = (cLocation consts sv, doc)
+         where doc =  text "/* CONSTRAINT */"
+                   $$ text "if" P.<> parens (text "!" P.<> parens (showSV env sv))
+                   $$ text "{"
+                   $+$ nest 2 (vcat [errOut, text "exit(-1);"])
+                   $$ text "}"
+                   $$ text ""
+
+               description = fromMaybe "unnamed" (lookup ":named" attributes)
+
+               errOut = text "fprintf" P.<> parens (fsep (punctuate comma [ text "stderr"
+                                                                          , cStringLiteral "%s:%d:CONSTRAINT FAILED: %s\n"
+                                                                          , text "__FILE__"
+                                                                          , text "__LINE__"
+                                                                          , cStringLiteral description
+                                                                          ])) P.<> semi
+
+-- | Return the source-order location used to interleave a value's dependent
+-- declarations. Constants are available before every generated assignment.
+cLocation :: [(SV, CV)] -> SV -> Int
+cLocation constants sv@(SV _ (NodeId (_, _, nodeIndex)))
+  | isJust (lookup sv constants) = -1
+  | True                         = nodeIndex
+
+-- | Render one finite lookup table at the point where all its elements are
+-- available. Constant top-level tables may use static storage; lambda-local
+-- tables always use automatic storage so their entries may depend on parameters.
+ppTable :: CRenderEnv -> Bool -> ((Int, Kind, Kind), [SV]) -> (Int, Doc)
+ppTable env allowStatic ((tableIndex, _, resultKind), elements)
+  = (location, storage <+> text tableElementType <+> tableName P.<> text "[] = {"
+              $$ nest 4 (fsep (punctuate comma (align (map renderElement elements))))
+              $$ text "};")
+ where cfg = renderConfig env
+       location = maximum (-1 : map (cLocation (renderConstants env)) elements)
+       renderElement element = arrayStoredValue resultKind (showSV env element)
+       tableElementType
+         | isArray resultKind = CTypes.constElementCType resultKind
+         | True               = "const " ++ showCType resultKind
+       storage
+         | allowStatic && location == -1 && not (tableMustBeLocal cfg resultKind) = text "static"
+         | True                                                                  = empty
+       tableName = text ("table" ++ show tableIndex)
+
+-- | Declare the private ownership-arena bundle threaded through generated SBV
+-- functions and retained array callbacks. The retain bridge creates empty
+-- arenas so an escaping lambda can produce fresh managed values without
+-- retaining storage owned by the call that created it.
+-- Define its unused-function annotation even when no other runtime is needed.
+definedFunctionContextType :: Set.Set CRequirement -> Doc
+definedFunctionContextType requirements = text . unlines $
+     [ cUnusedAttribute
+     , ""
+     , "typedef struct {"
+     ]
+  ++ ["  void *" ++ fieldName ++ ";" | (_, _, fieldName) <- functionContextFields]
+  ++ [ "} sbv_function_ctx;"
+     , ""
+     , "static SBV_CGEN_UNUSED const void *sbv_function_ctx_retain_empty(const void *context)"
+     , "{"
+     , "  if (context == NULL) abort();"
+     , "  const sbv_function_ctx *source = (const sbv_function_ctx *) context;"
+     , "  (void) source;"
+     , "  sbv_function_ctx *owned = (sbv_function_ctx *) calloc(1, sizeof *owned);"
+     , "  if (owned == NULL) abort();"
+     ]
+  ++ concatMap retainArena activeArenas
+  ++ [ "  return owned;"
+     , "}"
+     , ""
+     , "static SBV_CGEN_UNUSED void sbv_function_ctx_release_owned(const void *context)"
+     , "{"
+     , "  sbv_function_ctx *owned = (sbv_function_ctx *) context;"
+     , "  if (owned == NULL) return;"
+     ]
+  ++ concatMap releaseArena activeArenas
+  ++ [ "  free(owned);"
+     , "}"
+     , ""
+     ]
+ where activeArenas = [ arena
+                      | arena@(requirement, _, _, _) <- contextArenas
+                      , requirement `Set.member` requirements
+                      ]
+
+       contextArenas = [ (requirement, fieldName, contextType, contextType ++ "_end")
+                       | (requirement, contextType, fieldName) <- functionContextFields
+                       ]
+
+       retainArena (_, fieldName, contextType, _) =
+         [ "  if (source->" ++ fieldName ++ " != NULL) {"
+         , "    " ++ contextType ++ " *arena = (" ++ contextType ++ " *) calloc(1, sizeof *arena);"
+         , "    if (arena == NULL) abort();"
+         , "    owned->" ++ fieldName ++ " = arena;"
+         , "  }"
+         ]
+
+       releaseArena (_, fieldName, contextType, contextEnd) =
+         [ "  if (owned->" ++ fieldName ++ " != NULL) {"
+         , "    " ++ contextEnd ++ "((" ++ contextType ++ " *) owned->" ++ fieldName ++ ");"
+         , "    free(owned->" ++ fieldName ++ ");"
+         , "  }"
+         ]
+
+-- | Initialize a private function-context bundle from the ownership arenas
+-- available in the surrounding generated function.
+definedFunctionContextInitialization :: Set.Set CRequirement -> Doc
+definedFunctionContextInitialization requirements
+  = text "sbv_function_ctx sbv_local_function_ctx =" <+> braces (fsep (punctuate comma fields)) P.<> semi
+ where fields = [ field requirement fieldName ("sbv_local_" ++ fieldName ++ "_ctx")
+                | (requirement, _, fieldName) <- functionContextFields
+                ]
+
+       field requirement fieldName contextName
+         = text ("." ++ fieldName ++ " =") <+> if requirement `Set.member` requirements
+                                                   then text ("&" ++ contextName)
+                                                   else text "NULL"
+
+-- | Test whether a private function result needs a stable deep copy because
+-- its by-value representation contains independently owned aggregate storage.
+definedFunctionResultNeedsClone :: CgConfig -> [Kind] -> Kind -> Bool
+definedFunctionResultNeedsClone cfg adts kind
+  | kind == KString        = True
+  | isList kind            = True
+  | isSet kind             = True
+  | KTuple{} <- kind       = tupleNeedsOwnership cfg kind
+  | isConcreteADTReference kind = adtNeedsOwnership cfg adts kind
+  | True                   = False
+
+-- | Shared ownership-context fields: requirement, C arena type, and field
+-- name. Private functions and array callbacks must bind the same arenas.
+functionContextFields :: [(CRequirement, String, String)]
+functionContextFields =
+  [ (CRequiresGMP, "sbv_gmp_ctx", "gmp")
+  , (CRequiresText, "sbv_text_ctx", "text")
+  , (CRequiresLists, "sbv_list_ctx", "list")
+  , (CRequiresSets, "sbv_set_ctx", "set")
+  , (CRequiresArrays, "sbv_array_ctx", "array")
+  , (CRequiresFunctionResults, "sbv_function_result_ctx", "function_result")
+  ]
+
+-- | Borrow required parent arenas and bind a local function context to them.
+functionContextSetup :: Set.Set CRequirement -> Doc
+functionContextSetup requirements
+  = vcat [ text contextType <+> text ("*sbv_local_parent_" ++ fieldName ++ "_ctx = (" ++ contextType ++ " *) sbv_local_parent_function_ctx->" ++ fieldName ++ ";")
+        $$ text contextType <+> text ("sbv_local_" ++ fieldName ++ "_ctx = *sbv_local_parent_" ++ fieldName ++ "_ctx;")
+         | (requirement, contextType, fieldName) <- functionContextFields, requirement `Set.member` requirements
+         ]
+ $$ text "sbv_function_ctx sbv_local_function_ctx = *sbv_local_parent_function_ctx; (void) sbv_local_function_ctx;"
+ $$ vcat [text ("sbv_local_function_ctx." ++ fieldName ++ " = &sbv_local_" ++ fieldName ++ "_ctx;")
+         | (requirement, _, fieldName) <- functionContextFields, requirement `Set.member` requirements
+         ]
+
+-- | Publish arena allocations back to the parent before returning a result.
+functionContextCommit :: Set.Set CRequirement -> Doc
+functionContextCommit requirements
+  = vcat [text ("*sbv_local_parent_" ++ fieldName ++ "_ctx = sbv_local_" ++ fieldName ++ "_ctx;")
+         | (requirement, _, fieldName) <- functionContextFields, requirement `Set.member` requirements
+         ]
+
+-- | Return the generated helper name that clones one private managed result
+-- into the shared function-result arena.
+definedFunctionResultCloneName :: Kind -> String
+definedFunctionResultCloneName kind = "sbv_function_result_clone_" ++ CTypes.kindTag kind
+
+-- | Render a deep clone into the shared private function-result arena.
+definedFunctionResultClone :: Kind -> Doc -> Doc
+definedFunctionResultClone kind value
+  = text (definedFunctionResultCloneName kind)
+      P.<> parens (fsep (punctuate comma [text "&sbv_local_function_result_ctx", value]))
+
+-- | Emit temporary ownership storage for managed values returned by private
+-- generated functions or retained array callbacks. Public boundaries clone
+-- these values once more before this arena is released.
+definedFunctionResultRuntime :: [Kind] -> Doc
+definedFunctionResultRuntime []    = empty
+definedFunctionResultRuntime kinds = text . unlines $
+     [ "/* Stable storage for managed private-function and array-lambda results. */"
+     , "typedef void (*sbv_function_result_release)(void *);"
+     , "typedef struct sbv_function_result_node {"
+     , "  struct sbv_function_result_node *next;"
+     , "  void *value;"
+     , "  sbv_function_result_release release;"
+     , "} sbv_function_result_node;"
+     , "typedef struct { sbv_function_result_node *head; } sbv_function_result_ctx;"
+     , ""
+     , "static SBV_CGEN_UNUSED void sbv_function_result_ctx_remember(sbv_function_result_ctx *ctx, void *value, sbv_function_result_release release)"
+     , "{"
+     , "  sbv_function_result_node *node = (sbv_function_result_node *) malloc(sizeof(*node));"
+     , "  if (ctx == NULL || value == NULL || release == NULL || node == NULL) abort();"
+     , "  node->next = ctx->head;"
+     , "  node->value = value;"
+     , "  node->release = release;"
+     , "  ctx->head = node;"
+     , "}"
+     , ""
+     , "static SBV_CGEN_UNUSED void sbv_function_result_ctx_end(sbv_function_result_ctx *ctx)"
+     , "{"
+     , "  while (ctx->head != NULL) {"
+     , "    sbv_function_result_node *node = ctx->head;"
+     , "    ctx->head = node->next;"
+     , "    node->release(node->value);"
+     , "    free(node);"
+     , "  }"
+     , "}"
+     , ""
+     ]
+  ++ concatMap helpers kinds
+ where helpers kind =
+         [ "static SBV_CGEN_UNUSED void " ++ releaseName ++ "(void *opaque)"
+         , "{"
+         , "  " ++ cType ++ " *value = (" ++ cType ++ " *) opaque;"
+         , "  " ++ render (managedValueRelease kind (text "value"))
+         , "  free(value);"
+         , "}"
+         , ""
+         , "static SBV_CGEN_UNUSED " ++ cType ++ " " ++ cloneName ++ "(sbv_function_result_ctx *ctx, " ++ cType ++ " value)"
+         , "{"
+         , "  " ++ cType ++ " *result = (" ++ cType ++ " *) malloc(sizeof(*result));"
+         , "  if (result == NULL) abort();"
+         , "  *result = " ++ render (managedValueClone kind (text "value")) ++ ";"
+         , "  sbv_function_result_ctx_remember(ctx, result, " ++ releaseName ++ ");"
+         , "  return *result;"
+         , "}"
+         , ""
+         ]
+        where cType       = showCType kind
+              cloneName   = definedFunctionResultCloneName kind
+              releaseName = "sbv_function_result_release_" ++ CTypes.kindTag kind
+
+-- | Render the private C signature shared by a defined function's prototype
+-- and implementation.
+definedFunctionSignature :: String -> Kind -> [(Quantifier, SV)] -> Doc
+definedFunctionSignature originalName resultKind parameters
+  = text "static" <+> text resultType <+> text (CTypes.definedFunctionCName originalName)
+      P.<> parens renderedParameters
+ where resultType
+         | isArray resultKind = CTypes.elementCType resultKind
+         | True               = showCType resultKind
+
+       renderedParameters = fsep . punctuate comma $
+           text "sbv_function_ctx *const sbv_local_parent_function_ctx"
+         : [text "const" <+> text (showCType parameter) <+> text (show parameter) | (_, parameter) <- parameters]
+
+-- | Lower one first-order SBV function definition from its retained expression
+-- DAG. All definitions use demand-driven control flow so operations protected
+-- by conditionals and short-circuiting Boolean operations remain protected in
+-- C, including partial ADT selectors in acyclic functions. Closed nested array
+-- lambdas are lambda-lifted into private callbacks;
+-- SBV's firstified higher-order specializations arrive through the same
+-- first-order representation.
+ppDefinedFunction :: CgConfig
+                  -> [Kind]
+                  -> [(T.Text, String)]
+                  -> String
+                  -> Kind
+                  -> SBVType
+                  -> LambdaInfo
+                  -> (Doc, Set.Set CRequirement)
+ppDefinedFunction cfg adts functionNames originalName declaredResultKind (SBVType signatureKinds)
+                  LambdaInfo{ liAssignments = functionProgram
+                            , liParams      = parameters
+                            , liOutput      = functionOutput
+                            , liConsts      = constants
+                            , liTables      = tables
+                            }
+  | null signatureKinds
+  = die $ "Empty type for defined function " ++ show originalName
+  | declaredResultKind /= resultKind
+  = die $ "Result-kind mismatch in defined function " ++ show originalName
+  | map (kindOf . snd) parameters /= parameterKinds
+  = die $ "Parameter-kind mismatch in defined function " ++ show originalName
+  | any ((/= ALL) . fst) parameters
+  = die $ "Non-universal parameter in defined function " ++ show originalName
+  | kindOf functionOutput /= resultKind
+  = die $ "Output-kind mismatch in defined function " ++ show originalName
+  | not (null unsupportedManagedKinds)
+  = tbd $ "Managed values in defined function " ++ show originalName ++ ": " ++ intercalate ", " (map show unsupportedManagedKinds)
+  | True
+  = (functionDoc, functionRequirements)
+ where (parameterKinds, resultKind) = (init signatureKinds, last signatureKinds)
+       assignments                  = F.toList functionProgram
+       functionConsts               = (falseSV, falseCV) : (trueSV, trueCV) : constants
+       reachableValues              = cReachableValues cfg (Map.fromList assignments) tables [functionOutput]
+       (constantDeclarations, renderingConsts) = stabilizeCConstants cfg adts typeWidth (filter ((`Set.member` reachableValues) . fst) functionConsts)
+       env = CRenderEnv cfg adts renderingConsts
+       functionValues               = functionOutput : map snd parameters ++ map fst assignments ++ map fst constants
+       typeWidth                    = maximum (0 : map (length . showCType) functionValues)
+       nestedLambdaNames            = [ (sv, scopedArrayLambdaName (CTypes.definedFunctionCName originalName) sv)
+                                      | (sv, SBVApp (ArrayInit (Right _)) _) <- assignments
+                                      ]
+       unsupportedManagedKinds      = nub [ kind
+                                          | value <- functionValues
+                                          , let kind = kindOf value
+                                          , functionValueHasUnsupportedManagedStorage kind
+                                          ]
+
+       functionValueHasUnsupportedManagedStorage kind
+         | isExactGMPKind cfg kind = False
+         | kind == KString         = False
+         | isList kind             = False
+         | isSet kind              = False
+         | isArray kind            = False
+         | KTuple fields <- kind   = any functionValueHasUnsupportedManagedStorage fields
+         | isConcreteADTReference kind  = False
+         | True                    = valueNeedsOwnership cfg kind
+
+       (scheduledAssignments, scheduledRequirements) =
+         scheduleC env functionNames nestedLambdaNames
+                   (map fst functionConsts ++ map snd parameters) assignments tables False typeWidth [(functionOutput, empty)]
+
+       functionRequirements = Set.unions
+         [ Set.fromList $ [CRequiresGMP             | any (isExactGMPKind cfg) expandedFunctionKinds]
+                       ++ [CRequiresText            | KString `elem` expandedFunctionKinds]
+                       ++ [CRequiresLists           | any isList expandedFunctionKinds]
+                       ++ [CRequiresSets            | any isSet expandedFunctionKinds]
+                       ++ [CRequiresArrays          | any isArray expandedFunctionKinds]
+                       ++ [CRequiresFunctionResults | definedFunctionResultNeedsClone cfg adts resultKind]
+         , scheduledRequirements
+         , Set.unions [operationRequirements cfg (op, kindOf sv) | (sv, SBVApp op _) <- assignments]
+         ]
+
+       expandedFunctionKinds = concatMap (expandKinds . kindOf) functionValues
+
+       contextSetup  = functionContextSetup functionRequirements
+       contextCommit = functionContextCommit functionRequirements
+
+       functionDoc
+         = definedFunctionSignature originalName resultKind parameters
+          $$ text "{"
+          $$ nest 2 (   contextSetup
+                     $$ constantDeclarations
+                     $$ functionAssignments
+                     $$ functionResultDeclaration <+> text "sbv_local_function_result =" <+> functionResult P.<> semi
+                     $$ contextCommit
+                     $$ text "return sbv_local_function_result;"
+                    )
+          $$ text "}"
+          $$ text ""
+
+       functionAssignments = scheduledAssignments
+
+       functionResult
+         | isArray resultKind
+         = arrayStoredValue resultKind (showSV env functionOutput)
+         | definedFunctionResultNeedsClone cfg adts resultKind
+         = definedFunctionResultClone resultKind (showSV env functionOutput)
+         | True
+         = showSV env functionOutput
+
+       functionResultType
+         | isArray resultKind = CTypes.elementCType resultKind
+         | True               = showCType resultKind
+
+       functionResultDeclaration
+         | isArray resultKind = text functionResultType
+         | True               = text "const" <+> text functionResultType
+
+-- | Collect every operand, including values retained inside an operator
+-- instead of its ordinary argument list and the entries of referenced tables.
+-- Defaults omitted by unchecked or provably in-range lookups are not live.
+cExpressionDependencies :: CgConfig -> [((Int, Kind, Kind), [SV])] -> SBVExpr -> [SV]
+cExpressionDependencies cfg tables (SBVApp op arguments) = arguments ++ case op of
+  LkUp (tableIndex, indexKind, _, tableLength) index defaultValue
+    -> index : [defaultValue | tableNeedsBounds cfg indexKind, isJust (snd (tableIndexAndBounds cfg indexKind tableLength empty))]
+            ++ [value | ((candidateIndex, _, _), values) <- tables, candidateIndex == tableIndex, value <- values]
+  IEEEFP (FP_Cast _ _ rmSV) -> [rmSV]
+  _                       -> []
+
+-- | Find the complete demand closure of a collection of roots. Inputs and
+-- constants are included, so declaration liveness and evaluation scheduling
+-- use the same dependency graph.
+cReachableValues :: CgConfig -> Map.Map SV SBVExpr -> [((Int, Kind, Kind), [SV])] -> [SV] -> Set.Set SV
+cReachableValues cfg assignments tables = foldl reach Set.empty
+ where reach visited sv
+         | sv `Set.member` visited = visited
+         | True = foldl reach (Set.insert sv visited)
+                        (maybe [] (cExpressionDependencies cfg tables) (Map.lookup sv assignments))
+
+-- | Give managed constants function-wide backing storage. Rendering compound
+-- literals inside a conditional would otherwise leave dangling pointers when
+-- a descriptor is used after that branch exits. A lowering may elide a live
+-- operand, such as an unreachable table default, so acknowledge each binding
+-- even if its rendered use disappears.
+stabilizeCConstants :: CgConfig -> [Kind] -> Int -> [(SV, CV)] -> (Doc, [(SV, CV)])
+stabilizeCConstants cfg adts typeWidth constants
+  = ( vcat [ declSV typeWidth sv <+> text "=" <+> mkConst env cv P.<> semi
+          $$ text "(void)" <+> text (show sv) P.<> semi
+           | (sv, cv) <- stabilized
+           ]
+    , filter ((`Set.notMember` stabilizedValues) . fst) constants
+    )
+ where env = CRenderEnv cfg adts constants
+       stabilized = [(sv, cv) | (sv, cv) <- constants, isArray sv || definedFunctionResultNeedsClone cfg adts (kindOf sv)]
+       stabilizedValues = Set.fromList (map fst stabilized)
+
+-- | Recognize total bit-vector operations that may be computed before a
+-- guard when all their dependencies are already safe. Restrict speculation
+-- to the exact bit-vector runtime: calls, selectors, allocation, and native
+-- floating-point operations retain their demand ordering.
+cSpeculatable :: SV -> SBVExpr -> Bool
+cSpeculatable result (SBVApp op arguments) = all bitVector (result : arguments) && totalOperation op
+ where bitVector sv = kindOf sv == KBool || isBounded sv
+
+       totalOperation operation = case operation of
+         Plus        -> True
+         Times       -> True
+         Minus       -> True
+         UNeg        -> True
+         Abs         -> True
+         Quot        -> True
+         Rem         -> True
+         Equal{}     -> True
+         NotEqual    -> True
+         LessThan    -> True
+         GreaterThan -> True
+         LessEq      -> True
+         GreaterEq   -> True
+         Ite         -> True
+         Implies     -> True
+         And         -> True
+         Or          -> True
+         XOr         -> True
+         Not         -> True
+         Shl         -> True
+         Shr         -> True
+         Rol{}       -> True
+         Ror{}       -> True
+         Extract{}   -> True
+         Join        -> True
+         _           -> False
+
+-- | Path-sensitive scheduling facts. Tables, unlike hoisted values, are local
+-- to the C block that declares them. Memoized values accumulate across paths.
+data CAvailability = CAvailability
+  { definitelyAvailable :: Set.Set SV  -- ^ Values computed on every incoming path.
+  , possiblyAvailable   :: Set.Set SV  -- ^ Values computed on some incoming path.
+  , availableCTables    :: Set.Set Int -- ^ Tables declared in the current scope.
+  , memoizedValues      :: Set.Set SV  -- ^ Values requiring a runtime readiness check.
+  }
+
+-- | Schedule a collection of demanded values and their following statements.
+-- Branch-local work stays under its guard, while declarations are hoisted so
+-- values computed on both paths can safely be reused after the join. Root
+-- statements let entry points retain runtime checks even without live outputs.
+scheduleC :: CRenderEnv
+          -> [(T.Text, String)]
+          -> [(SV, String)]
+          -> [SV]
+          -> [(SV, SBVExpr)]
+          -> [((Int, Kind, Kind), [SV])]
+          -> Bool
+          -> Int
+          -> [(SV, Doc)]
+          -> (Doc, Set.Set CRequirement)
+scheduleC env functionNames lambdaNames initialValues assignments tables allowStatic typeWidth roots
+  = (vcat eagerDocs $$ declarations $$ statements, Set.union requirements eagerRequirements)
+ where cfg = renderConfig env
+       initialAvailability = CAvailability eagerValues eagerValues Set.empty Set.empty
+       (analyzed, _, _, _) = schedulePass Set.empty
+       guardedValues = memoizedValues analyzed
+       (_, statements, requirements, extraDeclarations) = guardedValues `seq` schedulePass guardedValues
+       declarations = vcat [typ <+> var <+> (if sv `Set.member` guardedValues then text "= {0}" else empty) P.<> semi
+                           | (sv, _) <- assignments
+                           , sv `Set.member` reachableValues
+                           , sv `Set.notMember` eagerValues
+                           , let (typ, var) = declSVNoConst typeWidth sv
+                           ]
+                   $$ vcat [text "bool" <+> readyName sv <+> text "= false;" | sv <- Set.toList guardedValues]
+                   $$ vcat (uniqueOn render extraDeclarations)
+
+       assignmentMap   = Map.fromList assignments
+       reachableValues = cReachableValues cfg assignmentMap tables (map fst roots)
+
+       -- The first pass discovers which values need readiness flags. The
+       -- second pass receives that completed set explicitly. Even forcing
+       -- first-pass documents cannot create a dependency on the second pass.
+       readyName sv = text ("sbv_ready_" ++ show sv)
+
+       (eagerValues, eagerReversed) = foldl speculate (Set.fromList initialValues, []) assignments
+       eagerLowerings = [ppExpr env functionNames lambdaNames expression sv
+                               (declSV typeWidth sv) (declSVNoConst typeWidth sv) True
+                        | (sv, expression) <- reverse eagerReversed]
+       eagerDocs = [doc | (doc, _, _) <- eagerLowerings]
+       eagerRequirements = Set.unions [needed | (_, needed, _) <- eagerLowerings]
+
+       speculate available@(values, emitted) assignment@(sv, expression)
+         | sv `Set.member` reachableValues
+         , cSpeculatable sv expression
+         , all (`Set.member` values) (cExpressionDependencies cfg tables expression)
+         = (Set.insert sv values, assignment : emitted)
+         | True
+         = available
+
+       schedulePass markedValues = emitRoots initialAvailability roots
+        where
+         emitRoots available [] = (available, empty, Set.empty, [])
+         emitRoots available ((sv, action):rest) =
+           let (withValue, valueDocs, valueRequirements, valueDeclarations) = emit available sv
+               (withRest, restDocs, restRequirements, restDeclarations) = emitRoots withValue rest
+           in ( withRest
+              , valueDocs $$ action $$ restDocs
+              , Set.union valueRequirements restRequirements
+              , valueDeclarations ++ restDeclarations
+              )
+
+         emit available sv
+           | sv `Set.member` definitelyAvailable available
+           = (available, empty, Set.empty, [])
+           | True
+           = let (after, docs, needed, decls) = emitAssignment available sv
+                 marked = docs $$ if sv `Set.member` markedValues then readyName sv <+> text "= true;" else empty
+                 guarded = text "if" P.<> parens (text "!" P.<> readyName sv)
+                        $$ text "{"
+                        $$ nest 2 marked
+                        $$ text "}"
+             in if sv `Set.member` possiblyAvailable available
+                  then (after { availableCTables = availableCTables available
+                              , memoizedValues = Set.insert sv (memoizedValues after)
+                              }, guarded, needed, decls)
+                  else (after, marked, needed, decls)
+
+         emitAssignment available sv
+           | Just expression@(SBVApp op arguments) <- Map.lookup sv assignmentMap
+           = case (op, arguments) of
+               (LkUp tableInfo index defaultValue, [])
+                 -> tableLookup available sv expression tableInfo index defaultValue
+               (Ite, [condition, trueValue, falseValue])
+                 -> conditional available sv condition trueValue falseValue
+               (And, [left, right])
+                 | kindOf sv == KBool
+                 -> conditional available sv left right falseSV
+               (Or, [left, right])
+                 | kindOf sv == KBool
+                 -> conditional available sv left trueSV right
+               (Implies, [left, right])
+                 | kindOf sv == KBool
+                 -> conditional available sv left right trueSV
+               _ -> let (withArguments, argumentDocs, argumentRequirements, argumentDeclarations) = emitMany available
+                                                                                                             (cExpressionDependencies cfg tables expression)
+                        (withTable, tableDocs) = emitTable withArguments op
+                        (assignmentDoc, assignmentRequirements, assignmentDeclarations) =
+                          ppExpr env functionNames lambdaNames expression sv (text (show sv))
+                                 (declSVNoConst typeWidth sv) False
+                    in ( insertAvailableValue sv withTable
+                       , argumentDocs $$ tableDocs $$ assignmentDoc
+                       , Set.union argumentRequirements assignmentRequirements
+                       , argumentDeclarations ++ assignmentDeclarations
+                       )
+           | True
+           = die $ "Missing assignment while scheduling C evaluation: " ++ show sv
+
+         emitMany available [] = (available, empty, Set.empty, [])
+         emitMany available (sv:svs) =
+           let (withValue, valueDocs, valueRequirements, valueDeclarations) = emit available sv
+               (withRest, restDocs, restRequirements, restDeclarations) = emitMany withValue svs
+           in ( withRest
+              , valueDocs $$ restDocs
+              , Set.union valueRequirements restRequirements
+              , valueDeclarations ++ restDeclarations
+              )
+
+         emitTable available op
+           | LkUp (tableIndex, _, _, _) _ _ <- op
+           , tableIndex `Set.notMember` availableCTables available
+           = case [table | table@((candidateIndex, _, _), _) <- tables, candidateIndex == tableIndex] of
+               [table] -> (insertAvailableTable tableIndex available, snd (ppTable env allowStatic table))
+               _       -> die "Missing table while scheduling C evaluation"
+           | True
+           = (available, empty)
+
+         tableLookup available result expression (tableIndex, indexKind, _, tableLength) index defaultValue =
+           let (withIndex, indexDocs, indexRequirements, indexDeclarations) = emit available index
+               (afterLookup, lookupDocs, lookupRequirements, lookupDeclarations) = selectValue withIndex
+           in ( afterLookup
+              , indexDocs $$ lookupDocs
+              , Set.union indexRequirements lookupRequirements
+              , indexDeclarations ++ lookupDeclarations
+              )
+           where elements = case [values | ((candidateIndex, _, _), values) <- tables, candidateIndex == tableIndex] of
+                              [values] | length values == tableLength -> values
+                              _ -> die "Missing or inconsistent table while scheduling C evaluation"
+                 (nativeIndex, outOfRange) = tableIndexAndBounds cfg indexKind tableLength (showSV env index)
+                 checkedBounds = if tableNeedsBounds cfg indexKind then outOfRange else Nothing
+                 entriesReady current = all (`Set.member` definitelyAvailable current) elements
+
+                 selectValue current
+                   | entriesReady current
+                   , isNothing checkedBounds || defaultValue `Set.member` definitelyAvailable current
+                   = renderLookup cfg current
+                   | Just check <- checkedBounds
+                   = let (withDefault, defaultDocs, defaultRequirements, defaultDeclarations) = emitChoice current defaultValue
+                         (withEntry, entryDocs, entryRequirements, entryDeclarations) = selectEntry current
+                     in ( insertAvailableValue result (joinAvailability current [withDefault, withEntry])
+                        , text "if" P.<> parens check
+                       $$ text "{" $$ nest 2 defaultDocs $$ text "}"
+                       $$ text "else"
+                       $$ text "{" $$ nest 2 entryDocs $$ text "}"
+                        , Set.union defaultRequirements entryRequirements
+                        , defaultDeclarations ++ entryDeclarations
+                        )
+                   | True
+                   = selectEntry current
+
+                 selectEntry current
+                   | entriesReady current
+                   , isNothing checkedBounds || defaultValue `Set.member` definitelyAvailable current
+                   = renderLookup (cfg {cgRTC = False}) current
+                   | True
+                   = let cases = [(position, emitChoice current value) | (position, value) <- zip [0 :: Int ..] elements]
+                         renderCase (position, (_, docs, _, _)) = text "case" <+> int position P.<> colon
+                                                             $$ text "{"
+                                                             $$ nest 2 (docs $$ text "break;")
+                                                             $$ text "}"
+                         availableAfter = joinAvailability current [values | (_, (values, _, _, _)) <- cases]
+                     in ( insertAvailableValue result availableAfter
+                        , text "switch" P.<> parens (text "(uint64_t)" <+> parens nativeIndex)
+                       $$ text "{"
+                       $$ nest 2 (vcat (map renderCase cases)
+                               $$ text "default:"
+                               $$ nest 2 (text "/* Unreachable for checked indices; invalid unchecked index. */" $$ text "abort();"))
+                       $$ text "}"
+                        , Set.unions [needed | (_, (_, _, needed, _)) <- cases]
+                        , concat [decls | (_, (_, _, _, decls)) <- cases]
+                        )
+
+                 emitChoice current value =
+                   let (withValue, docs, needed, decls) = emit current value
+                   in ( insertAvailableValue result withValue
+                      , docs $$ text (show result) <+> text "=" <+> showSV env value P.<> semi
+                      , needed
+                      , decls
+                      )
+
+                 renderLookup loweringConfig current =
+                   let SBVApp op _ = expression
+                       (withTable, tableDocs) = emitTable current op
+                       (docs, needed, decls) = ppExpr env{renderConfig = loweringConfig} functionNames lambdaNames expression result
+                                                     (text (show result)) (declSVNoConst typeWidth result) False
+                   in (insertAvailableValue result withTable, tableDocs $$ docs, needed, decls)
+
+         conditional available result condition trueValue falseValue =
+           let (withCondition, conditionDocs, conditionRequirements, conditionDeclarations) = emit available condition
+               shared = Set.intersection (mandatoryValues withCondition trueValue) (mandatoryValues withCondition falseValue)
+               (withCommon, commonDocs, commonRequirements, commonDeclarations) = emitMany withCondition (Set.toList shared)
+               (withTrue, trueDocs, trueRequirements, trueDeclarations) = emit withCommon trueValue
+               (withFalse, falseDocs, falseRequirements, falseDeclarations) = emit withCommon falseValue
+               branch label branchDocs branchValue = text label
+                                                  $$ text "{"
+                                                  $$ nest 2 (branchDocs $$ assign branchValue)
+                                                  $$ text "}"
+               assign value = text (show result) <+> text "=" <+> showSV env value P.<> semi
+               docs = conditionDocs
+                   $$ commonDocs
+                   $$ text "if" P.<> parens (showSV env condition)
+                   $$ branch "" trueDocs trueValue
+                   $$ branch "else" falseDocs falseValue
+               needed = Set.unions [conditionRequirements, commonRequirements, trueRequirements, falseRequirements]
+               -- Values are declared outside the branches, but branch-local C
+               -- table declarations do not remain in scope after the join.
+               availableAfter = joinAvailability withCommon [withTrue, withFalse]
+               branchDeclarations = conditionDeclarations ++ commonDeclarations ++ trueDeclarations ++ falseDeclarations
+           in (insertAvailableValue result availableAfter, docs, needed, branchDeclarations)
+
+         -- Sharing a mandatory dependency is safe even for partial operations:
+         -- either branch will demand it. Stop at nested guards rather than
+         -- treating their inactive alternatives as mandatory dependencies.
+         mandatoryValues available = walk Set.empty
+           where walk visited sv
+                   | sv `Set.member` definitelyAvailable available || sv `Set.member` visited = visited
+                   | True = foldl walk (Set.insert sv visited) dependencies
+                   where dependencies = case Map.lookup sv assignmentMap of
+                           Just (SBVApp Ite (condition:_)) -> [condition]
+                           Just (SBVApp (LkUp _ index _) _) -> [index]
+                           Just (SBVApp op (left:_))
+                             | kindOf sv == KBool, op `elem` [And, Or, Implies] -> [left]
+                           Just expression -> cExpressionDependencies cfg tables expression
+                           Nothing         -> []
+
+         joinAvailability current [] = current
+         joinAvailability current branches@(initial:rest) = current
+           { definitelyAvailable = foldl Set.intersection (definitelyAvailable initial) (map definitelyAvailable rest)
+           , possiblyAvailable = Set.unions (map possiblyAvailable branches)
+           , memoizedValues = Set.unions (map memoizedValues branches)
+           }
+
+         insertAvailableValue value available = available
+           { definitelyAvailable = Set.insert value (definitelyAvailable available)
+           , possiblyAvailable = Set.insert value (possiblyAvailable available)
+           }
+
+         insertAvailableTable tableIndex available = available {availableCTables = Set.insert tableIndex (availableCTables available)}
+
+-- | Give a lambda-lifted array callback a name unique to its lexical owner.
+scopedArrayLambdaName :: String -> SV -> String
+scopedArrayLambdaName scope arraySV = scope ++ "_nested_" ++ show arraySV
+
+-- | Render the private C signature for a structured array callback.
+-- Captures are rejected separately before any callback is lowered.
+arrayLambdaSignature :: String -> SV -> LambdaInfo -> Doc
+arrayLambdaSignature callbackName arraySV LambdaInfo{liParams = parameters}
+  = case (kindOf arraySV, parameters) of
+      (KArray _ valueKind, [(ALL, parameter)])
+        -> text "static" <+> text (arrayLambdaResultType valueKind) <+> text callbackName
+             P.<> parens (fsep (punctuate comma [text "const void *context", text (showCType (kindOf parameter)) <+> text (show parameter)]))
+      (KArray{}, _) -> die $ "Expected exactly one universal array-lambda parameter, received " ++ show parameters
+      (kind, _)     -> die $ "Expected an array-valued lambda node, received " ++ show kind
+
+-- | Return the C callback result type for an array element kind.
+arrayLambdaResultType :: Kind -> String
+arrayLambdaResultType kind
+  | isArray kind = CTypes.elementCType kind
+  | True         = showCType kind
+
+-- | Conservatively check the complete retained body for free symbolic values,
+-- independently of scheduling or dead-code elimination. Include values hidden
+-- in operators, every table entry/default, the result itself, and free values
+-- of nested array lambdas. Each nested callback is also checked separately,
+-- so capturing its enclosing lambda's parameter is rejected too.
+cLambdaFreeValues :: LambdaInfo -> [SV]
+cLambdaFreeValues lambdaInfo = Set.toList $ Set.fromList uses `Set.difference` bound
+ where assignments = F.toList (liAssignments lambdaInfo)
+       bound       = Set.fromList (falseSV : trueSV : map fst assignments ++ map snd (liParams lambdaInfo) ++ map fst (liConsts lambdaInfo))
+       uses        = liOutput lambdaInfo : concatMap (dependencies . snd) assignments ++ concatMap snd (liTables lambdaInfo)
+
+       dependencies (SBVApp op arguments) = arguments ++ case op of
+         LkUp _ index defaultValue -> [index, defaultValue]
+         IEEEFP (FP_Cast _ _ rm)   -> [rm]
+         ArrayInit (Right lambdaDef)
+           | Just nested <- smtLambdaInfo lambdaDef -> cLambdaFreeValues nested
+         _                        -> []
+
+-- | Lower a retained one-argument array lambda into a C lookup callback. Its
+-- local DAG uses the ordinary lowering pipeline, so scalar and managed values
+-- share the same semantics and ownership arenas as the enclosing generated
+-- function.
+ppArrayLambda :: CgConfig
+              -> [Kind]
+              -> [(T.Text, String)]
+              -> String
+              -> SV
+              -> LambdaInfo
+              -> (Doc, Set.Set CRequirement)
+ppArrayLambda cfg adts functionNames callbackName arraySV lambdaInfo@LambdaInfo{ liAssignments = lambdaPgm
+                                                                              , liParams      = parameters
+                                                                              , liOutput      = lambdaOutput
+                                                                              , liConsts      = constants
+                                                                              , liTables      = tables
+                                                                              }
+  = case (kindOf arraySV, parameters) of
+      (KArray keyKind valueKind, [(ALL, parameter)])
+        | kindOf parameter /= keyKind
+        -> die $ "Array-lambda parameter kind " ++ show (kindOf parameter) ++ " does not match " ++ show keyKind
+        | kindOf lambdaOutput /= valueKind
+        -> die $ "Array-lambda result kind " ++ show (kindOf lambdaOutput) ++ " does not match " ++ show valueKind
+        | True
+        -> (helper keyKind valueKind parameter, requirements)
+      (KArray{}, _) -> die $ "Expected exactly one universal array-lambda parameter, received " ++ show parameters
+      (kind, _)     -> die $ "Expected an array-valued lambda node, received " ++ show kind
+ where assignments = F.toList lambdaPgm
+       lambdaConsts = (falseSV, falseCV) : (trueSV, trueCV) : constants
+       reachableValues = cReachableValues cfg (Map.fromList assignments) tables [lambdaOutput]
+       (constantDeclarations, renderingConsts) = stabilizeCConstants cfg adts typeWidth (filter ((`Set.member` reachableValues) . fst) lambdaConsts)
+       env = CRenderEnv cfg adts renderingConsts
+       lambdaValues = lambdaOutput : map snd parameters ++ map fst assignments ++ map fst constants ++ concatMap snd tables
+       typeWidth    = maximum (0 : map (length . showCType) lambdaValues)
+
+       nestedLambdaNames = [ (sv, scopedArrayLambdaName callbackName sv)
+                           | (sv, SBVApp (ArrayInit (Right _)) _) <- assignments
+                           ]
+       definedFunctionCalls = [ symbol
+                              | (_, SBVApp (Uninterpreted symbol) _) <- assignments
+                              , isJust (lookup symbol functionNames)
+                              ]
+
+       (scheduledAssignments, scheduledRequirements) =
+         scheduleC env functionNames nestedLambdaNames
+                   (map fst lambdaConsts ++ map snd parameters) assignments tables False typeWidth [(lambdaOutput, empty)]
+
+       requirements = Set.unions
+         [ contextRequirements
+         , scheduledRequirements
+         , Set.unions [operationRequirements cfg (op, kindOf sv) | (sv, SBVApp op _) <- assignments]
+         ]
+
+       expandedLambdaKinds = concatMap (expandKinds . kindOf) lambdaValues
+
+       contextRequirements = Set.fromList $
+            [CRequiresGMP    | any (isExactGMPKind cfg) expandedLambdaKinds]
+         ++ [CRequiresText   | any (`elem` [KChar, KString]) expandedLambdaKinds]
+         ++ [CRequiresLists  | any isList expandedLambdaKinds]
+         ++ [CRequiresSets   | any isSet expandedLambdaKinds]
+         ++ [CRequiresArrays | any isArray expandedLambdaKinds]
+         ++ [CRequiresFunctionResults | definedFunctionResultNeedsClone cfg adts (kindOf lambdaOutput)]
+
+       helper _ valueKind _
+         = arrayLambdaSignature callbackName arraySV lambdaInfo
+          $$ text "{"
+          $$ nest 2 (   contextSetup
+                     $$ constantDeclarations
+                     $$ scheduledAssignments
+                     $$ lambdaResultDeclaration valueKind <+> text "sbv_local_lambda_result" <+> text "=" <+> lambdaResult P.<> semi
+                     $$ contextCommit
+                     $$ text "return sbv_local_lambda_result;"
+                    )
+          $$ text "}"
+          $$ text ""
+
+       lambdaResult
+         | isArray lambdaOutput
+         = arrayStoredValue (kindOf lambdaOutput) (showSV env lambdaOutput)
+         | definedFunctionResultNeedsClone cfg adts (kindOf lambdaOutput)
+         = definedFunctionResultClone (kindOf lambdaOutput) (showSV env lambdaOutput)
+         | True
+         = showSV env lambdaOutput
+
+       lambdaResultDeclaration valueKind
+         | isArray lambdaOutput = text (arrayLambdaResultType valueKind)
+         | True                 = text "const" <+> text (arrayLambdaResultType valueKind)
+
+       contextSetup
+         | not needsFunctionContext = parens (text "void") <+> text "context" P.<> semi
+         | True
+         =  text "sbv_function_ctx *const sbv_local_parent_function_ctx = (sbv_function_ctx *) context;"
+         $$ functionContextSetup contextRequirements
+
+       contextCommit = functionContextCommit contextRequirements
+
+       needsFunctionContext = not (Set.null contextRequirements && null definedFunctionCalls)
+
+
+-- | Lower native IEEE operations not handled by the explicit LibBF adapters.
+handleIEEE :: FPOp -> [(SV, CV)] -> [(SV, Doc)] -> Doc -> Doc
+handleIEEE w consts as var = cvt w
+  where same f                   = (f, f)
+        named fnm dnm f          = (f fnm, f dnm)
+
+        unary f [a]         = f a
+        unary _ args        = wrongArity 1 args
+        binary f [a, b]     = f a b
+        binary _ args       = wrongArity 2 args
+        ternary f [a, b, c] = f a b c
+        ternary _ args      = wrongArity 3 args
+        wrongArity expected args = die $ "Native floating-point operation " ++ show w ++ " expects "
+                                      ++ show (expected :: Int) ++ " arguments, received " ++ show (length args)
+
+        cvt FP_Cast{} = die "Floating-point cast escaped the exact cast lowering pipeline"
+
+        cvt (FP_Reinterpret f t) = case (f, t) of
+                                     (KBounded False 32, KFloat)  -> cast $ cpy "sizeof(SFloat)"
+                                     (KBounded False 64, KDouble) -> cast $ cpy "sizeof(SDouble)"
+                                     (KFloat,  KBounded False 32) -> cast $ cpy "sizeof(SWord32)"
+                                     (KDouble, KBounded False 64) -> cast $ cpy "sizeof(SWord64)"
+                                     _                            -> die $ "Reinterpretation from : " ++ show f ++ " to " ++ show t
+                                    where cpy sz = unary $ \a -> text "memcpy" P.<> parens (fsep (punctuate comma
+                                                                 [text "&" P.<> var, text "&" P.<> a, text sz]))
+        cvt FP_Abs               = dispatch $ named "fabsf" "fabs" $ \nm _ -> unary $ \a -> text nm P.<> parens a
+        cvt FP_Neg               = dispatch $ same $ \_ -> unary $ \a -> text "-" P.<> a
+        cvt FP_Add               = dispatch $ same $ \_ -> binary $ \a b -> a <+> text "+" <+> b
+        cvt FP_Sub               = dispatch $ same $ \_ -> binary $ \a b -> a <+> text "-" <+> b
+        cvt FP_Mul               = dispatch $ same $ \_ -> binary $ \a b -> a <+> text "*" <+> b
+        cvt FP_Div               = dispatch $ same $ \_ -> binary $ \a b -> a <+> text "/" <+> b
+        cvt FP_FMA               = dispatch $ named "fmaf"  "fma"  $ \nm _ -> ternary $ \a b c -> text nm P.<> parens (fsep (punctuate comma [a, b, c]))
+        cvt FP_Sqrt              = dispatch $ named "sqrtf" "sqrt" $ \nm _ -> unary $ \a       -> text nm P.<> parens a
+        cvt FP_Rem               = dispatch $ named "remainderf" "remainder" $ \nm _ -> binary $ \a b -> text nm P.<> parens (fsep (punctuate comma [a, b]))
+        cvt FP_RoundToIntegral   = dispatch $ named "rintf" "rint" $ \nm _ -> unary $ \a       -> text nm P.<> parens a
+        cvt FP_Min               = dispatch $ named "fminf" "fmin" $ \nm k -> binary $ \a b    -> wrapMinMax k a b (text nm P.<> parens (fsep (punctuate comma [a, b])))
+        cvt FP_Max               = dispatch $ named "fmaxf" "fmax" $ \nm k -> binary $ \a b    -> wrapMinMax k a b (text nm P.<> parens (fsep (punctuate comma [a, b])))
+        cvt FP_ObjEqual          = dispatch $ same $ \_ -> binary $ \a b -> nativeFPObjectEqual a b
+        cvt FP_IsNormal          = dispatch $ same $ \_ -> unary $ \a -> text "isnormal" P.<> parens a
+        cvt FP_IsSubnormal       = dispatch $ same $ \_ -> unary $ \a -> text "FP_SUBNORMAL == fpclassify" P.<> parens a
+        cvt FP_IsZero            = dispatch $ same $ \_ -> unary $ \a -> text "FP_ZERO == fpclassify" P.<> parens a
+        cvt FP_IsInfinite        = dispatch $ same $ \_ -> unary $ \a -> text "isinf" P.<> parens a
+        cvt FP_IsNaN             = dispatch $ same $ \_ -> unary $ \a -> text "isnan" P.<> parens a
+        cvt FP_IsNegative        = dispatch $ same $ \_ -> unary $ \a -> text "!isnan" P.<> parens a <+> text "&&" <+> text "signbit"  P.<> parens a
+        cvt FP_IsPositive        = dispatch $ same $ \_ -> unary $ \a -> text "!isnan" P.<> parens a <+> text "&&" <+> text "!signbit" P.<> parens a
+
+        -- grab the rounding-mode, if present, and make sure it's RoundNearestTiesToEven. Otherwise skip.
+        fpArgs = case as of
+                   []            -> []
+                   ((m, _):args)
+                     | isRoundingMode m -> case checkRM (m `lookup` consts) of
+                                             Nothing          -> args
+                                             Just (Left  msg) -> die msg
+                                             Just (Right msg) -> tbd msg
+                     | True              -> as
+
+        -- Explicit non-default and symbolic rounding modes are handled by the
+        -- LibBF adapters before this native fallback is selected.
+        checkRM (Just cv@(CV k v))
+          | k == kRoundingMode = case v of
+                                   CADT ("RoundNearestTiesToEven", []) -> Nothing
+                                   CADT (s,                        []) -> Just (Right $ "handleIEEE: Unsupported rounding-mode: " ++ show s ++ " for: " ++ show w)
+                                   _                                   -> Just (Left  $ "handleIEEE: Unexpected value for rounding-mode: " ++ show cv ++ " for: " ++ show w)
+        checkRM (Just cv) = Just (Left  $ "handleIEEE: Expected rounding-mode, but got: " ++ show cv ++ " for: " ++ show w)
+        checkRM Nothing   = Just (Right $ "handleIEEE: Non-constant rounding-mode for: " ++ show w)
+
+        pickOp _          []             = die $ "Cannot determine float/double kind for op: " ++ show w
+        pickOp (fOp, dOp) args@((a,_):_) = case kindOf a of
+                                             KFloat  -> fOp KFloat  (map snd args)
+                                             KDouble -> dOp KDouble (map snd args)
+                                             k       -> die $ "handleIEEE: Expected double/float args, but got: " ++ show k ++ " for: " ++ show w
+
+        dispatch (fOp, dOp) = pickOp (fOp, dOp) fpArgs
+        cast f              = f (map snd fpArgs)
+
+        -- In SMT-Lib, fpMin/fpMax is underspecified when given +0/-0 as the two arguments. (In any order.)
+        -- In C, the second argument is returned. (I think, might depend on the architecture, optimizations etc.).
+        -- We'll translate it so that we deterministically return +0.
+        -- There's really no good choice here.
+        wrapMinMax k a b s = parens cond <+> text "?" <+> fzero <+> text ":" <+> s
+          where fzero = text $ if k == KFloat then showCFloat 0 else showCDouble 0
+                cond  =                   parens (text "FP_ZERO == fpclassify" P.<> parens a)                                  -- a is zero
+                        <+> text "&&" <+> parens (text "FP_ZERO == fpclassify" P.<> parens b)                                  -- b is zero
+                        <+> text "&&" <+> parens (text "signbit" P.<> parens a <+> text "!=" <+> text "signbit" P.<> parens b) -- a and b differ in sign
+
+-- | Lower and render one symbolic assignment together with the facilities it
+-- requires from the generated C translation unit.
+ppExpr :: CRenderEnv
+       -> [(T.Text, String)]
+       -> [(SV, String)]
+       -> SBVExpr
+       -> SV
+       -> Doc
+       -> (Doc, Doc)
+       -> Bool
+       -> (Doc, Set.Set CRequirement, [Doc])
+ppExpr env functionNames structuredLambdaNames (SBVApp op opArgs) resultSV lhs (typ, var) declareResult
+  | requiresExtensionalEquality adts op (map kindOf opArgs)
+  , not (op `elem` [Equal False, Equal True, NotEqual] && all isArray opArgs)
+  = error $ "SBV->C: " ++ show op ++ " requires general extensional array equality, including array-valued elements or fields."
+  | True
+  = ( vcat $ declarations
+          ++ loweringSetup selected
+          ++ [assignment]
+    , loweringRequirements selected
+    , loweringDeclarations selected
+    )
+  where cfg    = renderConfig env
+        adts   = renderADTs env
+        consts = renderConstants env
+
+        declarations
+          | declareResult = loweringDeclarations selected
+          | True          = []
+
+        doNotAssign (IEEEFP FP_Reinterpret{})
+          | not (isFP (kindOf resultSV) || any (isFP . kindOf) opArgs)
+          , not (isWideBV (kindOf resultSV) || any (isWideBV . kindOf) opArgs)
+          = True   -- generates a memcpy instead; no simple assignment
+        doNotAssign PseudoBoolean{} = True   -- assigns through an overflow-safe reduction
+        doNotAssign _              = False
+
+        renderedArgs = map (showSV env) opArgs
+
+        -- Precedence is intentional, not a uniqueness invariant: aggregate
+        -- storage operations precede scalar operations touching their fields;
+        -- exact/mapped casts precede native fallbacks. In particular FP owns
+        -- BV/FP reinterpretation, including interchange vectors wider than 64.
+        -- Ite and short-circuit booleans are scheduled separately; only total
+        -- bit-vector Ite can reach this dispatch through eager speculation.
+        selected = fromMaybe legacy $ chooseLowering
+          [ arrayExpr cfg (`lookup` functionNames) (`lookup` structuredLambdaNames) op opArgs resultSV renderedArgs
+          , tableExpr cfg (showSV env) op resultSV
+          , setExpr cfg op opArgs (kindOf resultSV) renderedArgs
+          , nonLinearExpr cfg op opArgs (kindOf resultSV) renderedArgs
+          , regexExpr cfg op resultSV renderedArgs
+          , textExpr cfg op opArgs (kindOf resultSV) renderedArgs
+          , listExpr cfg op opArgs resultSV renderedArgs
+          , adtExpr cfg adts op opArgs resultSV renderedArgs
+          , tupleExpr op opArgs resultSV renderedArgs
+          , gmpExpr cfg op opArgs (kindOf resultSV) renderedArgs
+          , bitVectorCastExpr (cgInteger cfg) op opArgs (kindOf resultSV) renderedArgs
+          , arbitraryFPExpr cfg consts op opArgs (kindOf resultSV) renderedArgs
+          , nativeFPExpr consts op opArgs (kindOf resultSV) renderedArgs
+          , nativeBVExpr (cgInteger cfg) op opArgs (kindOf resultSV) renderedArgs
+          , nativeBVOverflowExpr op opArgs renderedArgs
+          , wideBVExpr op opArgs (kindOf resultSV) renderedArgs
+          ]
+
+        legacy = expressionLowering [] (p op renderedArgs)
+
+        rhs = loweringExpression selected
+
+        assignment
+          | doNotAssign op
+          = (if declareResult then typ <+> var P.<> semi else empty) <+> rhs P.<> semi
+          | True
+          = lhs <+> text "=" <+> rhs P.<> semi
+
+        rtc = cgRTC cfg
+
+        functionName symbol = fromMaybe (T.unpack symbol) (lookup symbol functionNames)
+
+        functionArguments symbol arguments
+          | isJust (lookup symbol functionNames) = text "&sbv_local_function_ctx" : arguments
+          | True                                 = arguments
+
+        cBinOps = [ (Plus, "+"), (Times, "*"), (Minus, "-")
+                  , (Equal False, "==")  -- no strong equality!
+                  , (NotEqual, "!="), (LessThan, "<"), (GreaterThan, ">"), (LessEq, "<="), (GreaterEq, ">=")
+                  , (And, "&"), (Or, "|"), (XOr, "^")
+                  ]
+
+        hd _ (h:_) = h
+        hd w []    = error $ "Data.SBV.C.ppExpr: Impossible happened: " ++ w ++ ", received empty list!"
+
+        p :: Op -> [Doc] -> Doc
+        p ReadArray{}          _   = die "Array read escaped the persistent-array lowering pipeline"
+        p WriteArray{}         _   = die "Array write escaped the persistent-array lowering pipeline"
+        p ArrayInit{}          _   = die "Array initialization escaped the persistent-array lowering pipeline"
+        p QuantifiedBool{}     _   = solverOnly "quantified Boolean expressions"
+        p SpecialRelOp{}       _   = solverOnly "special relations"
+        p RegExOp{}            _   = die "Regex comparison escaped the bounded-automaton lowering pipeline"
+        p (StrOp StrInRe{})    _   = die "Regex membership escaped the bounded-automaton lowering pipeline"
+        p (Label s)           [a]  = a <+> text "/*" <+> cCommentText s <+> text "*/"
+        p (IEEEFP w)            as = handleIEEE w consts (zip opArgs as) var
+        p (PseudoBoolean pb)    as = assignPseudoBoolean pb as var
+        p OverflowOp{}         _   = die "Overflow operation escaped the exact bit-vector lowering pipeline"
+        p NonLinear{}          _   = die "Non-linear operation escaped the dedicated lowering pipeline"
+        p castOp@KindCast{}    [a]
+          | Just width <- mappedRealFloorWidth cfg castOp
+          = mappedRealFloorCall width a
+        p (KindCast _ to)      [a]  = parens (text (showCType to)) <+> a
+        p (Uninterpreted s) []
+          | isJust (lookup s functionNames)
+          = text "/* Defined function */" <+> text (functionName s) P.<> parens (text "&sbv_local_function_ctx")
+          | True
+          = text "/* Uninterpreted constant */" <+> text (functionName s)
+        p (Uninterpreted s) as = text "/* Uninterpreted function */" <+> text (functionName s)
+                                  P.<> parens (fsep (punctuate comma (functionArguments s as)))
+        p Extract{}       _      = die "Bit-vector extraction escaped the exact bit-vector lowering pipeline"
+        p Join            _      = die "Bit-vector concatenation escaped the exact bit-vector lowering pipeline"
+        p ZeroExtend{}    _      = die "Zero extension escaped the exact bit-vector lowering pipeline"
+        p SignExtend{}    _      = die "Sign extension escaped the exact bit-vector lowering pipeline"
+        p Rol{}           _      = die "Left rotation escaped the exact bit-vector lowering pipeline"
+        p Ror{}           _      = die "Right rotation escaped the exact bit-vector lowering pipeline"
+        p Shl{}           _      = die "Left shift escaped the exact bit-vector lowering pipeline"
+        p Shr{}           _      = die "Right shift escaped the exact bit-vector lowering pipeline"
+        p Not          [a]       = case kindOf (hd "Not" opArgs) of
+                                   -- be careful about booleans, bitwise complement is not correct for them!
+                                   KBool -> text "!" P.<> a
+                                   _     -> text "~" P.<> a
+        p Ite [a, b, c] = a <+> text "?" <+> b <+> text ":" <+> c
+        p (LkUp (t, k, _, len) ind def) []
+          | not rtc                    = lkUp -- ignore run-time-checks per user request
+          | needsCheckL && needsCheckR = cndLkUp checkBoth
+          | needsCheckL                = cndLkUp checkLeft
+          | needsCheckR                = cndLkUp checkRight
+          | True                       = lkUp
+          where index  = showSV env ind
+                defVal = showSV env def
+
+                lkUp = text "table" P.<> int t P.<> brackets renderedIndex
+                cndLkUp cnd = cnd <+> text "?" <+> defVal <+> text ":" <+> lkUp
+
+                checkLeft
+                  | isWideBV k = text "!" P.<> parens (wideBVLookupInRange k len index)
+                  | True       = index <+> text "< 0"
+
+                checkRight
+                  | isWideBV k = text "!" P.<> parens (wideBVLookupInRange k len index)
+                  | True       = index <+> text ">=" <+> int len
+
+                checkBoth  = parens (checkLeft <+> text "||" <+> checkRight)
+
+                renderedIndex
+                  | isWideBV k = wideBVLookupIndex k index
+                  | True       = index
+
+                canOverflow True  sz = (2::Integer)^(sz-1)-1 >= fromIntegral len
+                canOverflow False sz = (2::Integer)^sz    -1 >= fromIntegral len
+
+                (needsCheckL, needsCheckR) = case k of
+                                               KVar{}          -> die $ "array index with variable: " ++ show k
+                                               KBool           -> (False, canOverflow False (1::Int))
+                                               KBounded sg sz
+                                                 | isWideBV k -> (sg, not sg)
+                                                 | True       -> (sg, canOverflow sg sz)
+                                               KReal           -> die "array index with real value"
+                                               KFloat          -> die "array index with float value"
+                                               KDouble         -> die "array index with double value"
+                                               KFP{}           -> die "array index with arbitrary float value"
+                                               KRational       -> die "array index with rational value"
+                                               KString         -> die "array index with string value"
+                                               KChar           -> die "array index with character value"
+                                               KUnbounded      -> case cgInteger cfg of
+                                                                    Nothing -> (True, True) -- won't matter, it'll be rejected later
+                                                                    Just i  -> (True, canOverflow True i)
+                                               KList     s     -> die $ "List sort "   ++ show s
+                                               KSet      s     -> die $ "Set sort "    ++ show s
+                                               KTuple    s     -> die $ "Tuple sort "  ++ show s
+                                               KArray    k1 k2 -> die $ "Array  sort " ++ show (k1, k2)
+                                               KApp      s _   -> die $ "ADT app: " ++ s
+                                               KADT      s _ _ -> die $ "ADT: "     ++ s
+
+        -- Integral quotient/remainder use the dedicated GMP or bit-vector
+        -- helpers above. Keep zero-divisor protection in the scalar fallback;
+        -- native IEEE division itself must retain its infinities and NaNs.
+        p (Divides n) [a]    = mappedIntegerDivides n a
+        p Quot        [a, b] = let k = kindOf (hd "Quot" opArgs)
+                                   z = mkConst env $ mkConstCV k (0::Integer)
+                               in protectDiv0 k "/" z a b
+        p Rem         [a, b] = protectDiv0 (kindOf (hd "Rem" opArgs)) "%" a a b
+        p UNeg        [a]    = parens (text "-" <+> a)
+        p Abs         [a]    = let f KFloat             = text "fabsf" P.<> parens a
+                                   f KDouble            = text "fabs"  P.<> parens a
+                                   f (KBounded False _) = text "/* unsigned, skipping call to abs */" <+> a
+                                   f (KBounded True 32) = text "labs"  P.<> parens a
+                                   f (KBounded True 64) = text "llabs" P.<> parens a
+                                   f KUnbounded         = case cgInteger cfg of
+                                                            Nothing -> f $ KBounded True 32 -- won't matter, it'll be rejected later
+                                                            Just i  -> f $ KBounded True i
+                                   f KReal              = case cgReal cfg of
+                                                            Nothing           -> f KDouble -- won't matter, it'll be rejected later
+                                                            Just CgFloat      -> f KFloat
+                                                            Just CgDouble     -> f KDouble
+                                                            Just CgLongDouble -> text "fabsl" P.<> parens a
+                                   f _                  = text "abs" P.<> parens a
+                               in f (kindOf (hd "Abs" opArgs))
+        -- for And/Or, translate to boolean versions if on boolean kind
+        p And [a, b] | kindOf (hd "And" opArgs) == KBool = a <+> text "&&" <+> b
+        p Or  [a, b] | kindOf (hd "Or"  opArgs) == KBool = a <+> text "||" <+> b
+        p o [a, b]
+          | Just co <- lookup o cBinOps
+          = a <+> text co <+> b
+
+        p Implies [a, b] | kindOf (hd "Implies" opArgs) == KBool = parens (text "!" P.<> a <+> text "||" <+> b)
+
+        p NotEqual xs = mkDistinct xs
+        p o args      = die $ "Received operator " ++ show o ++ " applied to " ++ show args
+
+        solverOnly feature = error $ "SBV->C: " ++ feature ++ " has solver-only semantics and cannot be compiled to executable C"
+
+        mappedIntegerDivides divisor value
+          | divisor > maximumMagnitude = parens (value <+> text "==" <+> text "0")
+          | True = parens $ magnitude <+> text "%" <+> uint64 divisor <+> text "==" <+> uint64 0
+          where width = case cgInteger cfg of
+                          Just w  -> w
+                          Nothing -> die "Exact integer divisibility escaped the GMP lowering pipeline"
+
+                maximumMagnitude = 2 ^ (width - 1)
+                magnitude        = parens $ value <+> text "< 0"
+                                         <+> text "?" <+> uint64 0 <+> text "-" <+> asUnsigned value
+                                         <+> text ":" <+> asUnsigned value
+                asUnsigned a     = parens (text "uint64_t") <+> a
+                uint64 n         = text "UINT64_C" P.<> parens (integer n)
+
+        -- generate a pairwise inequality check
+        mkDistinct args = fsep $ andAll $ walk args
+          where walk []     = []
+                walk (e:es) = map (pair e) es ++ walk es
+
+                pair e1 e2  = parens (e1 <+> text "!=" <+> e2)
+
+                -- like punctuate, but more spacing
+                andAll []     = []
+                andAll (d:ds) = go d ds
+                     where go d' [] = [d']
+                           go d' (e:es) = (d' <+> text "&&") : go e es
+
+        -- Div0 needs to protect, but only when the arguments are not float/double. (Div by 0 for those are well defined to be Inf/NaN etc.)
+        protectDiv0 k divOp def a b = case k of
+                                        KFloat  -> res
+                                        KDouble -> res
+                                        _       -> wrap
+           where res  = a <+> text divOp <+> b
+                 wrap = parens (b <+> text "== 0") <+> text "?" <+> def <+> text ":" <+> parens res
+
+-- | Render exact equality over a finite array domain. Each iteration performs
+-- two ordered lookups and an SMT object comparison; no backing arrays are
+-- materialized. Reject excessive domains before any C files are emitted.
+ppArrayEquality :: CgConfig -> [Kind] -> Kind -> Doc
+ppArrayEquality cfg adts kind@(KArray keyKind valueKind)
+  | requiresExtensionalEquality adts (Equal True) [valueKind]
+  = error $ "SBV->C: Nested extensional array equality is not supported: array values of kind " ++ show valueKind
+         ++ " contain arrays. This comparison is not approximated."
+  | cgArrayEqualityMaxKeys cfg == 0
+  = error "SBV->C: Extensional array equality is disabled by cgArrayEqualityLimit 0. Select a positive limit to permit finite-domain comparisons."
+  | Nothing <- cardinality
+  = error $ "SBV->C: Extensional array equality cannot enumerate key domain " ++ show keyKind
+         ++ ". Only supported finite domains can be compared; raising cgArrayEqualityLimit does not enable infinite or unsupported domains."
+  | Just count <- cardinality, count > cgArrayEqualityMaxKeys cfg
+  = error $ "SBV->C: Extensional array equality for " ++ show keyKind ++ " requires " ++ show count
+       ++ " keys, exceeding cgArrayEqualityLimit " ++ show (cgArrayEqualityMaxKeys cfg)
+       ++ ". Raise cgArrayEqualityLimit explicitly to permit this work."
+  | True
+  = text "static SBV_CGEN_UNUSED bool" <+> text (arrayEqualName kind)
+      P.<> parens (text (arrayCType kind ++ " left, " ++ arrayCType kind ++ " right"))
+ $$ text "{"
+ $$ nest 2 (enumerate "sbv_local_key" keyKind compareAt $$ text "return true;")
+ $$ text "}"
+ $$ text ""
+ where cardinality = finiteDomainSize (map snd . adtConstructors adts) keyKind
+
+       compareAt key = text ("const " ++ showCType keyKind ++ " key =") <+> key P.<> semi
+                    $$ text ("const " ++ CTypes.elementCType valueKind ++ " left_value = " ++ arrayReadName kind ++ "(left, key);")
+                    $$ text ("const " ++ CTypes.elementCType valueKind ++ " right_value = " ++ arrayReadName kind ++ "(right, key);")
+                    $$ text "if" P.<> parens (text "!" P.<> parens (byValueEqual cfg True valueKind (text "left_value") (text "right_value")))
+                    $$ nest 2 (text "return false;")
+
+       enumerate scope key yield
+         | key == KBool || key == KBounded False 1
+         = counted scope 2 (\counter -> yield (parens (text "SBool") <+> counter))
+         | key == KFloat   = floating scope key 32 yield
+         | key == KDouble  = floating scope key 64 yield
+         | KFP eb sb <- key = floating scope key (eb + sb) yield
+         | isWideBV key
+         = limbEnumeration scope key (intSizeOf key) yield
+         | isBounded key
+         = let raw       = scope ++ "_raw"
+               keyDoc    = if hasSign key then text scope else text raw
+               signedKey = if hasSign key
+                              then text (showCType key ++ " " ++ scope ++ "; memcpy(&" ++ scope ++ ", &" ++ raw ++ ", sizeof " ++ scope ++ ");")
+                              else empty
+           in text ("uint" ++ show (intSizeOf key) ++ "_t " ++ raw ++ " = 0;")
+           $$ text "do {"
+           $$ nest 2 (signedKey $$ yield keyDoc $$ text ("++" ++ raw ++ ";"))
+           $$ text ("} while (" ++ raw ++ " != 0);")
+         | key == KChar
+         = counted scope 0x30000 yield
+         | isRoundingMode key
+         = counted scope 5 (\counter -> yield (parens (text (showCType key)) <+> counter))
+         | KTuple fields <- key
+         = enumerateFields scope fields (yield . tupleValue key)
+         | isConcreteADTReference key
+         = vcat [ text "{" $$ nest 2 (enumerateFields (scope ++ "_c" ++ show index) fields (yield . adtValue adts key index)) $$ text "}"
+                | (index, (_, fields)) <- zip [1 :: Int ..] (adtConstructors adts key)]
+         | True
+         = die $ "Cannot enumerate array key kind " ++ show key
+
+       limbEnumeration :: String -> Kind -> Int -> (Doc -> Doc) -> Doc
+       limbEnumeration scope key width yield =
+         let limbCount  = (width + 63) `div` 64
+             limb index = scope ++ ".limb[" ++ show index ++ "]"
+             topMask    = 2 ^ (1 + (width - 1) `mod` 64) - 1 :: Integer
+         in text (showCType key ++ " " ++ scope ++ " = {{0}};")
+         $$ text "do {"
+         $$ nest 2 (yield (text scope)
+                 $$ text ("for (size_t i = 0; i < " ++ show limbCount ++ "; ++i) { if (++" ++ scope ++ ".limb[i] != 0) break; }")
+                 $$ text (limb (limbCount - 1) ++ " &= UINT64_C(" ++ show topMask ++ ");"))
+         $$ text ("} while (" ++ intercalate " || " [limb i ++ " != 0" | i <- [0 .. limbCount - 1]] ++ ");")
+
+       floating :: String -> Kind -> Int -> (Doc -> Doc) -> Doc
+       floating scope key width yield =
+         let seen        = scope ++ "_nan_seen"
+             visit value = text "const bool is_nan =" <+> (if isFP key then arbitraryFPIsNaN key value else text "isnan" P.<> parens value) P.<> semi
+                        $$ text ("if (!is_nan || !" ++ seen ++ ") {")
+                        $$ nest 2 (text (seen ++ " |= is_nan;") $$ yield value)
+                        $$ text "}"
+             raw         = scope ++ "_raw"
+             nativeLoop = text ("uint" ++ show width ++ "_t " ++ raw ++ " = 0;")
+                       $$ text "do {"
+                       $$ nest 2 (text (showCType key ++ " " ++ scope ++ "; memcpy(&" ++ scope ++ ", &" ++ raw ++ ", sizeof " ++ scope ++ ");")
+                               $$ visit (text scope) $$ text ("++" ++ raw ++ ";"))
+                       $$ text ("} while (" ++ raw ++ " != 0);")
+         in text ("bool " ++ seen ++ " = false;")
+         $$ if isFP key then limbEnumeration scope key width visit else nativeLoop
+
+       enumerateFields scope fields yield = fieldsFrom (1 :: Int) fields []
+         where fieldsFrom _ [] values = yield (reverse values)
+               fieldsFrom index (field:rest) values = enumerate (scope ++ "_f" ++ show index) field
+                                                         (\value -> fieldsFrom (index + 1) rest (value : values))
+
+       counted scope count yield = text ("for (uint32_t " ++ scope ++ " = 0; " ++ scope ++ " < " ++ show (count :: Integer) ++ "; ++" ++ scope ++ ") {")
+                                $$ nest 2 (yield (text scope))
+                                $$ text "}"
+ppArrayEquality _ _ kind = die $ "Expected an array equality kind, received " ++ show kind
+
+-- | Detect comparisons that transitively require array equality, resolving
+-- recursive ADT references without revisiting already inspected definitions.
+-- Array-valued data can still be constructed, selected, and transported.
+requiresExtensionalEquality :: [Kind] -> Op -> [Kind] -> Bool
+requiresExtensionalEquality adts op kinds = comparesElements op && any (containsArray Set.empty) kinds
+ where comparesElements Equal{}               = True
+       comparesElements NotEqual              = True
+       comparesElements (SeqOp SeqIndexOf{})   = True
+       comparesElements (SeqOp SeqContains{})  = True
+       comparesElements (SeqOp SeqPrefixOf{})  = True
+       comparesElements (SeqOp SeqSuffixOf{})  = True
+       comparesElements (SeqOp SeqReplace{})   = True
+       comparesElements _                     = False
+
+       containsArray _       KArray{}            = True
+       containsArray visited (KList elementKind)  = containsArray visited elementKind
+       containsArray visited (KSet elementKind)   = containsArray visited elementKind
+       containsArray visited (KTuple fields)      = any (containsArray visited) fields
+       containsArray visited kind
+         | isConcreteADTReference kind
+         , kind `Set.notMember` visited
+         = any (any (containsArray (Set.insert kind visited)) . snd) (adtConstructors adts kind)
+         | True
+         = False
+
+-- | Quote a document after removing line breaks, for generated format strings.
+printQuotes :: Doc -> Doc
+printQuotes d = text $ '"' : ppSameLine d ++ "\""
+
+-- | Flatten a document onto one line for generated build commands and labels.
+ppSameLine :: Doc -> String
+ppSameLine = trim . render
+ where trim ""        = ""
+       trim ('\n':cs) = ' ' : trim (dropWhile isSpace cs)
+       trim (c:cs)    = c   : trim cs
+
+-- | Left-pad documents so their rendered representations have equal width.
+align :: [Doc] -> [Doc]
+align ds = map (text . pad) ss
+  where ss    = map render ds
+        l     = maximum (0 : map length ss)
+        pad s = replicate (l - length s) ' ' ++ s
+
+-- | Merge component bundles. Code-generation options have already been
+-- applied per component; the returned config describes the merged artifacts
+-- and permits overwriting only when every component explicitly permits it.
+-- Other returned settings are representative of the first component.
+mergeToLib :: String -> [(CgConfig, CgPgmBundle)] -> (CgConfig, CgPgmBundle)
+mergeToLib libName cfgBundles
+  | length nubKinds /= 1
+  = error $  "Cannot merge programs with differing SInteger/SReal mappings. Received the following kinds:\n"
+          ++ unlines (map show nubKinds)
+  | not (null duplicateFiles)
+  = error $ "SBV.compileToCLib: Conflicting generated file names: " ++ unwords duplicateFiles
+  | not (null duplicateSymbols)
+  = error $ "SBV.compileToCLib: Conflicting generated entry points: " ++ unwords duplicateSymbols
+  | True
+  = (finalCfg, CgPgmBundle bundleKind resultFiles)
+  where bundles     = map snd cfgBundles
+        kinds       = [k | CgPgmBundle k _ <- bundles]
+        nubKinds    = nub kinds
+        bundleKind  = case nubKinds of
+                        bk:_ -> bk
+                        []   -> error "Data.SBV.C: Impossible happened: mergeLibs: kinds ended up being empty!"
+        files       = concat [fs | CgPgmBundle _ fs <- bundles]
+        headerMeta  = [metadata | (_, (CgCHeader metadata, _)) <- files]
+        typeDecls   = uniqueOn render (map cgHeaderTypes headerMeta)
+        sigs        = concatMap cgHeaderSignatures headerMeta
+        extProtos   = vcat $ uniqueOn render (map cgHeaderPrototypes headerMeta)
+        floating    = any cgHeaderFloating headerMeta
+        anyMake     = any (cgGenMakefile . fst) cfgBundles
+        drivers     = [(takeBaseName sourceName, ds)
+                      | (_, CgPgmBundle _ componentFiles) <- cfgBundles
+                      , (sourceName, (CgSource, _)) <- componentFiles
+                      , (_, (CgDriver, ds)) <- componentFiles
+                      ]
+        anyDriver   = not (null drivers)
+        mkFlags     = nub (concat [xs | (_, (CgMakefile xs, _)) <- files])
+        sources     = [(f, (CgSource, replaceHeader f parts)) | (f, (CgSource, parts)) <- files]
+        replaceHeader _ [pre, _, post] = [pre, libHInclude, post]
+        replaceHeader f _ = die $ "Invalid C source bundle layout for " ++ f
+        sourceNms   = map fst sources
+        libHeader   = (libName ++ ".h", (CgCHeader (CgCHeaderInfo floating (vcat typeDecls) sigs extProtos), [genHeader floating bundleKind libName sigs extProtos (vcat typeDecls)]))
+        libHInclude =  text "#include" <+> text (show (libName ++ ".h"))
+                    $$ if "-lbf" `elem` mkFlags then text "#include <libbf.h>" else empty
+        libMake     = ("Makefile", (CgMakefile mkFlags, [genLibMake floating anyDriver libName sourceNms mkFlags]))
+        libDriver   = (libName ++ "_driver.c", (CgDriver, mergeDrivers libName libHInclude drivers))
+        resultFiles = sources ++ libHeader : [libDriver | anyDriver] ++ [libMake | anyMake]
+        duplicateFiles = duplicateNames (map (map toLower . fst) resultFiles)
+        duplicateSymbols = duplicateNames $ map takeBaseName sourceNms ++ [fn ++ "_driver" | (fn, _) <- drivers] ++ ["main" | anyDriver]
+        finalCfg    = case cfgBundles of
+                        []         -> defaultCgConfig
+                        ((c, _):_) -> c { cgGenDriver = anyDriver
+                                        , cgGenMakefile = anyMake
+                                        , cgOverwriteGenerated = all (cgOverwriteGenerated . fst) cfgBundles
+                                        }
+
+-- | Create a Makefile for the library
+genLibMake :: Bool -> Bool -> String -> [String] -> [String] -> Doc
+genLibMake floating ifdr libName fs ldFlags = foldr1 ($$) [l | (True, l) <- lns]
+ where ifld = not (null ldFlags)
+       gmp  = "-lgmp" `elem` ldFlags
+       ld = text "${LDFLAGS}" <+> if ifld then text "${SBV_LIBS}" else empty
+       renderedLDFlags = unwords $ filter (/= "-lgmp") ldFlags ++ ["${GMP_LIBS}" | gmp]
+       lns = [ (True, text "# Makefile for" <+> nm P.<> text ". Automatically generated by SBV. Do not edit!")
+             , (True,  text "")
+             , (True,  text "# include any user-defined .mk file in the current directory.")
+             , (True,  text "-include *.mk")
+             , (True,  text "")
+             , (True,  text "CC?=gcc")
+             , (True,  text "CCFLAGS?=-Wall -O3 -DNDEBUG -fomit-frame-pointer")
+             , (gmp,   text "GMP_CFLAGS?=$(shell pkg-config --cflags gmp)")
+             , (gmp,   text "GMP_LIBS?=$(shell pkg-config --libs gmp)")
+             , (ifld,  text "SBV_LIBS?=" P.<> text renderedLDFlags)
+             , (True,  text "AR?=ar")
+             , (True,  text "ARFLAGS?=cr")
+             , (True,  text "")
+             , (not ifdr,  text ("all: " ++ liba))
+             , (ifdr,      text ("all: " ++ unwords [liba, libd]))
+             , (True,  text "")
+             , (True,  text liba P.<> text (": " ++ unwords os))
+             , (True,  text "\trm -f $@.tmp")
+             , (True,  text "\t${AR} ${ARFLAGS} $@.tmp $^")
+             , (True,  text "\tmv -f $@.tmp $@")
+             , (True,  text "")
+             , (ifdr,  text libd P.<> text (": " ++ unwords [libd ++ ".c", libh, liba]))
+             , (ifdr,  text ("\t" ++ cCompilerCommand floating gmp ++ " $< -o $@ " ++ liba) <+> ld)
+             , (ifdr,  text "")
+             , (True,  vcat (zipWith mkObj os fs))
+             , (True,  text "clean:")
+             , (True,  text "\trm -f *.o")
+             , (True,  text "")
+             , (True,  text "veryclean: clean")
+             , (not ifdr,  text "\trm -f" <+> text (unwords [liba, liba ++ ".tmp"]))
+             , (ifdr,      text "\trm -f" <+> text (unwords [liba, libd, liba ++ ".tmp"]))
+             , (True,  text "")
+             ]
+       nm = text libName
+       liba = libName ++ ".a"
+       libh = libName ++ ".h"
+       libd = libName ++ "_driver"
+       os   = map (`replaceExtension` ".o") fs
+       mkObj o f =  text o P.<> text (": " ++ unwords [f, libh])
+                 $$ text ("\t" ++ cCompilerCommand floating gmp ++ " -c $< -o $@")
+                 $$ text ""
+
+-- | Create a driver for a library
+mergeDrivers :: String -> Doc -> [(FilePath, [Doc])] -> [Doc]
+mergeDrivers libName inc ds = pre : concatMap mkDFun ds ++ [callDrivers (map fst ds)]
+  where pre =  text "/* Example driver program for" <+> text libName P.<> text ". */"
+            $$ text "/* Automatically generated by SBV. Edit as you see fit! */"
+            $$ text ""
+            $$ text "#include <stdio.h>"
+            $$ inc
+        mkDFun (f, [_pre, _include, callbacks, helpers, _header, body, _post]) = [callbacks, helpers, header, body, post]
+           where header =  text ""
+                        $$ text ("void " ++ f ++ "_driver(void)")
+                        $$ text "{"
+                 post   =  text "}"
+        mkDFun (f, _) = die $ "mergeDrivers: non-conforming driver program for " ++ show f
+        callDrivers fs =   text ""
+                       $$  text "int main(void)"
+                       $$  text "{"
+                       $+$ nest 2 (vcat (map call fs))
+                       $$  nest 2 (text "return 0;")
+                       $$  text "}"
+        call f =  text psep
+               $$ text ptag
+               $$ text psep
+               $$ text (f ++ "_driver();")
+               $$ text ""
+           where tag  = "** Driver run for " ++ f ++ ":"
+                 ptag = "printf(\"" ++ tag ++ "\\n\");"
+                 lsep = replicate (length tag) '='
+                 psep = "printf(\"" ++ lsep ++ "\\n\");"
+
+-- | Return the runtime requirements introduced by a legacy scalar operation.
+operationRequirements :: CgConfig -> (Op, Kind) -> Set.Set CRequirement
+operationRequirements cfg (o, k) = Set.fromList (required o)
+  where required (IEEEFP FP_Cast{}) = math
+        required castOp@KindCast{}
+          | Just _ <- mappedRealFloorWidth cfg castOp = math
+        required (IEEEFP fop)
+          | fop `elem` requiresMath = math
+        required Abs
+          | usesNativeFloatingPoint k = math
+        required _ = []
+
+        math = [CRequiresLibM]
+
+        usesNativeFloatingPoint KFloat = True
+        usesNativeFloatingPoint KDouble = True
+        usesNativeFloatingPoint KReal   = not (isExactGMPKind cfg KReal)
+        usesNativeFloatingPoint _       = False
+
+        requiresMath = [ FP_Abs
+                       , FP_FMA
+                       , FP_Sqrt
+                       , FP_Rem
+                       , FP_Min
+                       , FP_Max
+                       , FP_RoundToIntegral
+                       , FP_ObjEqual
+                       , FP_IsSubnormal
+                       , FP_IsInfinite
+                       , FP_IsNaN
+                       , FP_IsNegative
+                       , FP_IsPositive
+                       , FP_IsNormal
+                       , FP_IsZero
+                       ]
+
+-- | Translate collected runtime requirements to external C linker options.
+requirementLDFlags :: Set.Set CRequirement -> [String]
+requirementLDFlags requirements =
+  [ flag
+  | (requirement, flag) <- [ (CRequiresGMP, "-lgmp")
+                           , (CRequiresLibBF, "-lbf")
+                           , (CRequiresLibM, "-lm")
+                           ]
+  , requirement `Set.member` requirements
+  ]
+
+{- HLint ignore module "Redundant lambda" -}

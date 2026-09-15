@@ -10,13 +10,13 @@ CCFLAGS?=-Wall -O3 -DNDEBUG -fomit-frame-pointer
 all: merge_driver
 
 merge.o: merge.c merge.h
-	${CC} ${CCFLAGS} -c $< -o $@
+	${CC} ${CCFLAGS} -ffp-contract=off -c $< -o $@
 
 merge_driver.o: merge_driver.c merge.h
-	${CC} ${CCFLAGS} -c $< -o $@
+	${CC} ${CCFLAGS} -ffp-contract=off -c $< -o $@
 
 merge_driver: merge.o merge_driver.o
-	${CC} ${CCFLAGS} $^ -o $@
+	${CC} ${CCFLAGS} -ffp-contract=off $^ -o $@
 
 clean:
 	rm -f *.o
@@ -30,6 +30,10 @@ veryclean: clean
 #ifndef __merge__HEADER_INCLUDED__
 #define __merge__HEADER_INCLUDED__
 
+#if defined(__FAST_MATH__) || (defined(__FINITE_MATH_ONLY__) && __FINITE_MATH_ONLY__ > 0)
+#error "SBV-generated C requires IEEE floating-point semantics; disable fast-math and finite-math-only."
+#endif
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <inttypes.h>
@@ -37,6 +41,12 @@ veryclean: clean
 #include <stdbool.h>
 #include <string.h>
 #include <math.h>
+
+/* Floating-point calling convention:
+ * Enter generated code in FE_TONEAREST (round-to-nearest, ties-to-even).
+ * Callbacks must preserve this mode before returning or re-entering.
+ * Generated code does not check or change the hardware rounding mode.
+ */
 
 /* The boolean type */
 typedef bool SBool;
@@ -73,23 +83,29 @@ void merge(const SWord8 *xs, SWord8 *ys);
 
 int main(void)
 {
-  const SWord8 xs[5] = {
+  const SWord8 sbv_driver_input_0[5] = {
       10,  6,  4, 82, 71
   };
 
   printf("Contents of input array xs:\n");
-  int xs_ctr;
-  for(xs_ctr = 0; xs_ctr < 5 ; ++xs_ctr)
-    printf("  xs[%1d] = %"PRIu8"\n", xs_ctr ,xs[xs_ctr]);
+  int sbv_driver_input_0_ctr;
+  for(sbv_driver_input_0_ctr = 0; sbv_driver_input_0_ctr < 5 ; ++sbv_driver_input_0_ctr)
+  { printf("  xs[%1d] = ", sbv_driver_input_0_ctr);
+    printf("%"PRIu8"", sbv_driver_input_0[sbv_driver_input_0_ctr]);
+    printf("\n");
+  }
 
-  SWord8 ys[5];
+  SWord8 sbv_driver_output_0[5];
 
-  merge(xs, ys);
+  merge(sbv_driver_input_0, sbv_driver_output_0);
 
   printf("merge(xs, ys) ->\n");
-  int ys_ctr;
-  for(ys_ctr = 0; ys_ctr < 5 ; ++ys_ctr)
-    printf("  ys[%1d] = %"PRIu8"\n", ys_ctr ,ys[ys_ctr]);
+  int sbv_driver_output_0_ctr;
+  for(sbv_driver_output_0_ctr = 0; sbv_driver_output_0_ctr < 5 ; ++sbv_driver_output_0_ctr)
+  { printf("  ys[%1d] = ", sbv_driver_output_0_ctr);
+    printf("%"PRIu8"", sbv_driver_output_0[sbv_driver_output_0_ctr]);
+    printf("\n");
+  }
 
   return 0;
 }
@@ -99,13 +115,21 @@ int main(void)
 
 #include "merge.h"
 
-void merge(const SWord8 *xs, SWord8 *ys)
+/* Preserve separate SBV rounding steps; explicit fma calls remain fused. */
+#if defined(__GNUC__) && !defined(__clang__)
+#pragma GCC optimize ("fp-contract=off")
+#else
+#pragma STDC FP_CONTRACT OFF
+#endif
+
+
+void merge(const SWord8 *sbv_input_0, SWord8 *sbv_output_0)
 {
-  const SWord8 s0 = xs[0];
-  const SWord8 s1 = xs[1];
-  const SWord8 s2 = xs[2];
-  const SWord8 s3 = xs[3];
-  const SWord8 s4 = xs[4];
+  const SWord8 s0 = sbv_input_0[0];
+  const SWord8 s1 = sbv_input_0[1];
+  const SWord8 s2 = sbv_input_0[2];
+  const SWord8 s3 = sbv_input_0[3];
+  const SWord8 s4 = sbv_input_0[4];
   const SBool  s5 = s0 < s1;
   const SWord8 s6 = s5 ? s0 : s1;
   const SBool  s7 = s3 < s4;
@@ -147,10 +171,10 @@ void merge(const SWord8 *xs, SWord8 *ys)
   const SWord8 s43 = s20 ? s40 : s42;
   const SWord8 s44 = s11 ? s41 : s43;
 
-  ys[0] = s12;
-  ys[1] = s22;
-  ys[2] = s31;
-  ys[3] = s38;
-  ys[4] = s44;
+  sbv_output_0[0] = s12;
+  sbv_output_0[1] = s22;
+  sbv_output_0[2] = s31;
+  sbv_output_0[3] = s38;
+  sbv_output_0[4] = s44;
 }
 == END: "merge.c" ==================

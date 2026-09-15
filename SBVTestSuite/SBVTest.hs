@@ -65,14 +65,20 @@ import qualified TestSuite.BitPrecise.PrefixSum
 import qualified TestSuite.CantTypeCheck.Misc
 import qualified TestSuite.Char.Char
 import qualified TestSuite.CodeGeneration.AddSub
+import qualified TestSuite.CodeGeneration.ArbitraryBits
+import qualified TestSuite.CodeGeneration.ArbitraryFloats
+import qualified TestSuite.CodeGeneration.ArrayCaptures
+import qualified TestSuite.CodeGeneration.Boundaries
 import qualified TestSuite.CodeGeneration.CgTests
 import qualified TestSuite.CodeGeneration.CRC_USB5
+import qualified TestSuite.CodeGeneration.ExactNumbers
 import qualified TestSuite.CodeGeneration.Fibonacci
 import qualified TestSuite.CodeGeneration.Floats
 import qualified TestSuite.CodeGeneration.GCD
 import qualified TestSuite.CodeGeneration.PopulationCount
 import qualified TestSuite.CodeGeneration.LibraryBuild
 import qualified TestSuite.CodeGeneration.PseudoBoolean
+import qualified TestSuite.CodeGeneration.RegExp
 import qualified TestSuite.CodeGeneration.ScalarSafety
 import qualified TestSuite.CodeGeneration.Uninterpreted
 import qualified TestSuite.CRC.CCITT
@@ -194,14 +200,20 @@ main = do sCaseTests <- TestSuite.CompileTests.SCase.tests
                       , TestSuite.CantTypeCheck.Misc.tests
                       , TestSuite.Char.Char.tests
                       , TestSuite.CodeGeneration.AddSub.tests
+                      , TestSuite.CodeGeneration.ArbitraryBits.tests
+                      , TestSuite.CodeGeneration.ArbitraryFloats.tests
+                      , TestSuite.CodeGeneration.ArrayCaptures.tests
+                      , TestSuite.CodeGeneration.Boundaries.tests
                       , TestSuite.CodeGeneration.CgTests.tests
                       , TestSuite.CodeGeneration.CRC_USB5.tests
+                      , TestSuite.CodeGeneration.ExactNumbers.tests
                       , TestSuite.CodeGeneration.Fibonacci.tests
                       , TestSuite.CodeGeneration.Floats.tests
                       , TestSuite.CodeGeneration.GCD.tests
                       , TestSuite.CodeGeneration.PopulationCount.tests
                       , TestSuite.CodeGeneration.LibraryBuild.tests
                       , TestSuite.CodeGeneration.PseudoBoolean.tests
+                      , TestSuite.CodeGeneration.RegExp.tests
                       , TestSuite.CodeGeneration.ScalarSafety.tests
                       , TestSuite.CodeGeneration.Uninterpreted.tests
                       , TestSuite.CRC.CCITT.tests

@@ -34,7 +34,7 @@ import qualified Data.Text as T
 import Data.SBV.Core.Data
 import Data.SBV.Core.Kind
 import Data.SBV.SMT.SMTLib2
-import Data.SBV.Utils.Lib       (showText)
+import Data.SBV.Utils.Lib       (mapToSortedList, showText)
 import Data.SBV.Utils.PrettyNum
 
 import           Data.SBV.Core.Symbolic hiding   (mkNewState)
@@ -154,48 +154,51 @@ extractAllUniversals other      = error $ unlines [ ""
 
 -- | Generic creator for anonymous lambdas.
 lambdaGen :: (MonadIO m, Lambda (SymbolicT m) a) => LambdaScope -> (Defn -> b) -> State -> Kind -> a -> m b
-lambdaGen scope trans inState fk f = inSubState scope inState $ \st -> handle <$> convert st fk (mkLambda st f)
-  where handle d@(Defn _ frees _ _)
-            | null frees
-            = trans d
-            | True
-            = error $ unlines [ ""
-                              , "*** Data.SBV.Lambda: Detected free variables passed to a lambda."
-                              , "***"
-                              , "***  Free vars : " ++ unwords frees
-                              , "***  Definition: " ++ shift (lines (sh d))
-                              , "***"
-                              , "*** SBV currently does not support lambda-functions that capture variables. For"
-                              , "*** instance, consider:"
-                              , "***"
-                              , "***     map (\\x -> map (\\y -> x + y))"
-                              , "***"
-                              , "*** where the inner 'map' uses 'x', bound by the outer 'map'. Instead, create"
-                              , "*** a closure instead:"
-                              , "***"
-                              , "***     map (\\x -> map (Closure { closureEnv = x"
-                              , "***                             , closureFun = \\env y -> env + y"
-                              , "***                             }))"
-                              , "***"
-                              , "*** which will explicitly create the closure before calling 'map'. The environment can"
-                              , "*** be any symbolic value: You can use a tuple to support multiple free variables."
-                              , "***"
-                              , "*** (SBV firstifies higher-order functions via a simple translation to make it fit with"
-                              , "*** SMTLib's first-order logic. This translation does not currently support free"
-                              , "*** variables. In technical terms, we would need to do closure conversion and lambda-lifting."
-                              , "*** SBV isn't capable of doing the closure-conversion part, relying on the user to do so.)"
-                              , "***"
-                              , "*** Please rewrite your program to create a closure and use that as an argument."
-                              , "*** If this solution isn't applicable, or if you'd like help doing so, please get in"
-                              , "*** touch for further possible enhancements."
-                              ]
+lambdaGen scope trans inState fk f = inSubState scope inState $ \st -> handleLambdaDefn trans <$> convert st fk (mkLambda st f)
 
-        sh (Defn _unints _frees Nothing       body) = T.unpack (body 0)
-        sh (Defn _unints _frees (Just params) body) = "(lambda " ++ T.unpack (extractAllUniversals params) ++ "\n" ++ T.unpack (body 2) ++ ")"
+-- | Apply a lambda translation after enforcing SBV's no-captured-variables
+-- rule and preserving its established diagnostic.
+handleLambdaDefn :: (Defn -> b) -> Defn -> b
+handleLambdaDefn trans d@(Defn _ frees _ _)
+  | null frees
+  = trans d
+  | True
+  = error $ unlines [ ""
+                    , "*** Data.SBV.Lambda: Detected free variables passed to a lambda."
+                    , "***"
+                    , "***  Free vars : " ++ unwords frees
+                    , "***  Definition: " ++ shift (lines (sh d))
+                    , "***"
+                    , "*** SBV currently does not support lambda-functions that capture variables. For"
+                    , "*** instance, consider:"
+                    , "***"
+                    , "***     map (\\x -> map (\\y -> x + y))"
+                    , "***"
+                    , "*** where the inner 'map' uses 'x', bound by the outer 'map'. Instead, create"
+                    , "*** a closure instead:"
+                    , "***"
+                    , "***     map (\\x -> map (Closure { closureEnv = x"
+                    , "***                             , closureFun = \\env y -> env + y"
+                    , "***                             }))"
+                    , "***"
+                    , "*** which will explicitly create the closure before calling 'map'. The environment can"
+                    , "*** be any symbolic value: You can use a tuple to support multiple free variables."
+                    , "***"
+                    , "*** (SBV firstifies higher-order functions via a simple translation to make it fit with"
+                    , "*** SMTLib's first-order logic. This translation does not currently support free"
+                    , "*** variables. In technical terms, we would need to do closure conversion and lambda-lifting."
+                    , "*** SBV isn't capable of doing the closure-conversion part, relying on the user to do so.)"
+                    , "***"
+                    , "*** Please rewrite your program to create a closure and use that as an argument."
+                    , "*** If this solution isn't applicable, or if you'd like help doing so, please get in"
+                    , "*** touch for further possible enhancements."
+                    ]
+ where sh (Defn _unints _frees Nothing       body) = T.unpack (body 0)
+       sh (Defn _unints _frees (Just params) body) = "(lambda " ++ T.unpack (extractAllUniversals params) ++ "\n" ++ T.unpack (body 2) ++ ")"
 
-        shift []     = []
-        shift (x:xs) = intercalate "\n" (x : map tab xs)
-          where tab s = "***              " ++ s
+       shift []     = []
+       shift (x:xs) = intercalate "\n" (x : map tab xs)
+         where tab s = "***              " ++ s
 
 -- | Create an SMTLib lambda, in the given state.
 lambda :: (MonadIO m, Lambda (SymbolicT m) a) => State -> LambdaScope -> Kind -> a -> m SMTDef
@@ -207,7 +210,7 @@ lambdaWithInfo :: (MonadIO m, Lambda (SymbolicT m) a) => State -> LambdaScope ->
 lambdaWithInfo inState scope fk f = inSubState scope inState $ \st -> do
    defn <- handleDefn <$> convert st fk (mkLambda st f)
    info <- liftIO $ extractLambdaInfo st
-   pure (defn, info)
+   pure (smtDefWithInfo defn info, info)
    where handleDefn d@(Defn _ frees _ _)
             | null frees = mkLam d
             | True       = error $ unlines [ ""
@@ -223,6 +226,7 @@ extractLambdaInfo st = do
    linps        <- readIORef (rlambdaInps st)
    outs         <- readIORef (routs st)
    cmap         <- readIORef (rconstMap st)
+   tables       <- map arrange . mapToSortedList <$> readIORef (rtblMap st)
    let params = [(q, getSV nsv) | (q, nsv) <- F.toList linps]
        outSV  = case F.toList outs of
                   [o] -> o
@@ -231,14 +235,24 @@ extractLambdaInfo st = do
                    , liParams      = params
                    , liOutput      = outSV
                    , liConsts      = map swap $ Map.toList cmap
+                   , liTables      = tables
                    }
-   where swap (a, b) = (b, a)
+   where arrange (i, (indexKind, resultKind, elements)) = ((i, indexKind, resultKind), elements)
+         swap (a, b) = (b, a)
 
 -- | Create an anonymous lambda, rendered as n SMTLib string. The kind passed is the kind of the final result.
 lambdaStr :: (MonadIO m, Lambda (SymbolicT m) a) => State -> LambdaScope -> Kind -> a -> m SMTLambda
-lambdaStr st scope k a = SMTLambda <$> lambdaGen scope mkLam st k a
-   where mkLam (Defn _unints _frees Nothing       body) = body 0
-         mkLam (Defn _unints _frees (Just params) body) = "(lambda " <> extractAllUniversals params <> "\n" <> body 2 <> ")"
+lambdaStr inState HigherOrderArg fk f = SMTLambda <$> lambdaGen HigherOrderArg renderLambdaDefn inState fk f
+lambdaStr inState TopLevel       fk f = inSubState TopLevel inState $ \st -> do
+  defn <- convert st fk (mkLambda st f)
+  let rendered = handleLambdaDefn renderLambdaDefn defn
+  rendered `seq` do lambdaInfo <- liftIO $ extractLambdaInfo st
+                    pure (smtLambdaWithInfo rendered lambdaInfo)
+
+-- | Render a validated anonymous lambda in its canonical SMT-Lib form.
+renderLambdaDefn :: Defn -> T.Text
+renderLambdaDefn (Defn _unints _frees Nothing       body) = body 0
+renderLambdaDefn (Defn _unints _frees (Just params) body) = "(lambda " <> extractAllUniversals params <> "\n" <> body 2 <> ")"
 
 -- | Generic constraint generator.
 constraintGen :: (MonadIO m, Constraint (SymbolicT m) a) => LambdaScope -> ([String] -> (Int -> T.Text) -> b) -> State -> a -> m b
@@ -452,9 +466,9 @@ toLambda level curProgInfo cfg expectedKind result@Result{resAsgns = SBVPgm asgn
 
                rm = roundingMode cfg
 
-               -- NB. The following is dead-code, since we ensure tbls is empty
-               -- We used to support this, but there are issues, so dropping support
-               -- See, for instance, https://github.com/LeventErkok/sbv/issues/664
+               -- Tables are local to this lambda. Constant tables can be bound
+               -- immediately, while tables containing symbolic elements must be
+               -- introduced after their last element has been defined.
                (tableMap, constTables, nonConstTablesUnindexed) = constructTables consts tbls
 
                -- Index each non-const table with the largest index of SV it needs

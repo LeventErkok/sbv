@@ -23,14 +23,21 @@ import System.Process (readProcessWithExitCode)
 import Test.Tasty.HUnit (assertEqual)
 
 import Data.SBV.Tools.CodeGen
+import qualified Data.SBV.Tools.CodeGen.Legacy as Legacy
 import Utils.SBVTestFramework
 
--- | Exercise the default backend through its public standalone and library APIs.
+-- | Exercise both backends through their public standalone and library APIs.
 tests :: TestTree
-tests = testsWith "CodeGeneration.PseudoBoolean" $ \dir library functionName program ->
-  if library
-     then void $ compileToCLib (Just dir) "pbLibrary" [(functionName, program)]
-     else compileToC (Just dir) functionName program
+tests = testGroup "CodeGeneration.PseudoBoolean"
+  [ testsWith "current" $ \dir library functionName program ->
+      if library
+         then void $ compileToCLib (Just dir) "pbLibrary" [(functionName, program)]
+         else compileToC (Just dir) functionName program
+  , testsWith "legacy" $ \dir library functionName program ->
+      if library
+         then void $ Legacy.compileToCLib (Just dir) "pbLibrary" [(functionName, program)]
+         else Legacy.compileToC (Just dir) functionName program
+  ]
 
 -- | Reuse the execution matrix for a compatibility backend without changing its
 -- import facade. Every truth assignment is checked against unbounded Haskell

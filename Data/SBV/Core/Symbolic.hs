@@ -22,11 +22,13 @@
 {-# LANGUAGE MultiParamTypeClasses      #-}
 {-# LANGUAGE NamedFieldPuns             #-}
 {-# LANGUAGE OverloadedStrings          #-}
+{-# LANGUAGE PatternSynonyms            #-}
 {-# LANGUAGE RankNTypes                 #-}
 {-# LANGUAGE ScopedTypeVariables        #-}
 {-# LANGUAGE StandaloneDeriving         #-}
 {-# LANGUAGE TypeOperators              #-}
 {-# LANGUAGE UndecidableInstances       #-}
+{-# LANGUAGE ViewPatterns               #-}
 
 {-# OPTIONS_GHC -Wall -Werror -Wno-orphans #-}
 
@@ -34,7 +36,8 @@ module Data.SBV.Core.Symbolic
   ( NodeId(..)
   , SV(..), swKind, trueSV, falseSV
   , Op(..), PBOp(..), OvOp(..), FPOp(..), NROp(..), StrOp(..), RegExOp(..), SeqOp(..), SetOp(..), SpecialRelOp(..), ADTOp(..)
-  , RegExp(..), regExpToSMTString, validateRegExp, SMTLambda(..)
+  , RegExp(..), regExpToSMTString, validateRegExp
+  , SMTLambda(SMTLambda), smtLambdaWithInfo, smtLambdaText, smtLambdaInfo
   , Quantifier(..), needsExistentials, SBVContext(..), globalSBVContext, VarContext(..)
   , SBVType(..), svUninterpreted, svUninterpretedNamedArgs, newUninterpreted
   , SVal(..)
@@ -46,7 +49,7 @@ module Data.SBV.Core.Symbolic
   , getUserName', getUserName
   , lookupInput , getSValPathCondition, extendSValPathCondition
   , getTableIndex, sObserve
-  , SBVPgm(..), MonadSymbolic(..), SymbolicT, Symbolic, runSymbolic, mkNewState, runSymbolicInState, State(..), SMTDef(..), smtDefEq, conflictError, withNewIncState, IncState(..), incrementInternalCounter, incrementFreshNameCounter
+  , SBVPgm(..), MonadSymbolic(..), SymbolicT, Symbolic, runSymbolic, mkNewState, runSymbolicInState, State(..), SMTDef(SMTDef), smtDefWithInfo, smtDefInfo, smtDefEq, conflictError, withNewIncState, IncState(..), incrementInternalCounter, incrementFreshNameCounter
   , inSMTMode, SBVRunMode(..), IStage(..), Result(..), ResultInp(..), UICodeKind(..), UIName(..)
   , registerKind, registerLabel, recordObservable
   , addAssertion, addNewSMTOption, imposeConstraint, internalConstraint, newInternalVariable, lambdaVar, quantVar
@@ -247,9 +250,9 @@ data Op = Plus
         deriving (Eq, Ord, Generic, G.Data, NFData)
 
 -- | ADT operations
-data ADTOp = ADTConstructor T.Text Kind    -- Construct an ADT. Kind is the kind of the resulting ADT
-           | ADTTester      T.Text Kind    -- Check if top-level constructor matches. Kind is the kind of the argument
-           | ADTAccessor    T.Text Kind    -- Extract a field from an ADT value. Kind is the kind of the argument
+data ADTOp = ADTConstructor T.Text Kind    -- Construct an ADT. Kind is the kind of the result.
+           | ADTTester      T.Text Kind    -- Check if top-level constructor matches. Kind is the kind of the result.
+           | ADTAccessor    T.Text Kind    -- Extract a field from an ADT value. Kind is the kind of the result.
            deriving (Eq, Ord, Generic, G.Data, NFData)
 
 -- | Special relations supported by z3
@@ -526,15 +529,51 @@ instance Show RegExOp where
   show (RegExEq  r1 r2) = "(= "        ++ T.unpack (regExpToSMTString r1) ++ " " ++ T.unpack (regExpToSMTString r2) ++ ")"
   show (RegExNEq r1 r2) = "(distinct " ++ T.unpack (regExpToSMTString r1) ++ " " ++ T.unpack (regExpToSMTString r2) ++ ")"
 
--- | For now, we represent lambda functions in op with their SMTLib equivalent strings.
--- This might change in the future.
-newtype SMTLambda = SMTLambda T.Text
-                  deriving (Eq, Ord, G.Data, Generic)
-                  deriving newtype NFData
+-- | A lambda's canonical SMT-Lib representation, optionally accompanied by
+-- the expression DAG from which it was rendered. The structured form lets
+-- non-SMT backends consume lambdas without parsing SMT-Lib.
+data SMTLambda = SMTLambdaValue T.Text (Maybe LambdaInfo)
+               deriving (G.Data, Generic)
+
+-- | Compatibility constructor and pattern for an SMT-text-only lambda. The
+-- pattern also matches lambdas carrying retained backend metadata.
+pattern SMTLambda :: T.Text -> SMTLambda
+pattern SMTLambda textValue <- (smtLambdaText -> textValue)
+  where SMTLambda textValue = SMTLambdaValue textValue Nothing
+
+{-# COMPLETE SMTLambda #-}
+
+-- | Construct a lambda with both its canonical SMT-Lib text and retained
+-- expression DAG.
+smtLambdaWithInfo :: T.Text -> LambdaInfo -> SMTLambda
+smtLambdaWithInfo textValue lambdaInfo = SMTLambdaValue textValue (Just lambdaInfo)
+
+-- | Compare lambdas by their canonical SMT-Lib representation. The retained
+-- DAG is backend metadata and does not affect symbolic identity.
+instance Eq SMTLambda where
+  left == right = smtLambdaText left == smtLambdaText right
+
+-- | Order lambdas by their canonical SMT-Lib representation. The retained
+-- DAG is backend metadata and does not affect symbolic identity.
+instance Ord SMTLambda where
+  compare left right = compare (smtLambdaText left) (smtLambdaText right)
+
+-- | Fully evaluate both the canonical text and any retained expression DAG.
+instance NFData SMTLambda where
+  rnf (SMTLambdaValue textValue lambdaInfo) = rnf textValue `seq` rnf lambdaInfo
+
+-- | Return the canonical SMT-Lib rendering of a lambda.
+smtLambdaText :: SMTLambda -> T.Text
+smtLambdaText (SMTLambdaValue textValue _) = textValue
+
+-- | Return a lambda's retained expression DAG when it was constructed by
+-- SBV rather than directly from an SMT-Lib string.
+smtLambdaInfo :: SMTLambda -> Maybe LambdaInfo
+smtLambdaInfo (SMTLambdaValue _ lambdaInfo) = lambdaInfo
 
 -- | Simple show instance for SMTLambda
 instance Show SMTLambda where
-  show (SMTLambda s) = T.unpack s
+  show = T.unpack . smtLambdaText
 
 -- | Sequence operations. Indexed by the element kind.
 data SeqOp = SeqLen      Kind
@@ -1136,16 +1175,36 @@ lookupInput f sv ns
                     -- we use the more expensive O (n) to find the index and the elem
     secondLookup = S.elemIndexL sv svs >>= flip S.lookup ns
 
--- | A defined function/value
-data SMTDef = SMTDef Kind             -- ^ Final kind of the definition (resulting kind, not the params)
-                     [String]         -- ^ other definitions it refers to
-                     (Maybe Text)     -- ^ parameter string
-                     (Int -> Text)    -- ^ Body, in SMTLib syntax, given the tab amount
+-- | A defined function/value, optionally retaining its structured expression
+-- DAG for consumers other than SMT-Lib.
+data SMTDef = SMTDefValue Kind               -- ^ Final kind of the definition (resulting kind, not the params)
+                          [String]           -- ^ other definitions it refers to
+                          (Maybe Text)       -- ^ parameter string
+                          (Int -> Text)      -- ^ Body, in SMTLib syntax, given the tab amount
+                          (Maybe LambdaInfo) -- ^ Structured function body, when constructed by SBV
             deriving G.Data
+
+-- | Compatibility constructor and pattern for an SMT-text definition. The
+-- pattern also matches definitions carrying retained backend metadata.
+pattern SMTDef :: Kind -> [String] -> Maybe Text -> (Int -> Text) -> SMTDef
+pattern SMTDef resultKind dependencies parameters body <- SMTDefValue resultKind dependencies parameters body _
+  where SMTDef resultKind dependencies parameters body = SMTDefValue resultKind dependencies parameters body Nothing
+
+{-# COMPLETE SMTDef #-}
+
+-- | Attach a structured expression DAG to an SMT definition.
+smtDefWithInfo :: SMTDef -> LambdaInfo -> SMTDef
+smtDefWithInfo (SMTDefValue resultKind dependencies parameters body _) lambdaInfo
+  = SMTDefValue resultKind dependencies parameters body (Just lambdaInfo)
+
+-- | Return a definition's retained expression DAG, when it was constructed by
+-- SBV rather than supplied only as SMT-Lib text.
+smtDefInfo :: SMTDef -> Maybe LambdaInfo
+smtDefInfo (SMTDefValue _ _ _ _ lambdaInfo) = lambdaInfo
 
 -- | For debug purposes
 instance Show SMTDef where
-  show (SMTDef fk frees p body) = unlines [ "-- User defined function:"
+  show (SMTDefValue fk frees p body _) = unlines [ "-- User defined function:"
                                                       , "-- Final return type    : " ++ show fk
                                                       , "-- Refers to            : " ++ intercalate ", " frees
                                                       , "-- Parameters           : " ++ maybe "NONE" T.unpack p
@@ -1155,12 +1214,13 @@ instance Show SMTDef where
 
 -- | NFData instance for SMTDef
 instance NFData SMTDef where
-  rnf (SMTDef fk frees params body) = rnf fk `seq` rnf frees `seq` rnf params `seq` rnf body
+  rnf (SMTDefValue fk frees params body lambdaInfo)
+    = rnf fk `seq` rnf frees `seq` rnf params `seq` rnf body `seq` rnf lambdaInfo
 
 -- | Compare two SMTDef values for semantic equality.
 -- The body is @(Int -> Text)@ where @Int@ is indentation; we compare rendered output at indent 0.
 smtDefEq :: SMTDef -> SMTDef -> Bool
-smtDefEq (SMTDef k1 refs1 params1 body1) (SMTDef k2 refs2 params2 body2)
+smtDefEq (SMTDefValue k1 refs1 params1 body1 _) (SMTDefValue k2 refs2 params2 body2 _)
   = k1 == k2 && refs1 == refs2 && params1 == params2 && body1 0 == body2 0
 
 -- | Error for conflicting smtFunction definitions with the same name.
@@ -1175,13 +1235,20 @@ conflictError nm = error $ unlines [ ""
                                    , "*** Please use a unique name for each distinct function."
                                    ]
 
--- | Information about a compiled lambda body, used for measure verification.
+-- | Structured information about a compiled lambda body, used for measure
+-- verification and by backends that should not parse its SMT-Lib rendering.
 data LambdaInfo = LambdaInfo
-  { liAssignments :: S.Seq (SV, SBVExpr)  -- ^ The expression DAG
-  , liParams      :: [(Quantifier, SV)]    -- ^ Formal parameters with quantifier
-  , liOutput      :: SV                    -- ^ The output node
-  , liConsts      :: [(SV, CV)]            -- ^ Constants used
-  }
+  { liAssignments :: S.Seq (SV, SBVExpr)        -- ^ The expression DAG
+  , liParams      :: [(Quantifier, SV)]          -- ^ Formal parameters with quantifier
+  , liOutput      :: SV                          -- ^ The output node
+  , liConsts      :: [(SV, CV)]                  -- ^ Constants used
+  , liTables      :: [((Int, Kind, Kind), [SV])] -- ^ Finite lookup tables used by the body
+  } deriving G.Data
+
+-- | Fully evaluate the retained pieces of a compiled lambda body.
+instance NFData LambdaInfo where
+  rnf LambdaInfo{liAssignments, liParams, liOutput, liConsts, liTables}
+    = rnf liAssignments `seq` rnf liParams `seq` rnf liOutput `seq` rnf liConsts `seq` rnf liTables
 
 -- | The state of the symbolic interpreter
 data State  = State { sbvContext            :: SBVContext
@@ -2014,17 +2081,15 @@ extractSymbolicSimulationState st@State{ runMode=rrm
 -- | Generalization of 'Data.SBV.addNewSMTOption'
 addNewSMTOption :: MonadSymbolic m => SMTOption -> m ()
 addNewSMTOption o = do st <- symbolicEnv
+                       codeGeneration <- liftIO $ isCodeGenMode st
+                       when codeGeneration $ error "SBV->C: SMT solver options have no executable C semantics; remove setOption from the code-generation program."
                        liftIO $ modifyState st rSMTOptions (o:) (pure ())
 
 -- | Generalization of 'Data.SBV.imposeConstraint'
 imposeConstraint :: MonadSymbolic m => Bool -> [(String, String)] -> SVal -> m ()
 imposeConstraint isSoft attrs c = do st <- symbolicEnv
-                                     rm <- liftIO $ readIORef (runMode st)
-
-                                     case rm of
-                                       CodeGen -> error "SBV: constraints are not allowed in code-generation"
-                                       _       -> liftIO $ do mapM_ (registerLabel "Constraint" st) [nm | (":named",  nm) <- attrs]
-                                                              internalConstraint st isSoft attrs c
+                                     liftIO $ do mapM_ (registerLabel "Constraint" st) [nm | (":named",  nm) <- attrs]
+                                                 internalConstraint st isSoft attrs c
 
 -- | Require a boolean condition to be true in the state. Only used for internal purposes.
 internalConstraint :: State -> Bool -> [(String, String)] -> SVal -> IO ()
@@ -2053,6 +2118,10 @@ internalConstraint st isSoft attrs b = do v <- svToSV st b
 -- | Generalization of 'Data.SBV.addSValOptGoal'
 addSValOptGoal :: MonadSymbolic m => Objective SVal -> m ()
 addSValOptGoal obj = do st <- symbolicEnv
+                        mode <- liftIO $ readIORef (runMode st)
+                        case mode of
+                          CodeGen -> error "SBV->C: Optimization objectives require a solver and cannot be compiled to executable C."
+                          _       -> pure ()
 
                         -- create the tracking variable here for the metric
                         let mkGoal nm orig = liftIO $ do origSV  <- svToSV st orig

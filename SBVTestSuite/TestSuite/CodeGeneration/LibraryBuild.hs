@@ -24,15 +24,18 @@ import System.Process (readProcessWithExitCode)
 import Test.Tasty.HUnit (assertBool, assertEqual)
 
 import Data.SBV.Tools.CodeGen
+import qualified Data.SBV.Tools.CodeGen.Legacy as Legacy
 import Utils.SBVTestFramework
 
 -- | Generate a library named @buildLibrary@ with the supplied components.
 type LibraryGenerator = FilePath -> [(String, SBVCodeGen ())] -> IO ()
 
--- | Exercise the default public library generator.
+-- | Exercise both the current and legacy public library generators.
 tests :: TestTree
-tests = testsWith "CodeGeneration.LibraryBuild" $ \dir components ->
-  void $ compileToCLib (Just dir) "buildLibrary" components
+tests = testGroup "CodeGeneration.LibraryBuild"
+  [ testsWith "current" $ \dir components -> void $        compileToCLib (Just dir) "buildLibrary" components
+  , testsWith "legacy"  $ \dir components -> void $ Legacy.compileToCLib (Just dir) "buildLibrary" components
+  ]
 
 -- | Apply the same archive and driver checks to either public C backend.
 testsWith :: String -> LibraryGenerator -> TestTree

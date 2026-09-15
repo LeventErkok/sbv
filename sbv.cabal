@@ -142,6 +142,7 @@ Library
                   , Data.SBV.Tools.BVOptimize
                   , Data.SBV.Tools.Induction
                   , Data.SBV.Tools.CodeGen
+                  , Data.SBV.Tools.CodeGen.Legacy
                   , Data.SBV.Tools.GenTest
                   , Data.SBV.Tools.Overflow
                   , Data.SBV.Tools.Polynomial
@@ -314,9 +315,29 @@ Library
                   , Data.SBV.Control.Types
                   , Data.SBV.Control.Utils
                   , Data.SBV.Compilers.C
+                  , Data.SBV.Compilers.C.ADT
+                  , Data.SBV.Compilers.C.Arena
+                  , Data.SBV.Compilers.C.Array
+                  , Data.SBV.Compilers.C.BV
+                  , Data.SBV.Compilers.C.FP
+                  , Data.SBV.Compilers.C.Finite
+                  , Data.SBV.Compilers.C.GMP
+                  , Data.SBV.Compilers.C.Legacy
+                  , Data.SBV.Compilers.C.Legacy.Internal
+                  , Data.SBV.Compilers.C.List
+                  , Data.SBV.Compilers.C.Lowering
+                  , Data.SBV.Compilers.C.NonLinear
+                  , Data.SBV.Compilers.C.Backend
                   , Data.SBV.Compilers.C.PseudoBoolean
                   , Data.SBV.Compilers.C.Real
+                  , Data.SBV.Compilers.C.RegExp
+                  , Data.SBV.Compilers.C.Set
                   , Data.SBV.Compilers.C.Syntax
+                  , Data.SBV.Compilers.C.Table
+                  , Data.SBV.Compilers.C.Text
+                  , Data.SBV.Compilers.C.Types
+                  , Data.SBV.Compilers.C.Tuple
+                  , Data.SBV.Compilers.C.Value
                   , Data.SBV.Compilers.CodeGen
                   , Data.SBV.Lambda
                   , Data.SBV.SCase
@@ -372,6 +393,7 @@ Test-Suite SBVTest
   hs-source-dirs  : SBVTestSuite
   main-is         : SBVTest.hs
   other-modules   : Utils.SBVTestFramework
+                  , Utils.CCodeGen
                   , TestSuite.ADT.ADT
                   , TestSuite.ADT.Expr
                   , TestSuite.ADT.MutRec
@@ -426,14 +448,20 @@ Test-Suite SBVTest
                   , TestSuite.BitPrecise.MergeSort
                   , TestSuite.BitPrecise.PrefixSum
                   , TestSuite.CodeGeneration.AddSub
+                  , TestSuite.CodeGeneration.ArbitraryBits
+                  , TestSuite.CodeGeneration.ArbitraryFloats
+                  , TestSuite.CodeGeneration.ArrayCaptures
+                  , TestSuite.CodeGeneration.Boundaries
                   , TestSuite.CodeGeneration.CgTests
                   , TestSuite.CodeGeneration.CRC_USB5
+                  , TestSuite.CodeGeneration.ExactNumbers
                   , TestSuite.CodeGeneration.Fibonacci
                   , TestSuite.CodeGeneration.Floats
                   , TestSuite.CodeGeneration.GCD
                   , TestSuite.CodeGeneration.PopulationCount
                   , TestSuite.CodeGeneration.LibraryBuild
                   , TestSuite.CodeGeneration.PseudoBoolean
+                  , TestSuite.CodeGeneration.RegExp
                   , TestSuite.CodeGeneration.ScalarSafety
                   , TestSuite.CodeGeneration.Uninterpreted
                   , TestSuite.CompileTests.SCase
