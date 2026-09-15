@@ -454,10 +454,16 @@ gmpSet kind target value = namedCall (gmpFunctionName kind "set") [target, value
 -- representation. Callers must check 'isExactGMPKind' before using this for a
 -- configurable integer or real kind.
 gmpFunctionName :: Kind -> String -> String
-gmpFunctionName KUnbounded suffix = "mpz_" ++ suffix
-gmpFunctionName KReal      suffix = "mpq_" ++ suffix
-gmpFunctionName KRational  suffix = "mpq_" ++ suffix
-gmpFunctionName kind       _      = error $ "SBV->C: Expected an exact GMP kind, received " ++ show kind
+gmpFunctionName kind suffix = gmpPrefix kind ++ suffix
+
+-- | Public GMP namespace for a kind whose storage has already been selected
+-- as exact. Representation selection belongs to 'isExactGMPKind'; this helper
+-- supplies the common prefix of both function and type names.
+gmpPrefix :: Kind -> String
+gmpPrefix KUnbounded = "mpz_"
+gmpPrefix KReal      = "mpq_"
+gmpPrefix KRational  = "mpq_"
+gmpPrefix kind       = error $ "SBV->C: Expected an exact GMP kind, received " ++ show kind
 
 -- | Name the arena allocator for an exact value. It returns initialized,
 -- mutable GMP storage owned by the supplied arena.
@@ -487,12 +493,12 @@ gmpDriverAssign kind access value
 
 -- | Return the mutable GMP pointer type used for an output parameter.
 gmpOutputType :: Kind -> String
-gmpOutputType kind = gmpFunctionName kind "ptr"
+gmpOutputType kind = gmpPrefix kind ++ "ptr"
 
 -- | Return the mutable GMP storage type used for one element of a generated
 -- fixed-size array.
 gmpArrayType :: Kind -> String
-gmpArrayType kind = gmpFunctionName kind "t"
+gmpArrayType kind = gmpPrefix kind ++ "t"
 
 -- | Initialize already-declared caller-owned GMP storage from an
 -- integer-valued driver sample.

@@ -44,7 +44,10 @@ import Data.SBV.Compilers.C.List       (listClone, listRelease)
 import Data.SBV.Compilers.C.Lowering   (CLowering, expressionLowering)
 import Data.SBV.Compilers.C.Set        (setClone, setRelease)
 import Data.SBV.Compilers.C.Syntax     (cCommentText)
-import Data.SBV.Compilers.C.Types      (elementCType, kindTag, tupleCType, tupleFieldName)
+import Data.SBV.Compilers.C.Types      ( elementCType, kindTag, tupleCType, tupleFieldName
+                                     , tupleOwnedInitName, tupleOwnedSetName, tupleOwnedCloneName, tupleOwnedReleaseName
+                                     , textCloneName, textReleaseName
+                                     )
 import Data.SBV.Compilers.C.Value      (managedValueClone, managedValueRelease, valueDriverInit, valueNeedsOwnership)
 import Data.SBV.Compilers.CodeGen      (CgConfig)
 import Data.SBV.Core.Data
@@ -176,8 +179,8 @@ tupleOwnershipTypeDecls cfg tuples
                   | isExactGMPKind cfg fieldKind
                   = ["  " ++ gmpFunctionName fieldKind "set" ++ "((" ++ gmpOutputType fieldKind ++ ") target->" ++ field ++ ", source." ++ field ++ ");"]
                   | fieldKind == KString
-                  = [ "  const SString " ++ field ++ "_copy = sbv_string_clone(source." ++ field ++ ");"
-                    , "  sbv_string_release(&target->" ++ field ++ ");"
+                  = [ "  const SString " ++ field ++ "_copy = " ++ textCloneName ++ "(source." ++ field ++ ");"
+                    , "  " ++ textReleaseName ++ "(&target->" ++ field ++ ");"
                     , "  target->" ++ field ++ " = " ++ field ++ "_copy;"
                     ]
                   | isList fieldKind
@@ -214,7 +217,7 @@ tupleOwnershipTypeDecls cfg tuples
                     , "  }"
                     ]
                   | fieldKind == KString
-                  = ["  sbv_string_release(&value->" ++ field ++ ");"]
+                  = ["  " ++ textReleaseName ++ "(&value->" ++ field ++ ");"]
                   | isList fieldKind
                   = ["  " ++ render (listRelease fieldKind (text ("value->" ++ field)))]
                   | isSet fieldKind
@@ -229,23 +232,6 @@ tupleOwnershipTypeDecls cfg tuples
                   = []
                   where field = tupleFieldName index
        declaration kind = error $ "SBV->C: Expected a tuple kind, received " ++ show kind
-
--- | Return the helper name that initializes caller-owned storage for a tuple
--- with recursively managed fields.
-tupleOwnedInitName :: Kind -> String
-tupleOwnedInitName kind = "sbv_tuple_owned_init_" ++ kindTag kind
-
--- | Return the helper name that assigns into initialized owned tuple storage.
-tupleOwnedSetName :: Kind -> String
-tupleOwnedSetName kind = "sbv_tuple_owned_set_" ++ kindTag kind
-
--- | Return the public helper name that deep-copies a managed-field tuple.
-tupleOwnedCloneName :: Kind -> String
-tupleOwnedCloneName kind = "sbv_tuple_owned_clone_" ++ kindTag kind
-
--- | Return the public helper name that releases an owned managed-field tuple.
-tupleOwnedReleaseName :: Kind -> String
-tupleOwnedReleaseName kind = "sbv_tuple_owned_release_" ++ kindTag kind
 
 -- | Initialize a generated-driver tuple and populate its fields from a seed.
 -- Recursively owned fields use the public owned-tuple storage protocol; other

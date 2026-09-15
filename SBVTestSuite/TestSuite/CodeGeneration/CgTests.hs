@@ -21,7 +21,7 @@
 module TestSuite.CodeGeneration.CgTests(tests) where
 
 import Control.Exception (ErrorCall, displayException, evaluate, try)
-import Control.Monad (forM, unless, void, when)
+import Control.Monad (forM, forM_, unless, void, when)
 import qualified Data.Bifunctor as B
 import Data.List (isInfixOf)
 import Data.Proxy (Proxy(..))
@@ -183,6 +183,7 @@ tests = testGroup "CodeGeneration.CgTests"
   , testCase "reuse the full ADT registry for nested and leaf-only literals" sharedADTConstantRegistry
   , testCase "straight-line sharing needs no runtime readiness flags" straightLineSharing
   , testCase "text arena rejects allocation-size overflow" textAllocationOverflow
+  , testCase "shared arenas preserve allocation and cleanup contracts" ownershipArenaChecks
   , testCase "original bundle header patterns cover both backends" compatibleHeaderPatterns
   , testCase "merged configuration describes artifacts and protects existing files" mergedConfiguration
   , testCase "reject excess-precision floating-point compilation" excessFloatingPrecision
@@ -865,6 +866,73 @@ textAllocationOverflow = withSystemTempDirectory "sbv-text-overflow" $ \dir -> d
   assertEqual buildError ExitSuccess buildExit
   (runExit, _, runError) <- readProcessWithExitCode (dir </> "textOverflow") [] ""
   assertBool ("Expected allocation overflow to abort: " ++ runError) (runExit /= ExitSuccess)
+
+-- | Exercise all three instances of the shared arena emitter, including empty
+-- allocation, element alignment, independent payloads, repeated cleanup, and
+-- overflow of both the payload multiplication and allocation-header addition.
+ownershipArenaChecks :: Assertion
+ownershipArenaChecks = withSystemTempDirectory "sbv-ownership-arenas" $ \dir -> do
+  compileToC (Just dir) "ownershipArenas" $ do
+    cgOverwriteFiles True
+    cgGenerateDriver False
+    stringValue <- cgInput "string" :: SBVCodeGen SString
+    listValue   <- cgInput "list"   :: SBVCodeGen (SList Word32)
+    setValue    <- cgInput "set"    :: SBVCodeGen (SSet Word32)
+    cgOutput "stringCopy" (stringValue SL.++ stringValue)
+    cgOutput "listCopy"   (listValue SL.++ listValue)
+    cgOutput "setCopy"    (SS.insert 7 setValue)
+  appendFile (dir </> "ownershipArenas.c") $ unlines
+    [ "int main(int argc, char **argv) {"
+    , "  sbv_text_ctx text_ctx = {NULL};"
+    , "  sbv_list_ctx list_ctx = {NULL};"
+    , "  sbv_set_ctx set_ctx = {NULL};"
+    , "  if (argc != 2) return 2;"
+    , "  switch (argv[1][0]) {"
+    , "    case '0': {"
+    , "      if (sbv_text_alloc(&text_ctx, 0) != NULL) return 3;"
+    , "      if (sbv_list_alloc(&list_ctx, 0, 0) != NULL) return 4;"
+    , "      if (sbv_set_alloc(&set_ctx, 0, 0) != NULL) return 5;"
+    , "      if (text_ctx.head != NULL || list_ctx.head != NULL || set_ctx.head != NULL) return 6;"
+    , "      uint8_t *first = sbv_text_alloc(&text_ctx, 2); first[0] = 17; first[1] = 19;"
+    , "      uint8_t *second = sbv_text_alloc(&text_ctx, 1); second[0] = 23;"
+    , "      long double *items = (long double *) sbv_list_alloc(&list_ctx, 2, sizeof(*items));"
+    , "      long double *members = (long double *) sbv_set_alloc(&set_ctx, 2, sizeof(*members));"
+    , "      if ((uintptr_t) items % _Alignof(long double) != 0) return 7;"
+    , "      if ((uintptr_t) members % _Alignof(long double) != 0) return 8;"
+    , "      items[0] = 29; items[1] = 31; members[0] = 37; members[1] = 41;"
+    , "      (void) sbv_list_alloc(&list_ctx, 3, sizeof(*items));"
+    , "      (void) sbv_set_alloc(&set_ctx, 3, sizeof(*members));"
+    , "      if (first[0] != 17 || first[1] != 19 || second[0] != 23) return 9;"
+    , "      if (items[0] != 29 || items[1] != 31 || members[0] != 37 || members[1] != 41) return 10;"
+    , "      break;"
+    , "    }"
+    , "    case '1': (void) sbv_text_alloc(&text_ctx, SIZE_MAX); break;"
+    , "    case '2': (void) sbv_list_alloc(&list_ctx, 1, 0); break;"
+    , "    case '3': (void) sbv_set_alloc(&set_ctx, 1, 0); break;"
+    , "    case '4': (void) sbv_list_alloc(&list_ctx, SIZE_MAX / 2 + 1, 2); break;"
+    , "    case '5': (void) sbv_set_alloc(&set_ctx, SIZE_MAX / 2 + 1, 2); break;"
+    , "    case '6': (void) sbv_list_alloc(&list_ctx, SIZE_MAX, 1); break;"
+    , "    case '7': (void) sbv_set_alloc(&set_ctx, SIZE_MAX, 1); break;"
+    , "    default: return 11;"
+    , "  }"
+    , "  sbv_text_ctx_end(&text_ctx); sbv_list_ctx_end(&list_ctx); sbv_set_ctx_end(&set_ctx);"
+    , "  if (text_ctx.head != NULL || list_ctx.head != NULL || set_ctx.head != NULL) return 12;"
+    , "  sbv_text_ctx_end(&text_ctx); sbv_list_ctx_end(&list_ctx); sbv_set_ctx_end(&set_ctx);"
+    , "  return 0;"
+    , "}"
+    ]
+  writeFile (dir </> "caller.mk") $ unlines
+    [ "ownershipArenas: ownershipArenas.o"
+    , "\t${CC} ${CCFLAGS} $^ -o $@ ${LDFLAGS} ${SBV_LIBS}"
+    ]
+  makeOptions <- generatedMakeOptions dir
+  (buildExit, _, buildError) <- readProcessWithExitCode "make" (["-C", dir, "ownershipArenas"] ++ makeOptions) ""
+  assertEqual buildError ExitSuccess buildExit
+  (normalExit, _, normalError) <- readProcessWithExitCode (dir </> "ownershipArenas") ["0"] ""
+  assertEqual normalError ExitSuccess normalExit
+  forM_ [1 :: Int .. 7] $ \scenario -> do
+    (runExit, _, runError) <- readProcessWithExitCode (dir </> "ownershipArenas") [show scenario] ""
+    assertBool ("Expected arena size check " ++ show scenario ++ " to abort: " ++ runError) (runExit /= ExitSuccess)
 
 -- | Sharing non-speculatable arithmetic in a straight-line program needs one
 -- assignment, not a zero initializer, readiness flag, or conditional wrapper.

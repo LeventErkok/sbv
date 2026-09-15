@@ -34,8 +34,10 @@ import Numeric                         (showHex)
 import Text.PrettyPrint.HughesPJ
 import qualified Text.PrettyPrint.HughesPJ as P ((<>))
 
+import Data.SBV.Compilers.C.Arena      (CArena(..), arenaRuntime)
 import Data.SBV.Compilers.C.GMP        (isExactGMPKind)
 import Data.SBV.Compilers.C.Lowering   (CLowering, CRequirement(..), expressionLowering)
+import Data.SBV.Compilers.C.Types      (textCloneName, textReleaseName, textCompareName)
 import Data.SBV.Compilers.CodeGen      (CgConfig)
 import Data.SBV.Core.Data
 
@@ -77,7 +79,7 @@ textTypeDecls kinds
       , "  return sbv_string_borrow((const uint8_t *) value, byte_length, length);"
       , "}"
       , ""
-      , "static inline SString sbv_string_clone(SString value)"
+      , "static inline SString " ++ textCloneName ++ "(SString value)"
       , "{"
       , "  uint8_t *copy = NULL;"
       , "  if (value.byte_length != 0) {"
@@ -88,7 +90,7 @@ textTypeDecls kinds
       , "  return sbv_string_borrow(copy, value.byte_length, value.length);"
       , "}"
       , ""
-      , "static inline void sbv_string_release(SString *value)"
+      , "static inline void " ++ textReleaseName ++ "(SString *value)"
       , "{"
       , "  if (value == NULL) return;"
       , "  free((void *) value->data);"
@@ -225,16 +227,16 @@ textExpr cfg op svs resultKind args
        usesString = any ((== KString) . kindOf) svs
 
        equal a b
-         | usesString = parens $ call "sbv_text_compare" [a, b] <+> text "== 0"
+         | usesString = parens $ call textCompareName [a, b] <+> text "== 0"
          | True       = a <+> text "==" <+> b
 
        ordered relation a b
-         | usesString = parens $ call "sbv_text_compare" [a, b] <+> text relation <+> text "0"
+         | usesString = parens $ call textCompareName [a, b] <+> text relation <+> text "0"
          | True       = a <+> text relation <+> b
 
        distinctText as = fsep $ punctuate (text " &&")
                               [parens (if usesString
-                                       then call "sbv_text_compare" [a, b] <+> text "!= 0"
+                                       then call textCompareName [a, b] <+> text "!= 0"
                                        else a <+> text "!=" <+> b)
                               | (a:rest) <- tails as, b <- rest]
 
@@ -278,11 +280,11 @@ textPrint kind    _     = error $ "SBV->C: Expected a text kind, received " ++ s
 
 -- | Deep-copy a string across the generated function's ownership boundary.
 textClone :: Doc -> Doc
-textClone value = call "sbv_string_clone" [value]
+textClone value = call textCloneName [value]
 
 -- | Release an owned string in a generated driver.
 textRelease :: Doc -> Doc
-textRelease value = call "sbv_string_release" [text "&" P.<> value] P.<> semi
+textRelease value = call textReleaseName [text "&" P.<> value] P.<> semi
 
 -- | Produce a deterministic printable driver value for a character or string.
 textDriverValue :: Kind -> Integer -> Doc
@@ -349,27 +351,8 @@ call functionName args = text functionName P.<> parens (fsep (punctuate comma ar
 
 -- | Runtime helpers shared by mapped and exact integer configurations.
 commonRuntime :: [String]
-commonRuntime =
-  ["/* Per-call ownership arena for string temporaries. */"
-  , "typedef struct sbv_text_node { struct sbv_text_node *next; uint8_t data[]; } sbv_text_node;"
-  , "typedef struct { sbv_text_node *head; } sbv_text_ctx;"
-  , ""
-  , "static uint8_t *sbv_text_alloc(sbv_text_ctx *ctx, size_t count)"
-  , "{"
-  , "  if (count == 0) return NULL;"
-  , "  if (count > SIZE_MAX - sizeof(sbv_text_node)) abort();"
-  , "  sbv_text_node *node = (sbv_text_node *) malloc(sizeof(*node) + count);"
-  , "  if (node == NULL) abort();"
-  , "  node->next = ctx->head; ctx->head = node; return node->data;"
-  , "}"
-  , ""
-  , "static void sbv_text_ctx_end(sbv_text_ctx *ctx)"
-  , "{"
-  , "  while (ctx->head != NULL) {"
-  , "    sbv_text_node *next = ctx->head->next; free(ctx->head); ctx->head = next;"
-  , "  }"
-  , "}"
-  , ""
+commonRuntime = arenaRuntime TextArena ++
+  [ ""
   , "static size_t sbv_text_width(uint8_t first)"
   , "{"
   , "  if (first < UINT8_C(0x80)) return 1;"
@@ -397,7 +380,7 @@ commonRuntime =
   , ""
   , "static uint64_t sbv_text_length(SString value) { return (uint64_t) value.length; }"
   , ""
-  , "static int sbv_text_compare(SString left, SString right)"
+  , "static int " ++ textCompareName ++ "(SString left, SString right)"
   , "{"
   , "  const size_t common = left.byte_length < right.byte_length ? left.byte_length : right.byte_length;"
   , "  const int prefix = common == 0 ? 0 : memcmp(left.data, right.data, common);"

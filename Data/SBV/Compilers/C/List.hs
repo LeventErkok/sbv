@@ -42,10 +42,11 @@ import qualified Data.Set as Set
 import Text.PrettyPrint.HughesPJ
 import qualified Text.PrettyPrint.HughesPJ as P ((<>))
 
+import Data.SBV.Compilers.C.Arena      (CArena(..), arenaRuntime)
 import Data.SBV.Compilers.C.Array      (arrayStoredLoad, arrayStoredValue)
 import Data.SBV.Compilers.C.GMP        (gmpFunctionName, gmpInitializeCopy, gmpOutputType, isExactGMPKind)
 import Data.SBV.Compilers.C.Lowering   (CLowering, CRequirement(..), expressionLowering)
-import Data.SBV.Compilers.C.Types      (isConcreteADT, constElementCType, elementCType, kindTag)
+import Data.SBV.Compilers.C.Types      (isConcreteADT, constElementCType, elementCType, kindTag, listCloneName, listReleaseName, listHelperName)
 import Data.SBV.Compilers.C.Value      ( byValueEqual
                                        , managedValueClone
                                        , managedValueRelease
@@ -458,17 +459,9 @@ listElementKind :: Kind -> Kind
 listElementKind (KList elementKind) = elementKind
 listElementKind kind                = error $ "SBV->C: Expected a list kind, received " ++ show kind
 
--- | Return the generated clone-helper name for a list kind.
-listCloneName :: Kind -> String
-listCloneName kind = "sbv_list_clone_" ++ listKindTag (listElementKind kind)
-
--- | Return the generated release-helper name for a list kind.
-listReleaseName :: Kind -> String
-listReleaseName kind = "sbv_list_release_" ++ listKindTag (listElementKind kind)
-
 -- | Return one specialized list-operation helper name.
 helperName :: Kind -> String -> String
-helperName kind suffix = "sbv_list_" ++ listKindTag (listElementKind kind) ++ "_" ++ suffix
+helperName = listHelperName
 
 -- | Render a C helper call.
 call :: String -> [Doc] -> Doc
@@ -476,27 +469,7 @@ call functionName args = text functionName P.<> parens (fsep (punctuate comma ar
 
 -- | Shared per-call allocation arena used by every list specialization.
 commonRuntime :: [String]
-commonRuntime =
-  ["/* Per-call ownership arena for symbolic-list temporaries. */"
-  , "typedef struct sbv_list_node { struct sbv_list_node *next; long double data[]; } sbv_list_node;"
-  , "typedef struct { sbv_list_node *head; } sbv_list_ctx;"
-  , "static void *sbv_list_alloc(sbv_list_ctx *ctx, size_t count, size_t element_size)"
-  , "{"
-  , "  if (count == 0) return NULL;"
-  , "  if (element_size == 0 || count > SIZE_MAX / element_size) abort();"
-  , "  const size_t bytes = count * element_size;"
-  , "  if (bytes > SIZE_MAX - sizeof(sbv_list_node)) abort();"
-  , "  sbv_list_node *node = (sbv_list_node *) malloc(sizeof(*node) + bytes);"
-  , "  if (node == NULL) abort();"
-  , "  node->next = ctx->head; ctx->head = node; return node->data;"
-  , "}"
-  , "static void sbv_list_ctx_end(sbv_list_ctx *ctx)"
-  , "{"
-  , "  while (ctx->head != NULL) {"
-  , "    sbv_list_node *next = ctx->head->next; free(ctx->head); ctx->head = next;"
-  , "  }"
-  , "}"
-  ]
+commonRuntime = arenaRuntime ListArena
 
 -- | Exact-GMP index conversion shared by specialized list operations.
 exactIndexRuntime :: [String]

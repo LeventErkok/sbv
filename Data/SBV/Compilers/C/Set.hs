@@ -43,10 +43,11 @@ import qualified Data.Set as Set
 import Text.PrettyPrint.HughesPJ
 import qualified Text.PrettyPrint.HughesPJ as P ((<>))
 
+import Data.SBV.Compilers.C.Arena      (CArena(..), arenaRuntime)
 import Data.SBV.Compilers.C.Finite     (finiteDomainSize)
 import Data.SBV.Compilers.C.GMP        (gmpFunctionName, gmpInitializeCopy, gmpOutputType, isExactGMPKind)
 import Data.SBV.Compilers.C.Lowering   (CLowering, CRequirement(..), expressionLowering)
-import Data.SBV.Compilers.C.Types      (isConcreteADT, elementCType, kindTag)
+import Data.SBV.Compilers.C.Types      (isConcreteADT, elementCType, kindTag, setCloneName, setReleaseName, setHelperName)
 import Data.SBV.Compilers.C.Value      ( byValueEqual
                                        , managedValueClone
                                        , managedValueRelease
@@ -408,17 +409,9 @@ setGuard kind = "SBV_SET_" ++ setElementTag (setElementKind kind) ++ "_DEFINED"
 setOwnershipGuard :: Kind -> String
 setOwnershipGuard kind = "SBV_SET_" ++ setElementTag (setElementKind kind) ++ "_OWNERSHIP_DEFINED"
 
--- | Return the generated clone-helper name for a set kind.
-setCloneName :: Kind -> String
-setCloneName kind = "sbv_set_clone_" ++ setElementTag (setElementKind kind)
-
--- | Return the generated release-helper name for a set kind.
-setReleaseName :: Kind -> String
-setReleaseName kind = "sbv_set_release_" ++ setElementTag (setElementKind kind)
-
 -- | Return one specialized set-operation helper name.
 helperName :: Kind -> String -> String
-helperName kind suffix = "sbv_set_" ++ setElementTag (setElementKind kind) ++ "_" ++ suffix
+helperName = setHelperName
 
 -- | Render a C helper call.
 call :: String -> [Doc] -> Doc
@@ -426,27 +419,7 @@ call functionName args = text functionName P.<> parens (fsep (punctuate comma ar
 
 -- | Shared per-call allocation arena used by every set specialization.
 commonRuntime :: [String]
-commonRuntime =
-  ["/* Per-call ownership arena for symbolic-set temporaries. */"
-  , "typedef struct sbv_set_node { struct sbv_set_node *next; long double data[]; } sbv_set_node;"
-  , "typedef struct { sbv_set_node *head; } sbv_set_ctx;"
-  , "static void *sbv_set_alloc(sbv_set_ctx *ctx, size_t count, size_t element_size)"
-  , "{"
-  , "  if (count == 0) return NULL;"
-  , "  if (element_size == 0 || count > SIZE_MAX / element_size) abort();"
-  , "  const size_t bytes = count * element_size;"
-  , "  if (bytes > SIZE_MAX - sizeof(sbv_set_node)) abort();"
-  , "  sbv_set_node *node = (sbv_set_node *) malloc(sizeof(*node) + bytes);"
-  , "  if (node == NULL) abort();"
-  , "  node->next = ctx->head; ctx->head = node; return node->data;"
-  , "}"
-  , "static void sbv_set_ctx_end(sbv_set_ctx *ctx)"
-  , "{"
-  , "  while (ctx->head != NULL) {"
-  , "    sbv_set_node *next = ctx->head->next; free(ctx->head); ctx->head = next;"
-  , "  }"
-  , "}"
-  ]
+commonRuntime = arenaRuntime SetArena
 
 -- | Emit all set helpers for one supported element kind.
 setKindRuntime :: CgConfig -> (Kind -> [[Kind]]) -> Kind -> [String]

@@ -73,7 +73,7 @@ import Data.SBV.Compilers.C.Tuple      ( tupleOwnedInitName
                                        , tupleOwnedSetName
                                        , tupleNeedsOwnership
                                        )
-import Data.SBV.Compilers.C.Types      (isConcreteADT, adtCType, elementCType, tupleFieldName)
+import Data.SBV.Compilers.C.Types      (isConcreteADT, adtCType, elementCType, tupleFieldName, adtOwnedInitName, adtOwnedSetName, adtOwnedCloneName, adtOwnedReleaseName, adtEqualName)
 import Data.SBV.Compilers.C.Value      (byValueEqual, managedValueClone, managedValueRelease, valueNeedsOwnership)
 import Data.SBV.Compilers.CodeGen      (CgConfig)
 import Data.SBV.Core.Data
@@ -509,23 +509,6 @@ adtOwnershipTypeDecls cfg adts
                                                     ++ adtConstructorMember constructorIndex
                                                     ++ "."
                                                     ++ adtFieldName fieldIndex
-
--- | Return the helper name that initializes caller-owned storage for one ADT
--- constructor.
-adtOwnedInitName :: Kind -> String
-adtOwnedInitName kind = "sbv_adt_owned_init_" ++ adtCType kind
-
--- | Return the helper name that assigns into initialized owned ADT storage.
-adtOwnedSetName :: Kind -> String
-adtOwnedSetName kind = "sbv_adt_owned_set_" ++ adtCType kind
-
--- | Return the public helper name that deep-copies an owned ADT.
-adtOwnedCloneName :: Kind -> String
-adtOwnedCloneName kind = "sbv_adt_owned_clone_" ++ adtCType kind
-
--- | Return the public helper name that releases an owned ADT.
-adtOwnedReleaseName :: Kind -> String
-adtOwnedReleaseName kind = "sbv_adt_owned_release_" ++ adtCType kind
 
 -- | Initialize a generated-driver ADT and populate its active constructor
 -- from a seed. Managed fields use the public owned-ADT storage protocol; other
@@ -990,11 +973,6 @@ adtEqual cfg adts strong kind left right
 adtIsRecursive :: [Kind] -> Kind -> Bool
 adtIsRecursive adts = any (any recursive . snd) . adtConstructorFields adts
  where recursive (ADTField _ isRecursive) = isRecursive
-
--- | Return the generated structural-equality helper for a recursive ADT.
-adtEqualName :: Bool -> Kind -> String
-adtEqualName strong kind = "sbv_adt_" ++ (if strong then "object_" else "")
-                        ++ "equal_" ++ adtCType kind
 
 -- | Return the generated checked-dereference helper for a recursive ADT edge.
 adtDereferenceName :: Kind -> String

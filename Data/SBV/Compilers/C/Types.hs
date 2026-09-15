@@ -6,7 +6,7 @@
 -- Maintainer: erkokl@gmail.com
 -- Stability : experimental
 --
--- Shared C type names for structurally lowered SBV kinds.
+-- Shared C type and helper names for structurally lowered SBV kinds.
 -----------------------------------------------------------------------------
 
 {-# OPTIONS_GHC -Wall -Werror #-}
@@ -20,6 +20,24 @@ module Data.SBV.Compilers.C.Types
   , arrayStoredCloneName
   , arrayStoredReleaseName
   , tupleFieldName
+  , tupleOwnedInitName
+  , tupleOwnedSetName
+  , tupleOwnedCloneName
+  , tupleOwnedReleaseName
+  , adtOwnedInitName
+  , adtOwnedSetName
+  , adtOwnedCloneName
+  , adtOwnedReleaseName
+  , adtEqualName
+  , listCloneName
+  , listReleaseName
+  , listHelperName
+  , setCloneName
+  , setReleaseName
+  , setHelperName
+  , textCloneName
+  , textReleaseName
+  , textCompareName
   , elementCType
   , constElementCType
   , kindTag
@@ -32,6 +50,87 @@ import Numeric                     (showHex)
 
 import Data.SBV.Compilers.C.FP         (arbitraryFPCType)
 import Data.SBV.Core.Data
+
+-- | Return the helper name that initializes caller-owned storage for a tuple
+-- with recursively managed fields.
+tupleOwnedInitName :: Kind -> String
+tupleOwnedInitName kind = "sbv_tuple_owned_init_" ++ kindTag kind
+
+-- | Return the helper name that assigns into initialized owned tuple storage.
+tupleOwnedSetName :: Kind -> String
+tupleOwnedSetName kind = "sbv_tuple_owned_set_" ++ kindTag kind
+
+-- | Return the public helper name that deep-copies a managed-field tuple.
+tupleOwnedCloneName :: Kind -> String
+tupleOwnedCloneName kind = "sbv_tuple_owned_clone_" ++ kindTag kind
+
+-- | Return the public helper name that releases an owned managed-field tuple.
+tupleOwnedReleaseName :: Kind -> String
+tupleOwnedReleaseName kind = "sbv_tuple_owned_release_" ++ kindTag kind
+
+-- | Return the helper name that initializes caller-owned storage for one ADT
+-- constructor.
+adtOwnedInitName :: Kind -> String
+adtOwnedInitName kind = "sbv_adt_owned_init_" ++ adtCType kind
+
+-- | Return the helper name that assigns into initialized owned ADT storage.
+adtOwnedSetName :: Kind -> String
+adtOwnedSetName kind = "sbv_adt_owned_set_" ++ adtCType kind
+
+-- | Return the public helper name that deep-copies an owned ADT.
+adtOwnedCloneName :: Kind -> String
+adtOwnedCloneName kind = "sbv_adt_owned_clone_" ++ adtCType kind
+
+-- | Return the public helper name that releases an owned ADT.
+adtOwnedReleaseName :: Kind -> String
+adtOwnedReleaseName kind = "sbv_adt_owned_release_" ++ adtCType kind
+
+-- | Return the generated structural-equality helper for a recursive ADT.
+adtEqualName :: Bool -> Kind -> String
+adtEqualName strong kind = "sbv_adt_" ++ (if strong then "object_" else "")
+                        ++ "equal_" ++ adtCType kind
+
+-- | Return the generated clone-helper name for a list kind.
+listCloneName :: Kind -> String
+listCloneName (KList elementKind) = "sbv_list_clone_" ++ kindTag elementKind
+listCloneName kind                = error $ "SBV->C: Expected a list kind, received " ++ show kind
+
+-- | Return the generated release-helper name for a list kind.
+listReleaseName :: Kind -> String
+listReleaseName (KList elementKind) = "sbv_list_release_" ++ kindTag elementKind
+listReleaseName kind                = error $ "SBV->C: Expected a list kind, received " ++ show kind
+
+-- | Return one specialized list-operation helper name.
+listHelperName :: Kind -> String -> String
+listHelperName (KList elementKind) suffix = "sbv_list_" ++ kindTag elementKind ++ "_" ++ suffix
+listHelperName kind                _      = error $ "SBV->C: Expected a list kind, received " ++ show kind
+
+-- | Return the generated clone-helper name for a set kind.
+setCloneName :: Kind -> String
+setCloneName (KSet elementKind) = "sbv_set_clone_" ++ kindTag elementKind
+setCloneName kind               = error $ "SBV->C: Expected a set kind, received " ++ show kind
+
+-- | Return the generated release-helper name for a set kind.
+setReleaseName :: Kind -> String
+setReleaseName (KSet elementKind) = "sbv_set_release_" ++ kindTag elementKind
+setReleaseName kind               = error $ "SBV->C: Expected a set kind, received " ++ show kind
+
+-- | Return one specialized set-operation helper name.
+setHelperName :: Kind -> String -> String
+setHelperName (KSet elementKind) suffix = "sbv_set_" ++ kindTag elementKind ++ "_" ++ suffix
+setHelperName kind               _      = error $ "SBV->C: Expected a set kind, received " ++ show kind
+
+-- | Name of the public helper that copies a string into owned storage.
+textCloneName :: String
+textCloneName = "sbv_string_clone"
+
+-- | Name of the public helper that releases owned string storage.
+textReleaseName :: String
+textReleaseName = "sbv_string_release"
+
+-- | Name of the lexicographic string-comparison runtime helper.
+textCompareName :: String
+textCompareName = "sbv_text_compare"
 
 -- | A resolved user ADT, excluding built-in rounding modes and opaque sorts.
 isConcreteADT :: Kind -> Bool
