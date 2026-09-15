@@ -46,7 +46,7 @@ import Text.PrettyPrint.HughesPJ
 import qualified Text.PrettyPrint.HughesPJ as P ((<>), render)
 
 import Data.SBV.Compilers.C.BV         (isWideBV)
-import Data.SBV.Compilers.C.GMP        (isExactGMPKind)
+import Data.SBV.Compilers.C.GMP        (gmpFunctionName, gmpNewName, gmpOutputType, isExactGMPKind)
 import Data.SBV.Compilers.C.Lowering   (CLowering(..), CRequirement(..), expressionLowering)
 import Data.SBV.Compilers.C.Syntax     (cUnusedAttribute, cCommentText)
 import Data.SBV.Compilers.C.Types      ( isConcreteADT
@@ -490,8 +490,8 @@ ownershipRuntime cfg kind@(KArray keyKind valueKind) =
 
        cloneExact field fieldKind
          | isExactGMPKind cfg fieldKind
-         = [ "      " ++ mutableType fieldKind ++ " copy = " ++ allocation fieldKind ++ "(&owner->exact_values);"
-           , "      " ++ setter fieldKind ++ "(copy, source->" ++ field ++ ");"
+         = [ "      " ++ gmpOutputType fieldKind ++ " copy = " ++ gmpNewName fieldKind ++ "(&owner->exact_values);"
+           , "      " ++ gmpFunctionName fieldKind "set" ++ "(copy, source->" ++ field ++ ");"
            , "      owner->nodes[i]." ++ field ++ " = copy;"
            ]
          | True
@@ -505,20 +505,6 @@ ownershipRuntime cfg kind@(KArray keyKind valueKind) =
          | True
          = []
 
-       mutableType KUnbounded = "mpz_ptr"
-       mutableType fieldKind
-         | isExactGMPKind cfg fieldKind = "mpq_ptr"
-       mutableType other      = error $ "SBV->C: Expected an exact array field, received " ++ show other
-
-       allocation KUnbounded = "sbv_gmp_new_integer"
-       allocation fieldKind
-         | isExactGMPKind cfg fieldKind = "sbv_gmp_new_real"
-       allocation other      = error $ "SBV->C: Expected an exact array field, received " ++ show other
-
-       setter KUnbounded = "mpz_set"
-       setter fieldKind
-         | isExactGMPKind cfg fieldKind = "mpq_set"
-       setter other      = error $ "SBV->C: Expected an exact array field, received " ++ show other
 ownershipRuntime _ kind = error $ "SBV->C: Expected an array kind, received " ++ show kind
 
 -- | Materialize a borrowed public callback descriptor as an internal array

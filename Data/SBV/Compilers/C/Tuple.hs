@@ -39,7 +39,7 @@ import Text.PrettyPrint.HughesPJ
 import qualified Text.PrettyPrint.HughesPJ as P ((<>))
 
 import Data.SBV.Compilers.C.Array      (arrayStoredLoad, arrayStoredValue)
-import Data.SBV.Compilers.C.GMP        (isExactGMPKind)
+import Data.SBV.Compilers.C.GMP        (gmpFunctionName, gmpOutputType, isExactGMPKind)
 import Data.SBV.Compilers.C.List       (listClone, listRelease)
 import Data.SBV.Compilers.C.Lowering   (CLowering, expressionLowering)
 import Data.SBV.Compilers.C.Set        (setClone, setRelease)
@@ -152,11 +152,11 @@ tupleOwnershipTypeDecls cfg tuples
                initializeField index fieldKind
                   | isExactGMPKind cfg fieldKind
                   = let access  = "value->" ++ tupleFieldName index
-                        mutable = exactMutableType fieldKind
+                        mutable = gmpOutputType fieldKind
                         local   = "field" ++ show index
                     in [ "  " ++ mutable ++ " " ++ local ++ " = (" ++ mutable ++ ") malloc(sizeof(*" ++ local ++ "));"
                        , "  if (" ++ local ++ " == NULL) abort();"
-                       , "  " ++ exactInit fieldKind ++ "(" ++ local ++ ");"
+                       , "  " ++ gmpFunctionName fieldKind "init" ++ "(" ++ local ++ ");"
                        , "  " ++ access ++ " = " ++ local ++ ";"
                        ]
                   | fieldKind == KString
@@ -174,7 +174,7 @@ tupleOwnershipTypeDecls cfg tuples
 
                setField index fieldKind
                   | isExactGMPKind cfg fieldKind
-                  = ["  " ++ exactSet fieldKind ++ "((" ++ exactMutableType fieldKind ++ ") target->" ++ field ++ ", source." ++ field ++ ");"]
+                  = ["  " ++ gmpFunctionName fieldKind "set" ++ "((" ++ gmpOutputType fieldKind ++ ") target->" ++ field ++ ", source." ++ field ++ ");"]
                   | fieldKind == KString
                   = [ "  const SString " ++ field ++ "_copy = sbv_string_clone(source." ++ field ++ ");"
                     , "  sbv_string_release(&target->" ++ field ++ ");"
@@ -209,7 +209,7 @@ tupleOwnershipTypeDecls cfg tuples
                releaseField index fieldKind
                   | isExactGMPKind cfg fieldKind
                   = [ "  if (value->" ++ field ++ " != NULL) {"
-                    , "    " ++ exactClear fieldKind ++ "((" ++ exactMutableType fieldKind ++ ") value->" ++ field ++ ");"
+                    , "    " ++ gmpFunctionName fieldKind "clear" ++ "((" ++ gmpOutputType fieldKind ++ ") value->" ++ field ++ ");"
                     , "    free((void *) value->" ++ field ++ ");"
                     , "  }"
                     ]
@@ -229,26 +229,6 @@ tupleOwnershipTypeDecls cfg tuples
                   = []
                   where field = tupleFieldName index
        declaration kind = error $ "SBV->C: Expected a tuple kind, received " ++ show kind
-
-       exactMutableType KUnbounded = "mpz_ptr"
-       exactMutableType fieldKind
-         | isExactGMPKind cfg fieldKind = "mpq_ptr"
-       exactMutableType kind       = error $ "SBV->C: Expected an exact tuple field, received " ++ show kind
-
-       exactInit KUnbounded = "mpz_init"
-       exactInit fieldKind
-         | isExactGMPKind cfg fieldKind = "mpq_init"
-       exactInit kind       = error $ "SBV->C: Expected an exact tuple field, received " ++ show kind
-
-       exactSet KUnbounded = "mpz_set"
-       exactSet fieldKind
-         | isExactGMPKind cfg fieldKind = "mpq_set"
-       exactSet kind       = error $ "SBV->C: Expected an exact tuple field, received " ++ show kind
-
-       exactClear KUnbounded = "mpz_clear"
-       exactClear fieldKind
-         | isExactGMPKind cfg fieldKind = "mpq_clear"
-       exactClear kind       = error $ "SBV->C: Expected an exact tuple field, received " ++ show kind
 
 -- | Return the helper name that initializes caller-owned storage for a tuple
 -- with recursively managed fields.

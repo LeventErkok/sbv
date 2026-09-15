@@ -26,7 +26,7 @@ import qualified Text.PrettyPrint.HughesPJ as P ((<>))
 
 import Data.SBV.Compilers.C.BV         (isWideBV, wideBVEqual)
 import Data.SBV.Compilers.C.FP         (arbitraryFPEqual, arbitraryFPObjectEqual, nativeFPObjectEqual)
-import Data.SBV.Compilers.C.GMP        (gmpDriverClear, gmpDriverInit, gmpEqual, isExactGMPKind)
+import Data.SBV.Compilers.C.GMP        (gmpDriverAssign, gmpDriverClear, gmpDriverInit, gmpEqual, isExactGMPKind)
 import Data.SBV.Compilers.C.Types      (isConcreteADTReference, adtCType, arrayStoredCloneName, arrayStoredReleaseName, constElementCType, elementCType, kindTag, tupleCType, tupleFieldName)
 import Data.SBV.Compilers.CodeGen      (CgConfig)
 import Data.SBV.Core.Data
@@ -154,17 +154,7 @@ valueDriverInit cfg renderValue initializeValue kind@(KTuple fields)       exter
          , valueDriverClear cfg fieldKind fieldName
          ]
 
-       exactAssignment KUnbounded access value =
-         [ text "if" <+> parens (call "mpz_set_str" [parens (text "mpz_ptr") <+> access, doubleQuotes (integer value), text "10"] <+> text "!= 0")
-                     <+> call "abort" [] P.<> semi
-         ]
-       exactAssignment fieldKind access value
-         | isExactGMPKind cfg fieldKind
-         = [ text "if" <+> parens (call "mpq_set_str" [parens (text "mpq_ptr") <+> access, doubleQuotes (integer value), text "10"] <+> text "!= 0")
-                     <+> call "abort" [] P.<> semi
-           , call "mpq_canonicalize" [parens (text "mpq_ptr") <+> access] P.<> semi
-           ]
-       exactAssignment fieldKind _ _ = error $ "SBV->C: Expected an exact tuple field, received " ++ show fieldKind
+       exactAssignment fieldKind access value = gmpDriverAssign fieldKind access (integer value)
 valueDriverInit cfg renderValue initializeValue kind@(KList elementKind)   externalName seed
   = collectionDriverInit cfg renderValue initializeValue kind elementKind externalName seed False
 valueDriverInit cfg renderValue initializeValue kind@(KSet elementKind)    externalName seed

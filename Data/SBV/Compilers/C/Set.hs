@@ -44,7 +44,7 @@ import Text.PrettyPrint.HughesPJ
 import qualified Text.PrettyPrint.HughesPJ as P ((<>))
 
 import Data.SBV.Compilers.C.Finite     (finiteDomainSize)
-import Data.SBV.Compilers.C.GMP        (isExactGMPKind)
+import Data.SBV.Compilers.C.GMP        (gmpFunctionName, gmpInitializeCopy, gmpOutputType, isExactGMPKind)
 import Data.SBV.Compilers.C.Lowering   (CLowering, CRequirement(..), expressionLowering)
 import Data.SBV.Compilers.C.Types      (isConcreteADT, elementCType, kindTag)
 import Data.SBV.Compilers.C.Value      ( byValueEqual
@@ -189,10 +189,10 @@ setOwnershipTypeDecls cfg kinds
        cloneElements elementKind
          | isExactGMPKind cfg elementKind
          =  [ "    for (size_t i = 0; i < value.length; ++i) {"
-            , "      " ++ exactMutableType elementKind ++ " element = (" ++ exactMutableType elementKind ++ ") malloc(sizeof(*element));"
+            , "      " ++ gmpOutputType elementKind ++ " element = (" ++ gmpOutputType elementKind ++ ") malloc(sizeof(*element));"
             , "      if (element == NULL) abort();"
             ]
-         ++ exactInitialize elementKind
+         ++ map ("      " ++) (lines (render (gmpInitializeCopy elementKind (text "element") (text "value.data[i]"))))
          ++ [ "      copy[i] = element;"
             , "    }"
             ]
@@ -207,8 +207,8 @@ setOwnershipTypeDecls cfg kinds
          | isExactGMPKind cfg elementKind
          = [ "  " ++ setElementCType elementKind ++ " *data = (" ++ setElementCType elementKind ++ " *) value->data;"
            , "  for (size_t i = 0; i < value->length; ++i) {"
-           , "    " ++ exactMutableType elementKind ++ " element = (" ++ exactMutableType elementKind ++ ") data[i];"
-           , "    if (element != NULL) { " ++ exactClear elementKind ++ "(element); free(element); }"
+           , "    " ++ gmpOutputType elementKind ++ " element = (" ++ gmpOutputType elementKind ++ ") data[i];"
+           , "    if (element != NULL) { " ++ gmpFunctionName elementKind "clear" ++ "(element); free(element); }"
            , "  }"
            , "  free(data);"
            ]
@@ -220,24 +220,6 @@ setOwnershipTypeDecls cfg kinds
            ]
          | True
          = ["  free((void *) value->data);"]
-
-       exactMutableType KUnbounded = "mpz_ptr"
-       exactMutableType fieldKind
-         | isExactGMPKind cfg fieldKind = "mpq_ptr"
-       exactMutableType fieldKind = error $ "SBV->C: Expected an exact set element, received " ++ show fieldKind
-
-       exactInitialize KUnbounded = ["      mpz_init_set(element, value.data[i]);"]
-       exactInitialize fieldKind
-         | isExactGMPKind cfg fieldKind
-         = [ "      mpq_init(element);"
-           , "      mpq_set(element, value.data[i]);"
-           ]
-       exactInitialize fieldKind = error $ "SBV->C: Expected an exact set element, received " ++ show fieldKind
-
-       exactClear KUnbounded = "mpz_clear"
-       exactClear fieldKind
-         | isExactGMPKind cfg fieldKind = "mpq_clear"
-       exactClear fieldKind = error $ "SBV->C: Expected an exact set element, received " ++ show fieldKind
 
 -- | Emit forward declarations for set equality helpers referenced by nested
 -- aggregate element comparisons.

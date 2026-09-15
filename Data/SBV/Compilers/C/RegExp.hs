@@ -361,8 +361,10 @@ membership result value classes rows = (expressionLowering [CRequiresText] (text
       ]]
   }
  where prefix      = "sbv_regex_" ++ show result
-       transitionType | toInteger (length rows) <= 65536 = "uint16_t"
-                      | True                            = "size_t"
+       transitionType | stateCount <= 65536      = "uint16_t"
+                      | stateCount <= 4294967296 = "uint32_t"
+                      | True                     = "size_t"
+       stateCount  = toInteger (length rows)
        answer      = prefix ++ "_result"
        bounds      = prefix ++ "_bounds"
        accepting   = prefix ++ "_accept"

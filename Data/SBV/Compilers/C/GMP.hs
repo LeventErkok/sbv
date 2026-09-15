@@ -20,6 +20,10 @@ module Data.SBV.Compilers.C.GMP
   , gmpExpr
   , gmpPrint
   , gmpSet
+  , gmpFunctionName
+  , gmpNewName
+  , gmpInitializeCopy
+  , gmpDriverAssign
   , gmpOutputType
   , gmpArrayType
   , gmpDriverInitialize
@@ -444,25 +448,51 @@ gmpPrint k          _     = error $ "SBV->C: Expected an exact GMP kind, receive
 
 -- | Copy an internal immutable exact value into caller-owned GMP storage.
 gmpSet :: Kind -> Doc -> Doc -> Doc
-gmpSet KUnbounded target value = namedCall "mpz_set" [target, value]
-gmpSet KReal      target value = namedCall "mpq_set" [target, value]
-gmpSet KRational  target value = namedCall "mpq_set" [target, value]
-gmpSet k          _      _     = error $ "SBV->C: Expected an exact GMP kind, received " ++ show k
+gmpSet kind target value = namedCall (gmpFunctionName kind "set") [target, value]
+
+-- | Select a public GMP operation for storage already known to use the exact
+-- representation. Callers must check 'isExactGMPKind' before using this for a
+-- configurable integer or real kind.
+gmpFunctionName :: Kind -> String -> String
+gmpFunctionName KUnbounded suffix = "mpz_" ++ suffix
+gmpFunctionName KReal      suffix = "mpq_" ++ suffix
+gmpFunctionName KRational  suffix = "mpq_" ++ suffix
+gmpFunctionName kind       _      = error $ "SBV->C: Expected an exact GMP kind, received " ++ show kind
+
+-- | Name the arena allocator for an exact value. It returns initialized,
+-- mutable GMP storage owned by the supplied arena.
+gmpNewName :: Kind -> String
+gmpNewName KUnbounded = "sbv_gmp_new_integer"
+gmpNewName KReal      = "sbv_gmp_new_real"
+gmpNewName KRational  = "sbv_gmp_new_real"
+gmpNewName kind       = error $ "SBV->C: Expected an exact GMP kind, received " ++ show kind
+
+-- | Initialize uninitialized exact storage with a copy. GMP provides a
+-- combined operation for integers, but rationals require two calls.
+gmpInitializeCopy :: Kind -> Doc -> Doc -> Doc
+gmpInitializeCopy KUnbounded target value = namedCall "mpz_init_set" [target, value] P.<> semi
+gmpInitializeCopy kind       target value = namedCall (gmpFunctionName kind "init") [target] P.<> semi
+                                        $$ gmpSet kind target value P.<> semi
+
+-- | Assign an integer-valued decimal driver sample to an initialized field.
+-- The field may have the immutable public pointer type, so cast back to its
+-- owned mutable storage. Rational values are canonicalized after parsing.
+gmpDriverAssign :: Kind -> Doc -> Doc -> [Doc]
+gmpDriverAssign kind access value
+  = ( text "if" <+> parens (namedCall (gmpFunctionName kind "set_str") [target, doubleQuotes value, text "10"] <+> text "!= 0")
+                <+> namedCall "abort" [] P.<> semi
+    )
+  : [namedCall (gmpFunctionName kind "canonicalize") [target] P.<> semi | kind /= KUnbounded]
+ where target = parens (text (gmpOutputType kind)) <+> access
 
 -- | Return the mutable GMP pointer type used for an output parameter.
 gmpOutputType :: Kind -> String
-gmpOutputType KUnbounded = "mpz_ptr"
-gmpOutputType KReal      = "mpq_ptr"
-gmpOutputType KRational  = "mpq_ptr"
-gmpOutputType k          = error $ "SBV->C: Expected an exact GMP kind, received " ++ show k
+gmpOutputType kind = gmpFunctionName kind "ptr"
 
 -- | Return the mutable GMP storage type used for one element of a generated
 -- fixed-size array.
 gmpArrayType :: Kind -> String
-gmpArrayType KUnbounded = "mpz_t"
-gmpArrayType KReal      = "mpq_t"
-gmpArrayType KRational  = "mpq_t"
-gmpArrayType kind       = error $ "SBV->C: Expected an exact GMP kind, received " ++ show kind
+gmpArrayType kind = gmpFunctionName kind "t"
 
 -- | Initialize already-declared caller-owned GMP storage from an
 -- integer-valued driver sample.
@@ -484,10 +514,7 @@ gmpDriverInit kind storage value = text (gmpArrayType kind) <+> storage P.<> sem
 
 -- | Clear caller-owned GMP storage in a generated driver.
 gmpDriverClear :: Kind -> Doc -> Doc
-gmpDriverClear KUnbounded storage = namedCall "mpz_clear" [storage] P.<> semi
-gmpDriverClear KReal      storage = namedCall "mpq_clear" [storage] P.<> semi
-gmpDriverClear KRational  storage = namedCall "mpq_clear" [storage] P.<> semi
-gmpDriverClear k          _       = error $ "SBV->C: Expected an exact GMP kind, received " ++ show k
+gmpDriverClear kind storage = namedCall (gmpFunctionName kind "clear") [storage] P.<> semi
 
 -- | Initialize the arena used by exact temporaries in a generated function.
 gmpContextStart :: Doc

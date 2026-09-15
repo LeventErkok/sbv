@@ -51,7 +51,7 @@ import qualified Text.PrettyPrint.HughesPJ as P ((<>))
 import Data.SBV.Compilers.C.Array      (arrayStoredLoad, arrayStoredValue)
 import Data.SBV.Compilers.C.BV         (isWideBV, wideBVEqual)
 import Data.SBV.Compilers.C.FP         (arbitraryFPEqual, arbitraryFPObjectEqual, nativeFPObjectEqual)
-import Data.SBV.Compilers.C.GMP        (isExactGMPKind)
+import Data.SBV.Compilers.C.GMP        (gmpDriverAssign, gmpFunctionName, gmpOutputType, isExactGMPKind)
 import Data.SBV.Compilers.C.List       ( listClone
                                        , listDriverClear
                                        , listDriverInit
@@ -390,11 +390,11 @@ adtOwnershipTypeDecls cfg adts
          = []
          | isExactGMPKind cfg fieldKind
          = let access  = ownedField "value->" constructorIndex fieldIndex
-               mutable = exactMutableType fieldKind
+               mutable = gmpOutputType fieldKind
                local   = "field" ++ show constructorIndex ++ "_" ++ show fieldIndex
            in [ "      " ++ mutable ++ " " ++ local ++ " = (" ++ mutable ++ ") malloc(sizeof(*" ++ local ++ "));"
               , "      if (" ++ local ++ " == NULL) abort();"
-              , "      " ++ exactInit fieldKind ++ "(" ++ local ++ ");"
+              , "      " ++ gmpFunctionName fieldKind "init" ++ "(" ++ local ++ ");"
               , "      " ++ access ++ " = " ++ local ++ ";"
               ]
          | fieldKind == KString
@@ -437,8 +437,8 @@ adtOwnershipTypeDecls cfg adts
            , "      " ++ target ++ " = " ++ copy ++ ";"
            ]
          | isExactGMPKind cfg fieldKind
-         = [ "      " ++ exactSet fieldKind
-          ++ "((" ++ exactMutableType fieldKind ++ ") " ++ target ++ ", " ++ source ++ ");"
+         = [ "      " ++ gmpFunctionName fieldKind "set"
+          ++ "((" ++ gmpOutputType fieldKind ++ ") " ++ target ++ ", " ++ source ++ ");"
            ]
          | fieldKind == KString
          = [ "      const SString " ++ copy
@@ -484,7 +484,7 @@ adtOwnershipTypeDecls cfg adts
            ]
          | isExactGMPKind cfg fieldKind
          = [ "      if (" ++ access ++ " != NULL) {"
-           , "        " ++ exactClear fieldKind ++ "((" ++ exactMutableType fieldKind ++ ") " ++ access ++ ");"
+           , "        " ++ gmpFunctionName fieldKind "clear" ++ "((" ++ gmpOutputType fieldKind ++ ") " ++ access ++ ");"
            , "        free((void *) " ++ access ++ ");"
            , "      }"
            ]
@@ -509,26 +509,6 @@ adtOwnershipTypeDecls cfg adts
                                                     ++ adtConstructorMember constructorIndex
                                                     ++ "."
                                                     ++ adtFieldName fieldIndex
-
-       exactMutableType KUnbounded = "mpz_ptr"
-       exactMutableType fieldKind
-         | isExactGMPKind cfg fieldKind = "mpq_ptr"
-       exactMutableType kind       = error $ "SBV->C: Expected an exact ADT field, received " ++ show kind
-
-       exactInit KUnbounded = "mpz_init"
-       exactInit fieldKind
-         | isExactGMPKind cfg fieldKind = "mpq_init"
-       exactInit kind       = error $ "SBV->C: Expected an exact ADT field, received " ++ show kind
-
-       exactSet KUnbounded = "mpz_set"
-       exactSet fieldKind
-         | isExactGMPKind cfg fieldKind = "mpq_set"
-       exactSet kind       = error $ "SBV->C: Expected an exact ADT field, received " ++ show kind
-
-       exactClear KUnbounded = "mpz_clear"
-       exactClear fieldKind
-         | isExactGMPKind cfg fieldKind = "mpq_clear"
-       exactClear kind       = error $ "SBV->C: Expected an exact ADT field, received " ++ show kind
 
 -- | Return the helper name that initializes caller-owned storage for one ADT
 -- constructor.
@@ -641,24 +621,7 @@ adtDriverInit cfg adts renderValue initializeValue kind externalName seed
 
        constructible depth fieldKind = any (all (fits depth) . snd) (adtConstructorFields adts fieldKind)
 
-       exactAssignments KUnbounded access value =
-         [setFromString "mpz_set_str" "mpz_ptr" access value]
-       exactAssignments fieldKind access value
-         | isExactGMPKind cfg fieldKind =
-             [ setFromString "mpq_set_str" "mpq_ptr" access value
-             , text "mpq_canonicalize" P.<> parens (parens (text "mpq_ptr") <+> access) P.<> semi
-             ]
-       exactAssignments fieldKind _ _ = error $ "SBV->C: Expected an exact ADT field, received " ++ show fieldKind
-
-       setFromString functionName pointerType access value =
-         text "if"
-           <+> parens (text functionName
-                 P.<> parens (fsep (punctuate comma [ parens (text pointerType) <+> access
-                                                    , doubleQuotes (integer value)
-                                                    , text "10"
-                                                    ]))
-                 <+> text "!= 0")
-           <+> text "abort" P.<> parens empty P.<> semi
+       exactAssignments fieldKind access value = gmpDriverAssign fieldKind access (integer value)
 
 -- | Initialize a generated-driver list or set whose direct elements are ADTs.
 -- The descriptor borrows the independently initialized element variables.

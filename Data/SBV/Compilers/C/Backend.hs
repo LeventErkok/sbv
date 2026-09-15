@@ -429,13 +429,21 @@ declSVNoConst :: Int -> SV -> (Doc, Doc)
 declSVNoConst w sv = (text "     " <+> pad (showCType sv), text (show sv))
   where pad s = text $ s ++ replicate (w - length s) ' '
 
--- | Renders as "s0", etc, or the corresponding constant
-showSV :: CgConfig -> [Kind] -> [(SV, CV)] -> SV -> Doc
-showSV cfg adts consts sv
-  | sv == falseSV                 = text "false"
-  | sv == trueSV                  = text "true"
-  | Just cv <- sv `lookup` consts = mkConst cfg adts cv
-  | True                          = text $ show sv
+-- | Shared rendering information for one generated function. Constants are
+-- scoped to that function, while the ADT registry describes the whole bundle.
+data CRenderEnv = CRenderEnv
+  { renderConfig    :: CgConfig   -- ^ Representation and runtime-check choices.
+  , renderADTs      :: [Kind]     -- ^ Complete concrete ADT registry.
+  , renderConstants :: [(SV, CV)] -- ^ Constants still eligible for inline rendering.
+  }
+
+-- | Renders as "s0", etc, or the corresponding constant.
+showSV :: CRenderEnv -> SV -> Doc
+showSV env sv
+  | sv == falseSV                              = text "false"
+  | sv == trueSV                               = text "true"
+  | Just cv <- sv `lookup` renderConstants env = mkConst env cv
+  | True                                       = text $ show sv
 
 -- | Words as it would map to a C word
 pprCWord :: HasKind a => Bool -> a -> Doc
@@ -513,9 +521,12 @@ specifierKind cfg kind = case kind of
 -- The enclosing program's ADT registry is reused throughout nested literals.
 --   There are many options here, using binary, decimal, etc. We simply use decimal for values 8-bits or less,
 --   and hex otherwise.
-mkConst :: CgConfig -> [Kind] -> CV -> Doc
-mkConst cfg adts = renderConstant
+mkConst :: CRenderEnv -> CV -> Doc
+mkConst env = renderConstant
  where
+  cfg  = renderConfig env
+  adts = renderADTs env
+
   renderConstant (CV KReal (CAlgReal (AlgRational False _)))
     = error "SBV->C: Inexact SReal literals do not specify an exact value and cannot be compiled."
   renderConstant (CV KReal (CAlgReal AlgInterval{}))
@@ -712,7 +723,8 @@ isOwnedADT cfg adts sv = isADT sv
 genDriver :: CgConfig -> [Kind] -> [Integer] -> String -> [(String, CgVal)] -> [(String, CgVal)] -> Maybe SV -> [Doc]
 genDriver cfg adts randVals fn publicInputs publicOutputs mbRet
   = [pre, include, callbacks, printHelpers, header, body, post]
- where inps = privateParameters "sbv_driver_input_" publicInputs
+ where env  = CRenderEnv cfg adts []
+       inps = privateParameters "sbv_driver_input_" publicInputs
        outs = privateParameters "sbv_driver_output_" publicOutputs
        publicName local = fromMaybe local (lookup local publicNames)
        publicNames = zip (map fst (inps ++ outs)) (map fst (publicInputs ++ publicOutputs))
@@ -835,7 +847,7 @@ genDriver cfg adts randVals fn publicInputs publicOutputs mbRet
          | isSet kind                      = setDriverValue mkRValKind kind r
          | KTuple fieldKinds <- kind       = tupleValue kind (zipWith mkField fieldKinds [0 :: Integer ..])
          | isADT kind                      = adtDriverValue adts mkRValKind kind r
-         | True                            = mkConst cfg adts $ mkConstCV kind r
+         | True                            = mkConst env $ mkConstCV kind r
          where mkField fieldKind offset = mkRValKind fieldKind (r + offset)
        driverValueInit kind externalName seed
          | KApp{} <- kind                   = driverValueInit (resolveADTReferences adts kind) externalName seed
@@ -1444,7 +1456,7 @@ genCProg cfg adts lists sets fn proto
        arrayLambdaDocs        = map fst generatedArrayLambdas
 
        (scheduledAssignments, scheduledRequirements) =
-         scheduleC cfg adts functionNames topLevelArrayLambdaNames consts
+         scheduleC env functionNames topLevelArrayLambdaNames
                    (map fst allConsts ++ concatMap (cgValues . snd) inVars) assignments tbls True typeWidth
                    evaluationRoots
 
@@ -1559,20 +1571,20 @@ genCProg cfg adts lists sets fn proto
 
        exactReturn = case mbRet of
                        Just sv | isExactGMPKind cfg (kindOf sv)
-                               -> gmpSet (kindOf sv) (text "sbv_result") (showSV cfg adts consts sv) P.<> semi
+                               -> gmpSet (kindOf sv) (text "sbv_result") (showSV env sv) P.<> semi
                        _       -> empty
 
        arrayReturn = case mbRet of
                        Just sv | isArray sv
                                -> text "const" <+> text (arrayOutputCType (kindOf sv)) <+> text "sbv_result" <+> text "="
-                                  <+> text (arrayExportName (kindOf sv)) P.<> parens (showSV cfg adts consts sv) P.<> semi
+                                  <+> text (arrayExportName (kindOf sv)) P.<> parens (showSV env sv) P.<> semi
                        _       -> empty
 
        ownedTupleReturn = case mbRet of
                             Just sv
                               | tupleNeedsOwnership cfg (kindOf sv)
                               -> text "const" <+> text (tupleCType (kindOf sv)) <+> text "sbv_result" <+> text "="
-                                 <+> text (tupleOwnedCloneName (kindOf sv)) P.<> parens (showSV cfg adts consts sv) P.<> semi
+                                 <+> text (tupleOwnedCloneName (kindOf sv)) P.<> parens (showSV env sv) P.<> semi
                             _ -> empty
 
        exactADTReturn = case mbRet of
@@ -1580,25 +1592,25 @@ genCProg cfg adts lists sets fn proto
                             | isOwnedADT cfg adts sv
                             -> text "const" <+> text (adtCType (kindOf sv)) <+> text "sbv_result" <+> text "="
                            <+> text (adtOwnedCloneName (kindOf sv))
-                                 P.<> parens (showSV cfg adts consts sv)
+                                 P.<> parens (showSV env sv)
                                  P.<> semi
                           _ -> empty
 
        textReturn = case mbRet of
                       Just sv | kindOf sv == KString
-                              -> text "const SString sbv_result =" <+> textClone (showSV cfg adts consts sv) P.<> semi
+                              -> text "const SString sbv_result =" <+> textClone (showSV env sv) P.<> semi
                       _       -> empty
 
        listReturn = case mbRet of
                       Just sv | isList sv
                               -> text "const" <+> text (listCType (kindOf sv)) <+> text "sbv_result ="
-                              <+> listClone (kindOf sv) (showSV cfg adts consts sv) P.<> semi
+                              <+> listClone (kindOf sv) (showSV env sv) P.<> semi
                       _       -> empty
 
        setReturn = case mbRet of
                      Just sv | isSet sv
                              -> text "const" <+> text (setCType (kindOf sv)) <+> text "sbv_result ="
-                             <+> setClone (kindOf sv) (showSV cfg adts consts sv) P.<> semi
+                             <+> setClone (kindOf sv) (showSV env sv) P.<> semi
                      _       -> empty
 
        normalReturn = case mbRet of
@@ -1648,6 +1660,7 @@ genCProg cfg adts lists sets fn proto
 
        allConsts = (falseSV, falseCV) : (trueSV, trueCV) : preConsts
        (constantDeclarations, consts) = stabilizeCConstants cfg adts typeWidth (filter ((`Set.member` usedVariables) . fst) allConsts)
+       env = CRenderEnv cfg adts consts
 
        usedVariables = cReachableValues cfg (Map.fromList assignments) tbls (map fst evaluationRoots)
 
@@ -1661,19 +1674,19 @@ genCProg cfg adts lists sets fn proto
          | isSet sv   = [declSV typeWidth sv <+> text "=" <+> setNormalize (kindOf sv) (text cNm) P.<> semi | alive]
          | True       = [declSV typeWidth sv <+> text "=" <+> inputValue cNm sv P.<> semi | alive]
        genIO False (alive, (cNm, CgAtomic sv))
-         | isArray sv                          = [text "*" P.<> text cNm <+> text "=" <+> text (arrayExportName (kindOf sv)) P.<> parens (showSV cfg adts consts sv) P.<> semi | alive]
-         | isExactGMPKind cfg (kindOf sv)      = [gmpSet (kindOf sv) (text cNm) (showSV cfg adts consts sv) P.<> semi | alive]
-         | kindOf sv == KString                = [text "*" P.<> text cNm <+> text "=" <+> textClone (showSV cfg adts consts sv) P.<> semi | alive]
-         | isList sv                           = [text "*" P.<> text cNm <+> text "=" <+> listClone (kindOf sv) (showSV cfg adts consts sv) P.<> semi | alive]
-         | isSet sv                            = [text "*" P.<> text cNm <+> text "=" <+> setClone (kindOf sv) (showSV cfg adts consts sv) P.<> semi | alive]
-         | tupleNeedsOwnership cfg (kindOf sv) = [text "*" P.<> text cNm <+> text "=" <+> text (tupleOwnedCloneName (kindOf sv)) P.<> parens (showSV cfg adts consts sv) P.<> semi | alive]
+         | isArray sv                          = [text "*" P.<> text cNm <+> text "=" <+> text (arrayExportName (kindOf sv)) P.<> parens (showSV env sv) P.<> semi | alive]
+         | isExactGMPKind cfg (kindOf sv)      = [gmpSet (kindOf sv) (text cNm) (showSV env sv) P.<> semi | alive]
+         | kindOf sv == KString                = [text "*" P.<> text cNm <+> text "=" <+> textClone (showSV env sv) P.<> semi | alive]
+         | isList sv                           = [text "*" P.<> text cNm <+> text "=" <+> listClone (kindOf sv) (showSV env sv) P.<> semi | alive]
+         | isSet sv                            = [text "*" P.<> text cNm <+> text "=" <+> setClone (kindOf sv) (showSV env sv) P.<> semi | alive]
+         | tupleNeedsOwnership cfg (kindOf sv) = [text "*" P.<> text cNm <+> text "=" <+> text (tupleOwnedCloneName (kindOf sv)) P.<> parens (showSV env sv) P.<> semi | alive]
          | isOwnedADT cfg adts sv              = [ text "*" P.<> text cNm <+> text "="
                                                <+> text (adtOwnedCloneName (kindOf sv))
-                                                     P.<> parens (showSV cfg adts consts sv)
+                                                     P.<> parens (showSV env sv)
                                                      P.<> semi
                                                  | alive
                                                  ]
-         | True                                = [text "*" P.<> text cNm <+> text "=" <+> showSV cfg adts consts sv P.<> semi | alive]
+         | True                                = [text "*" P.<> text cNm <+> text "=" <+> showSV env sv P.<> semi | alive]
        genIO isInp (_,     (cNm, CgArray sws)) = zipWith genElt sws [(0::Int)..]
          where genElt sv i
                  | isInp                         = vcat (genIO True (sv `Set.member` usedVariables, (entry, CgAtomic sv)))
@@ -1687,7 +1700,7 @@ genCProg cfg adts lists sets fn proto
                  | True                         = text entry <+> text "=" <+> value P.<> semi
                  where entry = cNm ++ "[" ++ show i ++ "]"
                        kind  = kindOf sv
-                       value = showSV cfg adts consts sv
+                       value = showSV env sv
 
        inputValue cNm sv
          | isWideBV k = wideBVNormalize k (text cNm)
@@ -1695,13 +1708,13 @@ genCProg cfg adts lists sets fn proto
          | True        = text cNm
          where k = kindOf sv
 
-       mkRet sv = text "return" <+> showSV cfg adts consts sv P.<> semi
+       mkRet sv = text "return" <+> showSV env sv P.<> semi
 
        genAssert (msg, cs, sv) = (cLocation consts sv, doc)
          where doc =     text "/* ASSERTION:" <+> cCommentText msg
                      $$  maybe empty (vcat . map cCommentText) (locInfo (getCallStack <$> cs))
                      $$  text " */"
-                     $$  text "if" P.<> parens (showSV cfg adts consts sv)
+                     $$  text "if" P.<> parens (showSV env sv)
                      $$  text "{"
                      $+$ nest 2 (vcat [errOut, text "exit(-1);"])
                      $$  text "}"
@@ -1720,7 +1733,7 @@ genCProg cfg adts lists sets fn proto
 
        genConstraint (_, attributes, sv) = (cLocation consts sv, doc)
          where doc =  text "/* CONSTRAINT */"
-                   $$ text "if" P.<> parens (text "!" P.<> parens (showSV cfg adts consts sv))
+                   $$ text "if" P.<> parens (text "!" P.<> parens (showSV env sv))
                    $$ text "{"
                    $+$ nest 2 (vcat [errOut, text "exit(-1);"])
                    $$ text "}"
@@ -1745,13 +1758,14 @@ cLocation constants sv@(SV _ (NodeId (_, _, nodeIndex)))
 -- | Render one finite lookup table at the point where all its elements are
 -- available. Constant top-level tables may use static storage; lambda-local
 -- tables always use automatic storage so their entries may depend on parameters.
-ppTable :: CgConfig -> [Kind] -> Bool -> [(SV, CV)] -> ((Int, Kind, Kind), [SV]) -> (Int, Doc)
-ppTable cfg adts allowStatic constants ((tableIndex, _, resultKind), elements)
+ppTable :: CRenderEnv -> Bool -> ((Int, Kind, Kind), [SV]) -> (Int, Doc)
+ppTable env allowStatic ((tableIndex, _, resultKind), elements)
   = (location, storage <+> text tableElementType <+> tableName P.<> text "[] = {"
               $$ nest 4 (fsep (punctuate comma (align (map renderElement elements))))
               $$ text "};")
- where location = maximum (-1 : map (cLocation constants) elements)
-       renderElement element = arrayStoredValue resultKind (showSV cfg adts constants element)
+ where cfg = renderConfig env
+       location = maximum (-1 : map (cLocation (renderConstants env)) elements)
+       renderElement element = arrayStoredValue resultKind (showSV env element)
        tableElementType
          | isArray resultKind = CTypes.constElementCType resultKind
          | True               = "const " ++ showCType resultKind
@@ -2001,6 +2015,7 @@ ppDefinedFunction cfg adts functionNames originalName declaredResultKind (SBVTyp
        functionConsts               = (falseSV, falseCV) : (trueSV, trueCV) : constants
        reachableValues              = cReachableValues cfg (Map.fromList assignments) tables [functionOutput]
        (constantDeclarations, renderingConsts) = stabilizeCConstants cfg adts typeWidth (filter ((`Set.member` reachableValues) . fst) functionConsts)
+       env = CRenderEnv cfg adts renderingConsts
        functionValues               = functionOutput : map snd parameters ++ map fst assignments ++ map fst constants
        typeWidth                    = maximum (0 : map (length . showCType) functionValues)
        nestedLambdaNames            = [ (sv, scopedArrayLambdaName (CTypes.definedFunctionCName originalName) sv)
@@ -2023,7 +2038,7 @@ ppDefinedFunction cfg adts functionNames originalName declaredResultKind (SBVTyp
          | True                    = valueNeedsOwnership cfg kind
 
        (scheduledAssignments, scheduledRequirements) =
-         scheduleC cfg adts functionNames nestedLambdaNames renderingConsts
+         scheduleC env functionNames nestedLambdaNames
                    (map fst functionConsts ++ map snd parameters) assignments tables False typeWidth [(functionOutput, empty)]
 
        functionRequirements = Set.unions
@@ -2059,11 +2074,11 @@ ppDefinedFunction cfg adts functionNames originalName declaredResultKind (SBVTyp
 
        functionResult
          | isArray resultKind
-         = arrayStoredValue resultKind (showSV cfg adts renderingConsts functionOutput)
+         = arrayStoredValue resultKind (showSV env functionOutput)
          | definedFunctionResultNeedsClone cfg adts resultKind
-         = definedFunctionResultClone resultKind (showSV cfg adts renderingConsts functionOutput)
+         = definedFunctionResultClone resultKind (showSV env functionOutput)
          | True
-         = showSV cfg adts renderingConsts functionOutput
+         = showSV env functionOutput
 
        functionResultType
          | isArray resultKind = CTypes.elementCType resultKind
@@ -2101,13 +2116,14 @@ cReachableValues cfg assignments tables = foldl reach Set.empty
 -- even if its rendered use disappears.
 stabilizeCConstants :: CgConfig -> [Kind] -> Int -> [(SV, CV)] -> (Doc, [(SV, CV)])
 stabilizeCConstants cfg adts typeWidth constants
-  = ( vcat [ declSV typeWidth sv <+> text "=" <+> mkConst cfg adts cv P.<> semi
+  = ( vcat [ declSV typeWidth sv <+> text "=" <+> mkConst env cv P.<> semi
           $$ text "(void)" <+> text (show sv) P.<> semi
            | (sv, cv) <- stabilized
            ]
     , filter ((`Set.notMember` stabilizedValues) . fst) constants
     )
- where stabilized = [(sv, cv) | (sv, cv) <- constants, isArray sv || definedFunctionResultNeedsClone cfg adts (kindOf sv)]
+ where env = CRenderEnv cfg adts constants
+       stabilized = [(sv, cv) | (sv, cv) <- constants, isArray sv || definedFunctionResultNeedsClone cfg adts (kindOf sv)]
        stabilizedValues = Set.fromList (map fst stabilized)
 
 -- | Recognize total bit-vector operations that may be computed before a
@@ -2159,11 +2175,9 @@ data CAvailability = CAvailability
 -- Branch-local work stays under its guard, while declarations are hoisted so
 -- values computed on both paths can safely be reused after the join. Root
 -- statements let entry points retain runtime checks even without live outputs.
-scheduleC :: CgConfig
-          -> [Kind]
+scheduleC :: CRenderEnv
           -> [(T.Text, String)]
           -> [(SV, String)]
-          -> [(SV, CV)]
           -> [SV]
           -> [(SV, SBVExpr)]
           -> [((Int, Kind, Kind), [SV])]
@@ -2171,9 +2185,10 @@ scheduleC :: CgConfig
           -> Int
           -> [(SV, Doc)]
           -> (Doc, Set.Set CRequirement)
-scheduleC cfg adts functionNames lambdaNames constants initialValues assignments tables allowStatic typeWidth roots
+scheduleC env functionNames lambdaNames initialValues assignments tables allowStatic typeWidth roots
   = (vcat eagerDocs $$ declarations $$ statements, Set.union requirements eagerRequirements)
- where initialAvailability = CAvailability eagerValues eagerValues Set.empty Set.empty
+ where cfg = renderConfig env
+       initialAvailability = CAvailability eagerValues eagerValues Set.empty Set.empty
        (analyzed, _, _, _) = schedulePass Set.empty
        guardedValues = memoizedValues analyzed
        (_, statements, requirements, extraDeclarations) = guardedValues `seq` schedulePass guardedValues
@@ -2195,7 +2210,7 @@ scheduleC cfg adts functionNames lambdaNames constants initialValues assignments
        readyName sv = text ("sbv_ready_" ++ show sv)
 
        (eagerValues, eagerReversed) = foldl speculate (Set.fromList initialValues, []) assignments
-       eagerLowerings = [ppExpr cfg adts functionNames lambdaNames constants expression sv
+       eagerLowerings = [ppExpr env functionNames lambdaNames expression sv
                                (declSV typeWidth sv) (declSVNoConst typeWidth sv) True
                         | (sv, expression) <- reverse eagerReversed]
        eagerDocs = [doc | (doc, _, _) <- eagerLowerings]
@@ -2257,7 +2272,7 @@ scheduleC cfg adts functionNames lambdaNames constants initialValues assignments
                                                                                                              (cExpressionDependencies cfg tables expression)
                         (withTable, tableDocs) = emitTable withArguments op
                         (assignmentDoc, assignmentRequirements, assignmentDeclarations) =
-                          ppExpr cfg adts functionNames lambdaNames constants expression sv (text (show sv))
+                          ppExpr env functionNames lambdaNames expression sv (text (show sv))
                                  (declSVNoConst typeWidth sv) False
                     in ( insertAvailableValue sv withTable
                        , argumentDocs $$ tableDocs $$ assignmentDoc
@@ -2281,7 +2296,7 @@ scheduleC cfg adts functionNames lambdaNames constants initialValues assignments
            | LkUp (tableIndex, _, _, _) _ _ <- op
            , tableIndex `Set.notMember` availableCTables available
            = case [table | table@((candidateIndex, _, _), _) <- tables, candidateIndex == tableIndex] of
-               [table] -> (insertAvailableTable tableIndex available, snd (ppTable cfg adts allowStatic constants table))
+               [table] -> (insertAvailableTable tableIndex available, snd (ppTable env allowStatic table))
                _       -> die "Missing table while scheduling C evaluation"
            | True
            = (available, empty)
@@ -2297,7 +2312,7 @@ scheduleC cfg adts functionNames lambdaNames constants initialValues assignments
            where elements = case [values | ((candidateIndex, _, _), values) <- tables, candidateIndex == tableIndex] of
                               [values] | length values == tableLength -> values
                               _ -> die "Missing or inconsistent table while scheduling C evaluation"
-                 (nativeIndex, outOfRange) = tableIndexAndBounds cfg indexKind tableLength (showSV cfg adts constants index)
+                 (nativeIndex, outOfRange) = tableIndexAndBounds cfg indexKind tableLength (showSV env index)
                  checkedBounds = if tableNeedsBounds cfg indexKind then outOfRange else Nothing
                  entriesReady current = all (`Set.member` definitelyAvailable current) elements
 
@@ -2344,7 +2359,7 @@ scheduleC cfg adts functionNames lambdaNames constants initialValues assignments
                  emitChoice current value =
                    let (withValue, docs, needed, decls) = emit current value
                    in ( insertAvailableValue result withValue
-                      , docs $$ text (show result) <+> text "=" <+> showSV cfg adts constants value P.<> semi
+                      , docs $$ text (show result) <+> text "=" <+> showSV env value P.<> semi
                       , needed
                       , decls
                       )
@@ -2352,7 +2367,7 @@ scheduleC cfg adts functionNames lambdaNames constants initialValues assignments
                  renderLookup loweringConfig current =
                    let SBVApp op _ = expression
                        (withTable, tableDocs) = emitTable current op
-                       (docs, needed, decls) = ppExpr loweringConfig adts functionNames lambdaNames constants expression result
+                       (docs, needed, decls) = ppExpr env{renderConfig = loweringConfig} functionNames lambdaNames expression result
                                                      (text (show result)) (declSVNoConst typeWidth result) False
                    in (insertAvailableValue result withTable, tableDocs $$ docs, needed, decls)
 
@@ -2366,10 +2381,10 @@ scheduleC cfg adts functionNames lambdaNames constants initialValues assignments
                                                   $$ text "{"
                                                   $$ nest 2 (branchDocs $$ assign branchValue)
                                                   $$ text "}"
-               assign value = text (show result) <+> text "=" <+> showSV cfg adts constants value P.<> semi
+               assign value = text (show result) <+> text "=" <+> showSV env value P.<> semi
                docs = conditionDocs
                    $$ commonDocs
-                   $$ text "if" P.<> parens (showSV cfg adts constants condition)
+                   $$ text "if" P.<> parens (showSV env condition)
                    $$ branch "" trueDocs trueValue
                    $$ branch "else" falseDocs falseValue
                needed = Set.unions [conditionRequirements, commonRequirements, trueRequirements, falseRequirements]
@@ -2478,6 +2493,7 @@ ppArrayLambda cfg adts functionNames callbackName arraySV lambdaInfo@LambdaInfo{
        lambdaConsts = (falseSV, falseCV) : (trueSV, trueCV) : constants
        reachableValues = cReachableValues cfg (Map.fromList assignments) tables [lambdaOutput]
        (constantDeclarations, renderingConsts) = stabilizeCConstants cfg adts typeWidth (filter ((`Set.member` reachableValues) . fst) lambdaConsts)
+       env = CRenderEnv cfg adts renderingConsts
        lambdaValues = lambdaOutput : map snd parameters ++ map fst assignments ++ map fst constants ++ concatMap snd tables
        typeWidth    = maximum (0 : map (length . showCType) lambdaValues)
 
@@ -2490,7 +2506,7 @@ ppArrayLambda cfg adts functionNames callbackName arraySV lambdaInfo@LambdaInfo{
                               ]
 
        (scheduledAssignments, scheduledRequirements) =
-         scheduleC cfg adts functionNames nestedLambdaNames renderingConsts
+         scheduleC env functionNames nestedLambdaNames
                    (map fst lambdaConsts ++ map snd parameters) assignments tables False typeWidth [(lambdaOutput, empty)]
 
        requirements = Set.unions
@@ -2524,11 +2540,11 @@ ppArrayLambda cfg adts functionNames callbackName arraySV lambdaInfo@LambdaInfo{
 
        lambdaResult
          | isArray lambdaOutput
-         = arrayStoredValue (kindOf lambdaOutput) (showSV cfg adts renderingConsts lambdaOutput)
+         = arrayStoredValue (kindOf lambdaOutput) (showSV env lambdaOutput)
          | definedFunctionResultNeedsClone cfg adts (kindOf lambdaOutput)
-         = definedFunctionResultClone (kindOf lambdaOutput) (showSV cfg adts renderingConsts lambdaOutput)
+         = definedFunctionResultClone (kindOf lambdaOutput) (showSV env lambdaOutput)
          | True
-         = showSV cfg adts renderingConsts lambdaOutput
+         = showSV env lambdaOutput
 
        lambdaResultDeclaration valueKind
          | isArray lambdaOutput = text (arrayLambdaResultType valueKind)
@@ -2632,18 +2648,16 @@ handleIEEE w consts as var = cvt w
 
 -- | Lower and render one symbolic assignment together with the facilities it
 -- requires from the generated C translation unit.
-ppExpr :: CgConfig
-       -> [Kind]
+ppExpr :: CRenderEnv
        -> [(T.Text, String)]
        -> [(SV, String)]
-       -> [(SV, CV)]
        -> SBVExpr
        -> SV
        -> Doc
        -> (Doc, Doc)
        -> Bool
        -> (Doc, Set.Set CRequirement, [Doc])
-ppExpr cfg adts functionNames structuredLambdaNames consts (SBVApp op opArgs) resultSV lhs (typ, var) declareResult
+ppExpr env functionNames structuredLambdaNames (SBVApp op opArgs) resultSV lhs (typ, var) declareResult
   | requiresExtensionalEquality adts op (map kindOf opArgs)
   , not (op `elem` [Equal False, Equal True, NotEqual] && all isArray opArgs)
   = error $ "SBV->C: " ++ show op ++ " requires general extensional array equality, including array-valued elements or fields."
@@ -2654,7 +2668,11 @@ ppExpr cfg adts functionNames structuredLambdaNames consts (SBVApp op opArgs) re
     , loweringRequirements selected
     , loweringDeclarations selected
     )
-  where declarations
+  where cfg    = renderConfig env
+        adts   = renderADTs env
+        consts = renderConstants env
+
+        declarations
           | declareResult = loweringDeclarations selected
           | True          = []
 
@@ -2665,7 +2683,7 @@ ppExpr cfg adts functionNames structuredLambdaNames consts (SBVApp op opArgs) re
         doNotAssign PseudoBoolean{} = True   -- assigns through an overflow-safe reduction
         doNotAssign _              = False
 
-        renderedArgs = map (showSV cfg adts consts) opArgs
+        renderedArgs = map (showSV env) opArgs
 
         -- Precedence is intentional, not a uniqueness invariant: aggregate
         -- storage operations precede scalar operations touching their fields;
@@ -2675,7 +2693,7 @@ ppExpr cfg adts functionNames structuredLambdaNames consts (SBVApp op opArgs) re
         -- bit-vector Ite can reach this dispatch through eager speculation.
         selected = fromMaybe legacy $ chooseLowering
           [ arrayExpr cfg (`lookup` functionNames) (`lookup` structuredLambdaNames) op opArgs resultSV renderedArgs
-          , tableExpr cfg (showSV cfg adts consts) op resultSV
+          , tableExpr cfg (showSV env) op resultSV
           , setExpr cfg op opArgs (kindOf resultSV) renderedArgs
           , nonLinearExpr cfg op opArgs (kindOf resultSV) renderedArgs
           , regexExpr cfg op resultSV renderedArgs
@@ -2762,8 +2780,8 @@ ppExpr cfg adts functionNames structuredLambdaNames consts (SBVApp op opArgs) re
           | needsCheckL                = cndLkUp checkLeft
           | needsCheckR                = cndLkUp checkRight
           | True                       = lkUp
-          where index  = showSV cfg adts consts ind
-                defVal = showSV cfg adts consts def
+          where index  = showSV env ind
+                defVal = showSV env def
 
                 lkUp = text "table" P.<> int t P.<> brackets renderedIndex
                 cndLkUp cnd = cnd <+> text "?" <+> defVal <+> text ":" <+> lkUp
@@ -2813,7 +2831,7 @@ ppExpr cfg adts functionNames structuredLambdaNames consts (SBVApp op opArgs) re
         -- native IEEE division itself must retain its infinities and NaNs.
         p (Divides n) [a]    = mappedIntegerDivides n a
         p Quot        [a, b] = let k = kindOf (hd "Quot" opArgs)
-                                   z = mkConst cfg adts $ mkConstCV k (0::Integer)
+                                   z = mkConst env $ mkConstCV k (0::Integer)
                                in protectDiv0 k "/" z a b
         p Rem         [a, b] = protectDiv0 (kindOf (hd "Rem" opArgs)) "%" a a b
         p UNeg        [a]    = parens (text "-" <+> a)
