@@ -179,6 +179,8 @@ tests = testGroup "CodeGeneration.CgTests"
   , testCase "retain checks as demand-driven evaluation roots" guardedRuntimeChecks
   , testCase "preserve sharing across guarded evaluation diamonds" guardedEvaluationSharing
   , testCase "evaluate shared external calls at most once on each path" guardedExternalSharing
+  , testCase "force and execute a deep memoized chain beneath nested branches" deepGuardedSharing
+  , testCase "reuse the full ADT registry for nested and leaf-only literals" sharedADTConstantRegistry
   , testCase "straight-line sharing needs no runtime readiness flags" straightLineSharing
   , testCase "text arena rejects allocation-size overflow" textAllocationOverflow
   , testCase "original bundle header patterns cover both backends" compatibleHeaderPatterns
@@ -732,6 +734,63 @@ guardedExternalSharing = withSystemTempDirectory "sbv-shared-external" $ \dir ->
     (length (filter ("if(!sbv_ready_" `isInfixOf`) (lines source)))
   runEmbeddedCaller dir "sharedExternal"
 
+-- | Force the full bundle for a three-stage dependency chain first demanded
+-- beneath nested branches. All eight paths must reuse every computed stage;
+-- a later unconditional demand must also compute any previously skipped stage.
+deepGuardedSharing :: Assertion
+deepGuardedSharing = withSystemTempDirectory "sbv-deep-sharing" $ \dir -> do
+  (_, cfg, bundle) <- compileToC' "deepSharing" $ do
+    cgOverwriteFiles True
+    cgGenerateDriver False
+    cgAddPrototype ["SWord8 stageOne(SWord8);", "SWord8 stageTwo(SWord8);", "SWord8 stageThree(SWord8);"]
+    cgAddDecl [ "static unsigned calls[3];"
+              , "SWord8 stageOne(SWord8 x) { ++calls[0]; return x + 1; }"
+              , "SWord8 stageTwo(SWord8 x) { ++calls[1]; return x + 1; }"
+              , "SWord8 stageThree(SWord8 x) { ++calls[2]; return x + 1; }"
+              , "int main(void) {"
+              , "  for (SWord8 flags = 0; flags < 8; ++flags) {"
+              , "    SWord8 first, second, intermediate; calls[0] = calls[1] = calls[2] = 0;"
+              , "    deepSharing(flags, 7, &first, &second, &intermediate);"
+              , "    if (first != (flags == 7 ? 10 : 0) || second != 10 || intermediate != 9) return 1;"
+              , "    if (calls[0] != 1 || calls[1] != 1 || calls[2] != 1) return 2;"
+              , "  }"
+              , "  return 0;"
+              , "}"
+              ]
+    flags <- cgInput "flags" :: SBVCodeGen SWord8
+    value <- cgInput "value" :: SBVCodeGen SWord8
+    let stage1 = uninterpret "stageOne"   value  :: SWord8
+        stage2 = uninterpret "stageTwo"   stage1 :: SWord8
+        stage3 = uninterpret "stageThree" stage2 :: SWord8
+    cgOutput "first" (ite (sTestBit flags 0) (ite (sTestBit flags 1) (ite (sTestBit flags 2) stage3 0) 0) 0)
+    cgOutput "second" stage3
+    cgOutput "intermediate" stage2
+  void $ evaluate (length (show bundle))
+  renderCgPgmBundle (Just dir) (cfg, bundle)
+  source <- readFile (dir </> "deepSharing.c")
+  assertEqual "Each stage needs a post-join readiness guard" 3
+    (length (filter ("if(!sbv_ready_" `isInfixOf`) (lines source)))
+  runEmbeddedCaller dir "deepSharing"
+
+-- | A leaf literal contains no value of the mutually recursive partner type,
+-- but its type's other constructor still needs that partner's declaration.
+-- An ADT input registers the full mutually recursive group; both leaf-only and
+-- nested literals inside a managed collection must reuse that same registry.
+sharedADTConstantRegistry :: Assertion
+sharedADTConstantRegistry = mapM_ check [0, 1]
+ where check seed = withSystemTempDirectory "sbv-adt-constant-registry" $ \dir -> do
+         outputText <- compileProgramAndRunGenerated dir "sharedADTRegistry" $ do
+           cgOverwriteFiles True
+           cgSetDriverValues [seed, 0]
+           chooseLeaf <- cgInput "chooseLeaf" :: SBVCodeGen SBool
+           value <- cgInput "value" :: SBVCodeGen SCodeGenEven
+           cgOutput "copy" value
+           cgReturn (ite chooseLeaf (literal [CGEvenEnd 7])
+                                    (literal [CGEvenStep (CGOddStep (CGEvenEnd 9))]))
+         let expected | seed == 0 = "CGEvenStep(CGOddStep(CGEvenEnd(9)))"
+                      | True      = "CGEvenEnd(7)"
+         assertBool outputText (expected `isInfixOf` outputText)
+
 -- | The original four-way file-kind match must stay exhaustive under -Werror
 -- and expose signatures for current and legacy generated headers alike.
 compatibleHeaderPatterns :: Assertion
@@ -765,20 +824,21 @@ mergedConfiguration = do
 -- | Detect unsupported excess precision at C compilation, without depending
 -- on whether the local processor offers an x87-style evaluation mode.
 excessFloatingPrecision :: Assertion
-excessFloatingPrecision = withSystemTempDirectory "sbv-excess-precision" $ \dir -> do
-  compileToC (Just dir) "floatingPrecision" $ do
-    cgGenerateDriver False
-    value <- cgInput "value" :: SBVCodeGen SDouble
-    cgReturn (value + 1)
-  writeFile (dir </> "excess.c") $ unlines
-    [ "#include <float.h>"
-    , "#undef FLT_EVAL_METHOD"
-    , "#define FLT_EVAL_METHOD 2"
-    , "#include \"floatingPrecision.h\""
-    ]
-  (compileExit, _, compileError) <- readProcessWithExitCode "cc" ["-std=c11", "-fsyntax-only", dir </> "excess.c"] ""
-  assertBool "Excess precision must be rejected" (compileExit /= ExitSuccess)
-  assertBool compileError ("excess-precision floating evaluation is unsupported" `isInfixOf` compileError)
+excessFloatingPrecision = mapM_ check [-1, 1, 2 :: Int]
+ where check evaluationMethod = withSystemTempDirectory "sbv-excess-precision" $ \dir -> do
+         compileToC (Just dir) "floatingPrecision" $ do
+           cgGenerateDriver False
+           value <- cgInput "value" :: SBVCodeGen SDouble
+           cgReturn (value + 1)
+         writeFile (dir </> "excess.c") $ unlines
+           [ "#include <float.h>"
+           , "#undef FLT_EVAL_METHOD"
+           , "#define FLT_EVAL_METHOD " ++ show evaluationMethod
+           , "#include \"floatingPrecision.h\""
+           ]
+         (compileExit, _, compileError) <- readProcessWithExitCode "cc" ["-std=c11", "-fsyntax-only", dir </> "excess.c"] ""
+         assertBool "Excess precision must be rejected" (compileExit /= ExitSuccess)
+         assertBool compileError ("indeterminate or excess-precision floating evaluation is unsupported" `isInfixOf` compileError)
 
 -- | Exercise the arena's size check directly, without constructing an invalid
 -- borrowed string or relying on an enormous allocation to fail incidentally.

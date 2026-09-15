@@ -3612,7 +3612,7 @@ SBool d_FP_IsPositive(const SDouble sbv_input_0)
 #include <math.h>
 #include <float.h>
 #if FLT_EVAL_METHOD != 0
-#error "SBV-generated C requires FLT_EVAL_METHOD == 0; excess-precision floating evaluation is unsupported."
+#error "SBV-generated C requires FLT_EVAL_METHOD == 0; indeterminate or excess-precision floating evaluation is unsupported."
 #endif
 
 /* Floating-point calling convention:

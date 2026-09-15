@@ -701,19 +701,18 @@ collectionADTElement (KSet elementKind)
   | isConcreteADT elementKind = Just elementKind
 collectionADTElement _ = Nothing
 
--- | Render a concrete ADT value as a C99 compound literal.
-adtConst :: (CV -> Doc) -> CV -> Maybe Doc
-adtConst renderValue cv@(CV kind (CADT (constructorName, fieldValues)))
+-- | Render a concrete ADT value as a C99 compound literal using the enclosing
+-- program's complete registry, shared with nested constant rendering.
+adtConst :: [Kind] -> (CV -> Doc) -> CV -> Maybe Doc
+adtConst adts renderValue cv@(CV kind (CADT (constructorName, fieldValues)))
   | isConcreteADT kind
-  , Just (constructorIndex, fieldKinds) <- findConstructor localADTs kind constructorName
+  , Just (constructorIndex, fieldKinds) <- findConstructor adts kind constructorName
   , map fst fieldValues == fieldKinds
-  = Just $ adtValue localADTs kind constructorIndex
+  = Just $ adtValue adts kind constructorIndex
         [arrayStoredValue fieldKind (renderValue (CV fieldKind fieldValue)) | (fieldKind, fieldValue) <- fieldValues]
   | isConcreteADT kind
   = error $ "SBV->C: Malformed ADT constant " ++ show cv
- where localKinds = Set.fromList $ kind : concatMap (expandKinds . fst) fieldValues
-       localADTs  = adtKinds localKinds localKinds
-adtConst _ _ = Nothing
+adtConst _ _ _ = Nothing
 
 -- | Lower ADT construction, tests, accessors, equality, conditionals, and labels.
 adtExpr :: CgConfig -> [Kind] -> Op -> [SV] -> SV -> [Doc] -> Maybe CLowering

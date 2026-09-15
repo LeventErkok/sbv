@@ -64,6 +64,8 @@ calibratedRegexLimits = do
            input <- cgInput "input" :: SBVCodeGen SString
            cgReturn (input `R.match` regex)
          void $ evaluate (length (show bundle))
+         assertBool "Default-sized automata use compact transition entries"
+           (any (\line -> "static const uint16_t sbv_regex_" `isInfixOf` line && "_step" `isInfixOf` line) (lines (show bundle)))
 
 -- | Ordinary and Boolean operators, empty languages/concatenations, and
 -- nullable repetitions; include boundaries of every supported encoding width.

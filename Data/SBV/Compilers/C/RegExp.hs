@@ -332,14 +332,15 @@ regexExpr cfg (S.RegExOp operation) _ [] = Just $ runCompiler cfg $ do
 regexExpr _ _ _ _ = Nothing
 
 -- | Render an allocation-free matcher over canonical SBV text, preserving
--- embedded NULs and surrogate character codes. Tables use size_t indices;
--- input size is independent of the generation budgets.
+-- embedded NULs and surrogate character codes. Use compact transition entries
+-- when all actual state indices fit, falling back to size_t for larger custom
+-- budgets. Input size is independent of the generation budgets.
 membership :: S.SV -> Doc -> [(Int, Int)] -> [(Bool, [Int])] -> CLowering
 membership result value classes rows = (expressionLowering [CRequiresText] (text answer))
   { loweringDeclarations = map text
       [ "static const uint32_t " ++ bounds ++ "[] = {" ++ intercalate ", " (map (show . snd) classes) ++ "};"
       , "static const uint8_t " ++ accepting ++ "[] = {" ++ intercalate ", " [if yes then "1" else "0" | (yes, _) <- rows] ++ "};"
-      , "static const size_t " ++ transitions ++ "[][" ++ show (length classes) ++ "] = {\n"
+      , "static const " ++ transitionType ++ " " ++ transitions ++ "[][" ++ show (length classes) ++ "] = {\n"
           ++ intercalate ",\n" ["  {" ++ intercalate ", " (map show indices) ++ "}" | (_, indices) <- rows] ++ "\n};"
       , "SBool " ++ answer ++ ";"
       ]
@@ -360,6 +361,8 @@ membership result value classes rows = (expressionLowering [CRequiresText] (text
       ]]
   }
  where prefix      = "sbv_regex_" ++ show result
+       transitionType | toInteger (length rows) <= 65536 = "uint16_t"
+                      | True                            = "size_t"
        answer      = prefix ++ "_result"
        bounds      = prefix ++ "_bounds"
        accepting   = prefix ++ "_accept"
