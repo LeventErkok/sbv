@@ -120,6 +120,8 @@ managedValueRelease kind _                = error $ "SBV->C: Expected a non-GMP 
 -- borrow the element variables declared alongside them. The supplied
 -- statement renderer constructs retained arrays and registered ADTs without
 -- creating dependency cycles between the structural lowering modules.
+-- Collections whose elements need no initialization use a compound literal;
+-- 'valueDriverClear' emits no element cleanup for those borrowed literals.
 valueDriverInit :: CgConfig -> (Kind -> Integer -> Doc) -> (Kind -> String -> Integer -> Doc) -> Kind -> String -> Integer -> Doc
 valueDriverInit cfg _           _               kind                       externalName seed
   | isExactGMPKind cfg kind
@@ -160,8 +162,10 @@ valueDriverInit cfg renderValue initializeValue kind@(KTuple fields)       exter
 
        exactAssignment fieldKind access value = gmpDriverAssign fieldKind access (integer value)
 valueDriverInit cfg renderValue initializeValue kind@(KList elementKind)   externalName seed
+  | valueDriverNeedsInitialization cfg kind
   = collectionDriverInit cfg renderValue initializeValue kind elementKind externalName seed False
 valueDriverInit cfg renderValue initializeValue kind@(KSet elementKind)    externalName seed
+  | valueDriverNeedsInitialization cfg kind
   = collectionDriverInit cfg renderValue initializeValue kind elementKind externalName seed (odd seed)
 valueDriverInit _   _           initializeValue kind@KArray{}              externalName seed
   = initializeValue kind externalName seed

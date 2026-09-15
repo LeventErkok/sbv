@@ -213,6 +213,7 @@ tests = testGroup "CodeGeneration.CgTests"
   , testCase "borrow symbolic-array input groups in a library" (groupedArrayInputs True)
   , testCase "retain grouped callback inputs across independent library calls" groupedArrayInputOwnership
   , testCase "initialize and release managed input groups" (groupedManagedInputs False)
+  , testCase "share driver initialization for mixed aggregate fields" sharedDriverInitialization
   , testCase "initialize and release managed input groups in a library" (groupedManagedInputs True)
   , testCase "compile and execute a free array with a C definition" definedFreeArray
   , testCase "return and output owned arrays" ownedArrayResults
@@ -866,6 +867,28 @@ textAllocationOverflow = withSystemTempDirectory "sbv-text-overflow" $ \dir -> d
   assertEqual buildError ExitSuccess buildExit
   (runExit, _, runError) <- readProcessWithExitCode (dir </> "textOverflow") [] ""
   assertBool ("Expected allocation overflow to abort: " ++ runError) (runExit /= ExitSuccess)
+
+-- | Mix literal-backed collections with owned numbers, ADTs, and collections
+-- of ADTs in one driver input. Only fields needing initialization get element
+-- variables, and the cloned output survives cleanup of the borrowed input.
+sharedDriverInitialization :: Assertion
+sharedDriverInitialization = withSystemTempDirectory "sbv-shared-driver-init" $ \dir -> do
+  let program = do
+        cgOverwriteFiles True
+        cgSetDriverValues [5]
+        value <- cgInput "value" :: SBVCodeGen (SBV (Integer, [Word8], RCSet Word8, CodeGenADT Integer, [CodeGenADT Word8]))
+        let (_, listValue, setValue, _, _) = untuple value
+        cgOutput "copy" value
+        cgReturn (SL.head listValue .== 6 .&& sNot (SS.member 7 setValue))
+  stdoutText <- compileProgramAndRunGenerated dir "sharedDriverInitialization" program
+  assertBool ("Expected the mixed input's driver samples to agree: " ++ stdoutText) (") = 1" `isInfixOf` stdoutText)
+  driverText <- readFile (dir </> "sharedDriverInitialization_driver.c")
+  assertBool "Literal-backed list elements need no separate driver variables"
+             (not ("sbv_driver_input_0_field_2_element_" `isInfixOf` driverText))
+  assertBool "Literal-backed set elements need no separate driver variables"
+             (not ("sbv_driver_input_0_field_3_element_" `isInfixOf` driverText))
+  assertBool "ADT collection elements retain their explicit initialization"
+             ("sbv_driver_input_0_field_5_element_0" `isInfixOf` driverText)
 
 -- | Exercise all three instances of the shared arena emitter, including empty
 -- allocation, element alignment, independent payloads, repeated cleanup, and

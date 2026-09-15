@@ -26,8 +26,6 @@ module Data.SBV.Compilers.C.ADT
   , adtOwnedCloneName
   , adtOwnedReleaseName
   , adtDriverInit
-  , adtCollectionDriverInit
-  , collectionUsesADT
   , adtValue
   , adtConst
   , adtExpr
@@ -605,47 +603,6 @@ adtDriverInit cfg adts renderValue initializeValue kind externalName seed
        constructible depth fieldKind = any (all (fits depth) . snd) (adtConstructorFields adts fieldKind)
 
        exactAssignments fieldKind access value = gmpDriverAssign fieldKind access (integer value)
-
--- | Initialize a generated-driver list or set whose direct elements are ADTs.
--- The descriptor borrows the independently initialized element variables.
-adtCollectionDriverInit :: CgConfig -> [Kind] -> (Kind -> Integer -> Doc) -> (Kind -> String -> Integer -> Doc) -> Kind -> String -> Integer -> Doc
-adtCollectionDriverInit cfg adts renderValue initializeValue kind externalName seed
-  | Just elementKind <- collectionADTElement kind
-  =  vcat (zipWith (initializeElement elementKind) elementNames [seed ..])
-  $$ text "const" <+> text (adtCType elementKind) <+> text dataName P.<> brackets (int elementCount)
-       <+> text "=" <+> braces (fsep (punctuate comma (map text elementNames))) P.<> semi
-  $$ text "const" <+> text (elementCType kind) <+> text externalName <+> text "="
-       <+> braces (fsep (punctuate comma descriptorFields)) P.<> semi
-  | True
-  = error $ "SBV->C: Expected a collection with direct ADT elements, received " ++ show kind
- where elementCount     = 3
-       elementNames     = [externalName ++ "_element_" ++ show index | index <- [0 :: Int .. elementCount - 1]]
-       dataName         = externalName ++ "_data"
-       descriptorFields = [text dataName, int elementCount]
-                       ++ case kind of
-                            KSet{} -> [text (if odd seed then "true" else "false")]
-                            _      -> []
-
-       initializeElement elementKind elementName elementSeed
-         | adtNeedsOwnership cfg adts elementKind
-         = adtDriverInit cfg adts renderValue initializeValue elementKind elementName elementSeed
-         | True
-         = text (adtCType elementKind) <+> text elementName <+> text "="
-             <+> adtDriverValue adts renderValue elementKind elementSeed P.<> semi
-
--- | Test whether a list or set has a concrete ADT as its direct element kind.
-collectionUsesADT :: Kind -> Bool
-collectionUsesADT kind = case collectionADTElement kind of
-                           Just{}  -> True
-                           Nothing -> False
-
--- | Return the concrete direct ADT element of a collection kind.
-collectionADTElement :: Kind -> Maybe Kind
-collectionADTElement (KList elementKind)
-  | isConcreteADT elementKind = Just elementKind
-collectionADTElement (KSet elementKind)
-  | isConcreteADT elementKind = Just elementKind
-collectionADTElement _ = Nothing
 
 -- | Render a concrete ADT value as a C99 compound literal using the enclosing
 -- program's complete registry, shared with nested constant rendering.

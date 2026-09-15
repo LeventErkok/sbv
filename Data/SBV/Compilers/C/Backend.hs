@@ -22,7 +22,7 @@ import qualified Data.Foldable         as F (toList)
 import qualified Data.Graph            as DG
 import Data.List                       (intercalate, intersperse, isPrefixOf, nub, sortOn)
 import qualified Data.Map.Strict       as Map
-import Data.Maybe                      (fromJust, fromMaybe, isJust, isNothing)
+import Data.Maybe                      (fromJust, fromMaybe, isJust, isNothing, maybeToList)
 import qualified Data.Set              as Set (Set, difference, empty, fromList, insert, intersection, map, member, notMember, null, toList, union, unions)
 import qualified Data.Text             as T
 import System.FilePath                 (replaceExtension, takeBaseName)
@@ -52,9 +52,11 @@ import Data.SBV.Compilers.C.Set
 import Data.SBV.Compilers.C.Syntax (cUnusedAttribute, cCommentText, cStringLiteral)
 import Data.SBV.Compilers.C.Table
 import Data.SBV.Compilers.C.Text
-import qualified Data.SBV.Compilers.C.Types as CTypes (arrayStoredReleaseName, constElementCType, definedFunctionCName, elementCType, kindTag)
+import qualified Data.SBV.Compilers.C.Types as CTypes (constElementCType, definedFunctionCName, elementCType, kindTag)
 import Data.SBV.Compilers.C.Tuple
-import Data.SBV.Compilers.C.Value (byValueEqual, managedValueClone, managedValueRelease, valueNeedsOwnership)
+import Data.SBV.Compilers.C.Value ( byValueEqual, managedValueClone, managedValueRelease, valueNeedsOwnership
+                                , valueDriverNeedsInitialization, valueDriverInit, valueDriverClear
+                                )
 import Data.SBV.Compilers.CodeGen
 
 import Data.SBV.Utils.PrettyNum   (chex, showCFloat, showCDouble)
@@ -832,12 +834,9 @@ genDriver cfg adts randVals fn publicInputs publicOutputs mbRet
                             Just seeds -> seeds
                             Nothing    -> die $ "Missing driver seed for composite input " ++ show n
        inputElementName n index = n ++ "_element_" ++ show (index :: Int)
-       inputNeedsInitialization kind = isArray kind
-                                    || collectionUsesADT kind
-                                    || listNeedsDriverInit cfg kind
-                                    || setNeedsDriverInit cfg kind
-                                    || tupleNeedsOwnership cfg kind
-                                    || (isConcreteADTReference kind && adtNeedsOwnership cfg adts kind)
+       inputNeedsInitialization kind
+         | isConcreteADTReference kind = adtNeedsOwnership cfg adts kind
+         | True                        = valueDriverNeedsInitialization cfg kind
        mkRVal sv = mkRValKind (kindOf sv)
        mkRValKind kind r
          | isRoundingMode kind            = roundingModeDriverValue r
@@ -849,20 +848,18 @@ genDriver cfg adts randVals fn publicInputs publicOutputs mbRet
          | isADT kind                      = adtDriverValue adts mkRValKind kind r
          | True                            = mkConst env $ mkConstCV kind r
          where mkField fieldKind offset = mkRValKind fieldKind (r + offset)
-       driverValueInit kind externalName seed
+       driverValueInit = valueDriverInit cfg mkRValKind initializeComposite
+
+       -- Only these constructors need the complete ADT registry or the public
+       -- versus stored array ABI. All other dispatch belongs to Value.
+       initializeComposite kind externalName seed
          | KApp{} <- kind                   = driverValueInit (resolveADTReferences adts kind) externalName seed
-         | isExactGMPKind cfg kind         = gmpDriverInit kind (text externalName) (integer seed)
          | isArray kind                    = initializeArray kind externalName seed
-         | collectionUsesADT kind          = adtCollectionDriverInit cfg adts mkRValKind driverValueInit kind externalName seed
-         | listNeedsDriverInit cfg kind    = listDriverInit cfg mkRValKind driverValueInit kind externalName seed
-         | setNeedsDriverInit cfg kind     = setDriverInit cfg mkRValKind driverValueInit kind externalName seed
-         | tupleNeedsOwnership cfg kind    = tupleDriverInit cfg mkRValKind driverValueInit kind externalName seed
          | isConcreteADTReference kind
-         , adtNeedsOwnership cfg adts kind = adtDriverInit cfg adts mkRValKind driverValueInit kind externalName seed
-         | isConcreteADTReference kind          = text (adtCType kind) <+> text externalName <+> text "="
+         , adtNeedsOwnership cfg adts kind  = adtDriverInit cfg adts mkRValKind driverValueInit kind externalName seed
+         | isConcreteADTReference kind      = text (adtCType kind) <+> text externalName <+> text "="
                                            <+> adtDriverValue adts mkRValKind kind seed P.<> semi
-         | True                            = text "const" <+> text (showCType kind) <+> text externalName <+> text "="
-                                           <+> mkRValKind kind seed P.<> semi
+         | True                            = die $ "Expected an array or ADT driver kind, received " ++ show kind
        initializeArray kind@(KArray _ valueKind) externalName seed
          = let defaultName = externalName ++ "_default"
                inputName   = externalName ++ "_input"
@@ -872,26 +869,16 @@ genDriver cfg adts randVals fn publicInputs publicOutputs mbRet
               $$ driverValueClear valueKind defaultName
        initializeArray kind _ _ = die $ "Expected an array driver kind, received " ++ show kind
        driverValueClear kind externalName
-         | isExactGMPKind cfg kind         = gmpDriverClear kind (text externalName)
-         | isArray kind                    = text (CTypes.arrayStoredReleaseName kind) P.<> parens (text "&" P.<> text externalName) P.<> semi
-         | isList kind                     = listDriverClear cfg kind externalName
-         | isSet kind                      = setDriverClear cfg kind externalName
-         | tupleNeedsOwnership cfg kind    = text (tupleOwnedReleaseName kind) P.<> parens (text "&" P.<> text externalName) P.<> semi
          | isConcreteADTReference kind
-         , adtNeedsOwnership cfg adts kind = text (adtOwnedReleaseName kind) P.<> parens (text "&" P.<> text externalName) P.<> semi
-         | True                            = empty
+         , not (adtNeedsOwnership cfg adts kind) = empty
+         | True                                 = valueDriverClear cfg kind externalName
        mkInp (_, n, CgAtomic sv)
          | KArray _ valueKind <- kindOf sv
          = let defaultName = n ++ "_default"
            in driverValueInit valueKind defaultName (inputSeed n)
               $$ arrayDriverInput cfg (kindOf sv) n defaultName
-       mkInp ([v], n, CgAtomic sv)
-         | isExactGMPKind cfg (kindOf sv)      = gmpDriverInit (kindOf sv) (text n) v
-         | collectionUsesADT (kindOf sv)       = adtCollectionDriverInit cfg adts mkRValKind driverValueInit (kindOf sv) n (inputSeed n)
-         | listNeedsDriverInit cfg (kindOf sv) = listDriverInit cfg mkRValKind driverValueInit (kindOf sv) n (inputSeed n)
-         | setNeedsDriverInit cfg (kindOf sv)  = setDriverInit cfg mkRValKind driverValueInit (kindOf sv) n (inputSeed n)
-         | tupleNeedsOwnership cfg (kindOf sv) = tupleDriverInit cfg mkRValKind driverValueInit (kindOf sv) n (inputSeed n)
-         | isOwnedADT cfg adts sv              = adtDriverInit cfg adts mkRValKind driverValueInit (kindOf sv) n (inputSeed n)
+       mkInp ([_], n, CgAtomic sv)
+         | inputNeedsInitialization (kindOf sv) = driverValueInit (kindOf sv) n (inputSeed n)
        mkInp (_,   _, CgAtomic{})         = empty  -- constant, no need to declare
        mkInp (_,   n, CgArray [])         = die $ "Unsupported empty array value for " ++ show n
        mkInp (vs, n, CgArray sws@(sv:_))
@@ -977,12 +964,7 @@ genDriver cfg adts randVals fn publicInputs publicOutputs mbRet
                           Just sv | isExactGMPKind cfg (kindOf sv) -> [resultVar]
                           _                                        -> []
        mkCVal rename ([v], n, CgAtomic sv)
-         | isArray sv                          = text (rename n)
-         | isExactGMPKind cfg (kindOf sv)      = text (rename n)
-         | listNeedsDriverInit cfg (kindOf sv) = text (rename n)
-         | setNeedsDriverInit cfg (kindOf sv)  = text (rename n)
-         | tupleNeedsOwnership cfg (kindOf sv) = text (rename n)
-         | isOwnedADT cfg adts sv              = text (rename n)
+         | inputNeedsInitialization (kindOf sv) = text (rename n)
          | True                                = v
        mkCVal _      (vs, n, CgAtomic{}) = die $ "Unexpected driver value computed for " ++ show n ++ render (hcat vs)
        mkCVal rename (_,  n, CgArray{})  = text (rename n)
@@ -1126,100 +1108,35 @@ genDriver cfg adts randVals fn publicInputs publicOutputs mbRet
        printStoredArray _ kind = die $ "Expected a stored array, received " ++ show kind
 
        driverCleanup = vcat $ inputCleanup ++ outputCleanup ++ returnCleanup
-         where inputCleanup  = [ gmpDriverClear (kindOf sv) (text n)
-                               | (_, n, CgAtomic sv) <- pairedInputs
-                               , isExactGMPKind cfg (kindOf sv)
-                               ]
-                              ++ [listDriverClear cfg (kindOf sv) n
-                                 | (_, n, CgAtomic sv) <- pairedInputs
-                                 , listNeedsDriverInit cfg (kindOf sv)
-                                 ]
-                              ++ [setDriverClear cfg (kindOf sv) n
-                                 | (_, n, CgAtomic sv) <- pairedInputs
-                                 , setNeedsDriverInit cfg (kindOf sv)
-                                 ]
-                              ++ [releaseTuple sv n
-                                 | (_, n, CgAtomic sv) <- pairedInputs
-                                 , tupleNeedsOwnership cfg (kindOf sv)
-                                 ]
-                              ++ [driverValueClear valueKind (n ++ "_default")
-                                 | (_, n, CgAtomic sv) <- pairedInputs
-                                 , KArray _ valueKind <- [kindOf sv]
-                                 ]
-                              ++ [releaseADT sv n
-                                 | (_, n, CgAtomic sv) <- pairedInputs
-                                 , isOwnedADT cfg adts sv
-                                 ]
-                              ++ [gmpDriverClear (kindOf sv) (text n P.<> brackets (int index))
-                                 | (_, n, CgArray svs) <- pairedInputs
-                                 , (index, sv) <- zip [0 :: Int ..] svs
-                                 , isExactGMPKind cfg (kindOf sv)
-                                 ]
-                              ++ [clearInputElement (kindOf sv) (inputElementName n index)
-                                 | (_, n, CgArray svs) <- pairedInputs
-                                 , (index, sv) <- zip [0 :: Int ..] svs
-                                 , inputNeedsInitialization (kindOf sv)
-                                 , not (isExactGMPKind cfg (kindOf sv))
-                                 ]
+         where inputCleanup = [ clearInputElement (kindOf sv) n
+                              | (_, n, CgAtomic sv) <- pairedInputs
+                              , inputNeedsInitialization (kindOf sv)
+                              ]
+                           ++ [ clearInputElement (kindOf sv) elementName
+                              | (_, n, CgArray svs) <- pairedInputs
+                              , (index, sv) <- zip [0 :: Int ..] svs
+                              , inputNeedsInitialization (kindOf sv)
+                              , let elementName
+                                      | isExactGMPKind cfg (kindOf sv) = n ++ "[" ++ show index ++ "]"
+                                      | True                          = inputElementName n index
+                              ]
                clearInputElement (KArray _ valueKind) elementName = driverValueClear valueKind (elementName ++ "_default")
                clearInputElement kind                elementName = driverValueClear kind elementName
-               outputCleanup = [ gmpDriverClear (kindOf sv) (text n)
-                               | (n, CgAtomic sv) <- outs
-                               , isExactGMPKind cfg (kindOf sv)
-                               ]
-                            ++ [releaseTuple sv n
-                               | (n, CgAtomic sv) <- outs
-                               , tupleNeedsOwnership cfg (kindOf sv)
-                               ]
-                            ++ [text (arrayOutputReleaseName (kindOf sv)) P.<> parens (text "&" P.<> text n) P.<> semi
-                               | (n, CgAtomic sv) <- outs
-                               , isArray sv
-                               ]
-                            ++ [releaseADT sv n
-                               | (n, CgAtomic sv) <- outs
-                               , isOwnedADT cfg adts sv
-                               ]
-                            ++ [textRelease (text n)
-                               | (n, CgAtomic sv) <- outs
-                               , kindOf sv == KString
-                               ]
-                            ++ [listRelease (kindOf sv) (text n)
-                               | (n, CgAtomic sv) <- outs
-                               , isList sv
-                               ]
-                            ++ [setRelease (kindOf sv) (text n)
-                               | (n, CgAtomic sv) <- outs
-                               , isSet sv
-                               ]
-                            ++ [outputArrayValueClear (kindOf sv) (n ++ "[" ++ show index ++ "]")
-                               | (n, CgArray svs) <- outs
-                               , (index, sv) <- zip [0 :: Int ..] svs
-                               ]
-               returnCleanup = case mbRet of
-                                 Just sv | isExactGMPKind cfg (kindOf sv)      -> [gmpDriverClear (kindOf sv) resultVar]
-                                 Just sv | isArray sv                          -> [text (arrayOutputReleaseName (kindOf sv)) P.<> parens (text "&" P.<> resultVar) P.<> semi]
-                                 Just sv | tupleNeedsOwnership cfg (kindOf sv) -> [releaseTuple sv "sbv_result"]
-                                 Just sv | isOwnedADT cfg adts sv              -> [releaseADT sv "sbv_result"]
-                                 Just sv | kindOf sv == KString                -> [textRelease resultVar]
-                                 Just sv | isList sv                           -> [listRelease (kindOf sv) resultVar]
-                                 Just sv | isSet sv                            -> [setRelease (kindOf sv) resultVar]
-                                 _                                             -> []
 
-               releaseTuple sv = releaseOwned (tupleOwnedReleaseName (kindOf sv))
-               releaseADT   sv = releaseOwned (adtOwnedReleaseName   (kindOf sv))
+               outputCleanup = concatMap clearOutput outs
+               clearOutput (n, CgAtomic sv) = [outputValueClear (kindOf sv) n]
+               clearOutput (n, CgArray svs) = [outputValueClear (kindOf sv) (n ++ "[" ++ show index ++ "]")
+                                             | (index, sv) <- zip [0 :: Int ..] svs
+                                             ]
+               returnCleanup = [outputValueClear (kindOf sv) "sbv_result" | sv <- maybeToList mbRet]
 
-               releaseOwned helper externalName = text helper
-                                                 P.<> parens (text "&" P.<> text externalName)
-                                                 P.<> semi
-
-               outputArrayValueClear kind externalName
-                 | isArray kind    = text (arrayOutputReleaseName kind)
-                                  P.<> parens (text "&" P.<> text externalName)
-                                  P.<> semi
-                 | kind == KString = textRelease (text externalName)
-                 | isList kind     = listRelease kind (text externalName)
-                 | isSet kind      = setRelease kind (text externalName)
-                 | True            = driverValueClear kind externalName
+               -- Public array outputs own an exported descriptor. Collection
+               -- outputs own their elements; driver inputs merely borrow them.
+               outputValueClear kind externalName
+                 | isArray kind                                = text (arrayOutputReleaseName kind) P.<> parens address P.<> semi
+                 | kind == KString || isList kind || isSet kind = managedValueRelease kind address
+                 | True                                        = driverValueClear kind externalName
+                where address = text "&" P.<> text externalName
 
 -- | Generate the C program
 genCProg :: CgConfig
