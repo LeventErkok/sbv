@@ -54,6 +54,7 @@ common common-settings
                      DeriveLift
                      DeriveTraversable
                      DerivingStrategies
+                     EmptyDataDecls
                      ExistentialQuantification
                      FlexibleContexts
                      FlexibleInstances
@@ -73,6 +74,7 @@ common common-settings
                      OverloadedStrings
                      PackageImports
                      ParallelListComp
+                     PatternSynonyms
                      QuantifiedConstraints
                      QuasiQuotes
                      RankNTypes
