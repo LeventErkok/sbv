@@ -179,6 +179,11 @@ tests = testGroup "CodeGeneration.CgTests"
   , testCase "retain checks as demand-driven evaluation roots" guardedRuntimeChecks
   , testCase "preserve sharing across guarded evaluation diamonds" guardedEvaluationSharing
   , testCase "evaluate shared external calls at most once on each path" guardedExternalSharing
+  , testCase "straight-line sharing needs no runtime readiness flags" straightLineSharing
+  , testCase "text arena rejects allocation-size overflow" textAllocationOverflow
+  , testCase "original bundle header patterns cover both backends" compatibleHeaderPatterns
+  , testCase "merged configuration describes artifacts and protects existing files" mergedConfiguration
+  , testCase "reject excess-precision floating-point compilation" excessFloatingPrecision
   , testCase "honor linker overrides, ignored assertions, and nonreserved macro prefixes" reviewedBuildOptions
   , testCase "remove all matching elements from borrowed duplicate sets" borrowedDuplicateRemoval
   , testCase "guard unselected finite-table entries and defaults" guardedTableEvaluation
@@ -722,7 +727,109 @@ guardedExternalSharing = withSystemTempDirectory "sbv-shared-external" $ \dir ->
     let shared = uninterpret "counted" value :: SWord8
     cgOutput "first" (ite condition shared 0)
     cgOutput "second" shared
+  source <- readFile (dir </> "sharedExternal.c")
+  assertEqual "Only the post-join demand needs a readiness guard" 1
+    (length (filter ("if(!sbv_ready_" `isInfixOf`) (lines source)))
   runEmbeddedCaller dir "sharedExternal"
+
+-- | The original four-way file-kind match must stay exhaustive under -Werror
+-- and expose signatures for current and legacy generated headers alike.
+compatibleHeaderPatterns :: Assertion
+compatibleHeaderPatterns = mapM_ check [compileToC', PublicLegacy.compileToC']
+ where check compiler = do
+         (_, _, CgPgmBundle _ files) <- compiler "compatibleHeader" $ do
+           value <- cgInput "value" :: SBVCodeGen SWord8
+           cgReturn (value + 1)
+         assertEqual "One header with one public signature" [1]
+           [count | (_, (fileKind, _)) <- files, Just count <- [signatures fileKind]]
+       signatures (CgMakefile _) = Nothing
+       signatures (CgHeader ds)  = Just (length ds)
+       signatures CgSource       = Nothing
+       signatures CgDriver       = Nothing
+
+-- | Per-component generation options need not agree, but a library's returned
+-- artifact flags must reflect the union, and overwriting needs unanimous opt-in.
+mergedConfiguration :: Assertion
+mergedConfiguration = do
+  (_, cfg, _) <- compileToCLib' "mixedConfiguration"
+    [ ("withoutDriver", do cgGenerateDriver False
+                           cgGenerateMakefile False
+                           cgOverwriteFiles True
+                           cgReturn sTrue)
+    , ("withDriver", cgReturn sFalse)
+    ]
+  assertBool "Merged library includes a driver" (cgGenDriver cfg)
+  assertBool "Merged library includes a Makefile" (cgGenMakefile cfg)
+  assertBool "One component cannot authorize overwriting for the others" (not (cgOverwriteGenerated cfg))
+
+-- | Detect unsupported excess precision at C compilation, without depending
+-- on whether the local processor offers an x87-style evaluation mode.
+excessFloatingPrecision :: Assertion
+excessFloatingPrecision = withSystemTempDirectory "sbv-excess-precision" $ \dir -> do
+  compileToC (Just dir) "floatingPrecision" $ do
+    cgGenerateDriver False
+    value <- cgInput "value" :: SBVCodeGen SDouble
+    cgReturn (value + 1)
+  writeFile (dir </> "excess.c") $ unlines
+    [ "#include <float.h>"
+    , "#undef FLT_EVAL_METHOD"
+    , "#define FLT_EVAL_METHOD 2"
+    , "#include \"floatingPrecision.h\""
+    ]
+  (compileExit, _, compileError) <- readProcessWithExitCode "cc" ["-std=c11", "-fsyntax-only", dir </> "excess.c"] ""
+  assertBool "Excess precision must be rejected" (compileExit /= ExitSuccess)
+  assertBool compileError ("excess-precision floating evaluation is unsupported" `isInfixOf` compileError)
+
+-- | Exercise the arena's size check directly, without constructing an invalid
+-- borrowed string or relying on an enormous allocation to fail incidentally.
+textAllocationOverflow :: Assertion
+textAllocationOverflow = withSystemTempDirectory "sbv-text-overflow" $ \dir -> do
+  compileToC (Just dir) "textOverflow" $ do
+    cgOverwriteFiles True
+    cgGenerateDriver False
+    value <- cgInput "value" :: SBVCodeGen SString
+    cgReturn (value SL.++ value)
+  appendFile (dir </> "textOverflow.c") $ unlines
+    [ "int main(void) {"
+    , "  sbv_text_ctx ctx = {NULL};"
+    , "  (void) sbv_text_alloc(&ctx, SIZE_MAX);"
+    , "  sbv_text_ctx_end(&ctx); return 0;"
+    , "}"
+    ]
+  writeFile (dir </> "caller.mk") $ unlines
+    [ "textOverflow: textOverflow.o"
+    , "\t${CC} ${CCFLAGS} $^ -o $@ ${LDFLAGS} ${SBV_LIBS}"
+    ]
+  makeOptions <- generatedMakeOptions dir
+  (buildExit, _, buildError) <- readProcessWithExitCode "make" (["-C", dir, "textOverflow"] ++ makeOptions) ""
+  assertEqual buildError ExitSuccess buildExit
+  (runExit, _, runError) <- readProcessWithExitCode (dir </> "textOverflow") [] ""
+  assertBool ("Expected allocation overflow to abort: " ++ runError) (runExit /= ExitSuccess)
+
+-- | Sharing non-speculatable arithmetic in a straight-line program needs one
+-- assignment, not a zero initializer, readiness flag, or conditional wrapper.
+straightLineSharing :: Assertion
+straightLineSharing = mapM_ check [("sharedDouble", doubles), ("sharedInteger", integers)]
+ where doubles = do
+         value <- cgInput "value" :: SBVCodeGen SDouble
+         let productValue = value * value
+         cgOutput "first" productValue
+         cgOutput "second" productValue
+       integers = do
+         value <- cgInput "value" :: SBVCodeGen SInteger
+         let productValue = value * value
+         cgOutput "first" productValue
+         cgOutput "second" productValue
+       check (entry, program) = withSystemTempDirectory "sbv-straight-sharing" $ \dir -> do
+         outputText <- compileProgramAndRunGenerated dir entry $ do
+           cgOverwriteFiles True
+           cgSetDriverValues [7]
+           program
+         source <- readFile (dir </> entry ++ ".c")
+         assertBool source (not ("sbv_ready_" `isInfixOf` source))
+         assertBool source (not ("= {0}" `isInfixOf` source))
+         assertBool source (not ("sbv_gmp_integer_shift" `isInfixOf` source))
+         assertBool outputText ("49" `isInfixOf` outputText || "0x1.88p+5" `isInfixOf` outputText)
 
 -- | Build a translation unit containing its own test main, preserving the
 -- same compilation, sanitizer, and dependency flags at the final link step.

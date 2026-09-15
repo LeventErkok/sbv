@@ -265,19 +265,24 @@ alphabet regexes = do
            Star x          -> visit cuts x
            _               -> pure cuts
 
+-- | A complete automaton or an early language-inequality witness. An accepting
+-- state in a membership automaton is not itself an inequality witness.
+data Exploration = CompleteAutomaton [(Bool, [Int])] -- ^ All reachable states and transitions.
+                 | InequalityWitness                -- ^ A reachable pair differs in acceptance.
+
 -- | Explore states breadth-first, assigning deterministic integer indices.
 -- Language comparison stops at the first accepting product state (a witness
 -- of inequality); membership builds all reachable rows. State limits apply
 -- before insertion, including to pairs explored for language comparison.
 explore :: Ord a => Bool -> (a -> Bool) -> (a -> Integer) -> (Int -> a -> Build a)
-        -> [(Int, Int)] -> a -> Build [(Bool, [Int])]
+        -> [(Int, Int)] -> a -> Build Exploration
 explore stop accepts size step classes initial = go (Map.singleton initial 0) (Seq.singleton initial) []
  where go known pending rows = case Seq.viewl pending of
-         Seq.EmptyL -> pure (reverse rows)
+         Seq.EmptyL -> pure (CompleteAutomaton (reverse rows))
          r Seq.:< rest -> do
            charge 1
            if stop && accepts r
-             then pure [(True, [])]
+             then pure InequalityWitness
              else do
                (known', pending', reversed) <- foldM (transition r) (known, rest, []) classes
                go known' pending' ((accepts r, reverse reversed) : rows)
@@ -307,8 +312,10 @@ regexExpr :: CgConfig -> S.Op -> S.SV -> [Doc] -> Maybe CLowering
 regexExpr cfg (S.StrOp (S.StrInRe regex)) result [value] = Just $ runCompiler cfg $ do
   initial <- convertRegex regex
   classes <- alphabet [initial]
-  rows    <- explore False nullable nodeCount derivative classes initial
-  pure $ membership result value classes rows
+  automaton <- explore False nullable nodeCount derivative classes initial
+  case automaton of
+    CompleteAutomaton rows -> pure $ membership result value classes rows
+    InequalityWitness      -> lift $ Left "Unexpected inequality witness during regex membership compilation."
 regexExpr cfg (S.RegExOp operation) _ [] = Just $ runCompiler cfg $ do
   let (left, right, negateResult) = case operation of
         S.RegExEq  a b -> (a, b, False)
@@ -316,9 +323,11 @@ regexExpr cfg (S.RegExOp operation) _ [] = Just $ runCompiler cfg $ do
   a <- convertRegex left
   b <- convertRegex right
   classes <- alphabet [a, b]
-  rows <- explore True (\(x, y) -> nullable x /= nullable y) (\(x, y) -> nodeCount x + nodeCount y)
+  comparison <- explore True (\(x, y) -> nullable x /= nullable y) (\(x, y) -> nodeCount x + nodeCount y)
                        (\c (x, y) -> (,) <$> derivative c x <*> derivative c y) classes (a, b)
-  let equal = not (any fst rows)
+  let equal = case comparison of
+                CompleteAutomaton{} -> True
+                InequalityWitness   -> False
   pure $ expressionLowering [] (text (if equal /= negateResult then "true" else "false"))
 regexExpr _ _ _ _ = Nothing
 

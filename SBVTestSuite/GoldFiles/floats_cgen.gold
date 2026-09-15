@@ -3610,11 +3610,16 @@ SBool d_FP_IsPositive(const SDouble sbv_input_0)
 #include <stdbool.h>
 #include <string.h>
 #include <math.h>
+#include <float.h>
+#if FLT_EVAL_METHOD != 0
+#error "SBV-generated C requires FLT_EVAL_METHOD == 0; excess-precision floating evaluation is unsupported."
+#endif
 
 /* Floating-point calling convention:
  * Enter generated code in FE_TONEAREST (round-to-nearest, ties-to-even).
  * Callbacks must preserve this mode before returning or re-entering.
  * Generated code does not check or change the hardware rounding mode.
+ * Custom builds must disable implicit FP contraction, including at LTO link time.
  */
 
 /* The boolean type */

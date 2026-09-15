@@ -43,6 +43,7 @@ veryclean: clean
  * Enter generated code in FE_TONEAREST (round-to-nearest, ties-to-even).
  * Callbacks must preserve this mode before returning or re-entering.
  * Generated code does not check or change the hardware rounding mode.
+ * Custom builds must disable implicit FP contraction, including at LTO link time.
  */
 
 /* The boolean type */

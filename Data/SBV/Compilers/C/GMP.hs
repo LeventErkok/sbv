@@ -118,7 +118,7 @@ gmpRuntime cfg kinds assignments
   | True                                            = text . unlines . map markUnused $
       commonRuntime
    ++ [""]
-   ++ concat [integerRuntime  | needsExactInteger]
+   ++ concat [integerRuntime needsIntegerShifts | needsExactInteger]
    ++ concat [realRuntime     | needsExactQuotient]
    ++ concat [rationalRuntime cfg | needsRational]
    ++ concat [crossRuntime    | needsExactInteger && needsExactQuotient]
@@ -131,6 +131,15 @@ gmpRuntime cfg kinds assignments
        needsExactQuotient  = needsExactReal || needsRational
        conversions         = nub (concatMap wideIntegerConversions assignments)
        quotientConversions = nub (concatMap wideQuotientConversions assignments)
+       needsIntegerShifts = any integerShift assignments
+       integerShift (result, SBVApp operation _)
+         | kindOf result == KUnbounded = case operation of
+             Shl   -> True
+             Shr   -> True
+             Rol{} -> True
+             Ror{} -> True
+             _     -> False
+         | True = False
 
        markUnused line = case stripPrefix "static " line of
                            Just rest -> "static SBV_CGEN_UNUSED " ++ rest
@@ -538,15 +547,6 @@ commonRuntime =
   , "  }"
   , "}"
   , ""
-  , "static const void *sbv_gmp_ctx_retain_empty(const void *context)"
-  , "{"
-  , "  (void) context;"
-  , "  sbv_gmp_ctx *owned = (sbv_gmp_ctx *) malloc(sizeof(*owned));"
-  , "  if (owned == NULL) abort();"
-  , "  owned->head = NULL;"
-  , "  return owned;"
-  , "}"
-  , ""
   , "static void sbv_gmp_ctx_release_owned(const void *context)"
   , "{"
   , "  sbv_gmp_ctx *owned = (sbv_gmp_ctx *) context;"
@@ -555,9 +555,10 @@ commonRuntime =
   , "}"
   ]
 
--- | Runtime helpers for exact unbounded integers.
-integerRuntime :: [String]
-integerRuntime =
+-- | Runtime helpers for exact unbounded integers. Raw low-level shift nodes
+-- need additional helpers; ordinary SBV integer programs do not emit them.
+integerRuntime :: Bool -> [String]
+integerRuntime includeShifts =
   ["static SInteger sbv_gmp_integer_const(sbv_gmp_ctx *ctx, const char *value)"
   , "{ mpz_ptr r = sbv_gmp_new_integer(ctx); if (mpz_set_str(r, value, 10) != 0) abort(); return r; }"
   , ""
@@ -619,7 +620,9 @@ integerRuntime =
      , "  mpz_clear(power); mpz_clear(factor); return result;"
      , "}"
      , ""
-     , "static SInteger sbv_gmp_integer_shift(sbv_gmp_ctx *ctx, SInteger a, SInteger amount, bool left)"
+     ]
+  ++ [line | includeShifts, line <-
+     [ "static SInteger sbv_gmp_integer_shift(sbv_gmp_ctx *ctx, SInteger a, SInteger amount, bool left)"
      , "{"
      , "  mpz_ptr r = sbv_gmp_new_integer(ctx); mpz_t magnitude; bool effective_left = left;"
      , "  mpz_init(magnitude); mpz_abs(magnitude, amount);"
@@ -641,6 +644,7 @@ integerRuntime =
      , "static SInteger sbv_gmp_integer_shr(sbv_gmp_ctx *ctx, SInteger a, SInteger amount)"
      , "{ return sbv_gmp_integer_shift(ctx, a, amount, false); }"
      , ""
+     ]
      ]
  where integerUnary (suffix, operation) =
          ["static SInteger sbv_gmp_integer_" ++ suffix ++ "(sbv_gmp_ctx *ctx, SInteger a)"

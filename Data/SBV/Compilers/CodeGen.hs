@@ -10,6 +10,7 @@
 -----------------------------------------------------------------------------
 
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
+{-# LANGUAGE PatternSynonyms           #-}
 
 {-# OPTIONS_GHC -Wall -Werror #-}
 
@@ -34,7 +35,8 @@ module Data.SBV.Compilers.CodeGen (
         , cgIntegerSize, cgSRealType, CgSRealType(..)
 
         -- * Infrastructure
-        , CgTarget(..), CgConfig(..), CgState(..), CgPgmBundle(..), CgPgmKind(..), CgCHeader(..), CgVal(..)
+        , CgTarget(..), CgConfig(..), CgState(..), CgPgmBundle(..)
+        , CgPgmKind(CgMakefile, CgHeader, CgCHeader, CgSource, CgDriver), CgCHeader(..), CgVal(..)
         , defaultCgConfig, initCgState, isCgDriver, isCgMakefile
 
         -- * Generating collateral
@@ -411,13 +413,27 @@ data CgPgmBundle = CgPgmBundle (Maybe Int, Maybe CgSRealType) [(FilePath, (CgPgm
 
 -- | Different kinds of "files" we can produce. Currently this is quite "C" specific.
 data CgPgmKind = CgMakefile [String]  -- list of flags to pass to linker
-               | CgHeader [Doc]
-               | CgCHeader CgCHeader
+               | CgHeaderInternal [Doc] (Maybe CgCHeader)
                | CgSource
                | CgDriver
 
+-- | Header signatures, as exposed by the original bundle interface. Matches
+-- headers from both backends; construction produces a header without private
+-- merge metadata. Existing four-way matches on 'CgPgmKind' remain exhaustive.
+pattern CgHeader :: [Doc] -> CgPgmKind
+pattern CgHeader signatures <- CgHeaderInternal signatures _
+  where CgHeader signatures = CgHeaderInternal signatures Nothing
+
+-- | Structured metadata for current-backend header merging. This is a more
+-- specific view of 'CgHeader', not an additional kind of generated file.
+pattern CgCHeader :: CgCHeader -> CgPgmKind
+pattern CgCHeader metadata <- CgHeaderInternal _ (Just metadata)
+  where CgCHeader metadata = CgHeaderInternal (cgHeaderSignatures metadata) (Just metadata)
+
+{-# COMPLETE CgMakefile, CgHeader, CgSource, CgDriver #-}
+
 -- | Structured C header metadata used when combining current-backend bundles.
--- The older 'CgHeader' constructor is retained for compatibility backends.
+-- 'CgHeader' provides the compatibility view for both backends.
 data CgCHeader = CgCHeaderInfo
   { cgHeaderFloating   :: Bool  -- ^ Requires IEEE floating-point compilation.
   , cgHeaderTypes      :: Doc   -- ^ Runtime type declarations.

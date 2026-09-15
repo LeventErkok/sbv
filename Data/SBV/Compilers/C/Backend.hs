@@ -11,7 +11,7 @@
 
 {-# LANGUAGE TupleSections #-}
 
-{-# OPTIONS_GHC -Wall -Werror -Wno-incomplete-uni-patterns #-}
+{-# OPTIONS_GHC -Wall -Werror #-}
 
 module Data.SBV.Compilers.C.Backend(compileToC, compileToCLib, compileToC', compileToCLib') where
 
@@ -20,7 +20,7 @@ import Control.DeepSeq                 (rnf)
 import Data.Char                       (isAsciiLower, isAsciiUpper, isDigit, isSpace, toLower)
 import qualified Data.Foldable         as F (toList)
 import qualified Data.Graph            as DG
-import Data.List                       (intercalate, intersperse, isPrefixOf, nub, nubBy, sortOn)
+import Data.List                       (intercalate, intersperse, isPrefixOf, nub, sortOn)
 import qualified Data.Map.Strict       as Map
 import Data.Maybe                      (fromJust, fromMaybe, isJust, isNothing)
 import qualified Data.Set              as Set (Set, difference, empty, fromList, insert, intersection, map, member, notMember, null, toList, union, unions)
@@ -141,6 +141,16 @@ compileToCLib' libName comps
 -- | Report each repeated name once, preserving its first occurrence order.
 duplicateNames :: [String] -> [String]
 duplicateNames names = [nm | nm <- nub names, length (filter (== nm) names) > 1]
+
+-- | Retain the first value for each key without repeated linear scans or
+-- repeated rendering of documents. Original order is significant in C output.
+uniqueOn :: Ord key => (value -> key) -> [value] -> [value]
+uniqueOn key = go Set.empty
+ where go _ [] = []
+       go seen (value:rest)
+         | valueKey `Set.member` seen = go seen rest
+         | True                       = value : go (Set.insert valueKey seen) rest
+         where valueKey = key value
 
 -- | Validate public C names before rendering. Use a portable ASCII spelling,
 -- excluding language keywords and namespaces owned by the generated runtime
@@ -627,11 +637,16 @@ genHeader floating (ik, rk) fn sigs protos extraTypes =
   $$ text "#include <stdbool.h>"
   $$ text "#include <string.h>"
   $$ text "#include <math.h>"
+  $$ (if floating then vcat [text "#include <float.h>"
+                           , text "#if FLT_EVAL_METHOD != 0"
+                           , text "#error \"SBV-generated C requires FLT_EVAL_METHOD == 0; excess-precision floating evaluation is unsupported.\""
+                           , text "#endif"] else empty)
   $$ text ""
   $$ text "/* Floating-point calling convention:"
   $$ text " * Enter generated code in FE_TONEAREST (round-to-nearest, ties-to-even)."
   $$ text " * Callbacks must preserve this mode before returning or re-entering."
   $$ text " * Generated code does not check or change the hardware rounding mode."
+  $$ text " * Custom builds must disable implicit FP contraction, including at LTO link time."
   $$ text " */"
   $$ text ""
   $$ text "/* The boolean type */"
@@ -1214,7 +1229,7 @@ genCProg cfg adts lists sets fn proto
   = notyet $ "Sets with element kinds " ++ intercalate ", " (map (show . setElementKind) unsupportedSets)
   | any (requiresExtensionalEquality adts (Equal True) . pure . setElementKind) sets
   = error "SBV->C: Set elements require general extensional array equality."
-  | any (\(KArray keyKind _) -> requiresExtensionalEquality adts (Equal True) [keyKind]) arrays
+  | or [requiresExtensionalEquality adts (Equal True) [keyKind] | KArray keyKind _ <- arrays]
   = error "SBV->C: Array keys require general extensional array equality."
   | any containsNestedSet kindInfo
   = notyet "Sets nested in arrays or unsupported aggregate types"
@@ -1392,7 +1407,7 @@ genCProg cfg adts lists sets fn proto
                                , let captures = cLambdaFreeValues lambdaInfo
                                , not (null captures)
                                ]
-       equalityArrayKinds     = nubBy (\left right -> arrayEqualName left == arrayEqualName right)
+       equalityArrayKinds     = uniqueOn arrayEqualName
                                     [kindOf value | (_, SBVApp op (value:_)) <- allAssignments
                                                 , op `elem` [Equal False, Equal True, NotEqual]
                                                 , isArray value]
@@ -1625,7 +1640,6 @@ genCProg cfg adts lists sets fn proto
                         | isUninterpreted k = die $ "Uninterpreted ADT: " ++ s
                         | True             = length (adtCType k)
 
-                      getMax 8 _      = 8  -- Preserve the historical declaration layout once native-width alignment is reached.
                       getMax m []     = m
                       getMax m (x:xs) = getMax (m `max` x) xs
 
@@ -2149,6 +2163,15 @@ cSpeculatable result (SBVApp op arguments) = all bitVector (result : arguments) 
          Join        -> True
          _           -> False
 
+-- | Path-sensitive scheduling facts. Tables, unlike hoisted values, are local
+-- to the C block that declares them. Memoized values accumulate across paths.
+data CAvailability = CAvailability
+  { definitelyAvailable :: Set.Set SV  -- ^ Values computed on every incoming path.
+  , possiblyAvailable   :: Set.Set SV  -- ^ Values computed on some incoming path.
+  , availableCTables    :: Set.Set Int -- ^ Tables declared in the current scope.
+  , memoizedValues      :: Set.Set SV  -- ^ Values requiring a runtime readiness check.
+  }
+
 -- | Schedule a collection of demanded values and their following statements.
 -- Branch-local work stays under its guard, while declarations are hoisted so
 -- values computed on both paths can safely be reused after the join. Root
@@ -2167,26 +2190,23 @@ scheduleC :: CgConfig
           -> (Doc, Set.Set CRequirement)
 scheduleC cfg adts functionNames lambdaNames constants initialValues assignments tables allowStatic typeWidth roots
   = (vcat eagerDocs $$ declarations $$ statements, Set.union requirements eagerRequirements)
- where (_, statements, requirements, extraDeclarations) = emitRoots (eagerValues, Set.empty) roots
-       declarations = vcat [typ <+> var <+> (if sv `Set.member` sharedValues then text "= {0}" else empty) P.<> semi
+ where (finished, statements, requirements, extraDeclarations) = emitRoots (CAvailability eagerValues eagerValues Set.empty Set.empty) roots
+       guardedValues = memoizedValues finished
+       declarations = vcat [typ <+> var <+> (if sv `Set.member` guardedValues then text "= {0}" else empty) P.<> semi
                            | (sv, _) <- assignments
                            , sv `Set.member` reachableValues
                            , sv `Set.notMember` eagerValues
                            , let (typ, var) = declSVNoConst typeWidth sv
                            ]
-                   $$ vcat [text "bool" <+> readyName sv <+> text "= false;" | sv <- Set.toList sharedValues]
-                   $$ vcat (nubBy (\left right -> render left == render right) extraDeclarations)
+                   $$ vcat [text "bool" <+> readyName sv <+> text "= false;" | sv <- Set.toList guardedValues]
+                   $$ vcat (uniqueOn render extraDeclarations)
 
        assignmentMap   = Map.fromList assignments
        reachableValues = cReachableValues cfg assignmentMap tables (map fst roots)
 
-       -- Static availability is deliberately intersected at joins. A shared
-       -- node can nevertheless have run on the selected path: remember that
-       -- fact at runtime, including for external calls and managed results.
-       sharedValues = Map.keysSet (Map.filter (> (1 :: Int)) useCounts) `Set.intersection`
-                      (reachableValues `Set.difference` eagerValues)
-       useCounts = Map.fromListWith (+) [(sv, 1) | sv <- map fst roots ++ concat
-                     [cExpressionDependencies cfg tables expression | (result, expression) <- assignments, result `Set.member` reachableValues]]
+       -- Rendering depends lazily on the completed analysis: first demands
+       -- set a flag only if a later, path-dependent demand actually tests it.
+       -- Scheduling facts never depend on these documents.
        readyName sv = text ("sbv_ready_" ++ show sv)
 
        (eagerValues, eagerReversed) = foldl speculate (Set.fromList initialValues, []) assignments
@@ -2214,18 +2234,21 @@ scheduleC cfg adts functionNames lambdaNames constants initialValues assignments
             , valueDeclarations ++ restDeclarations
             )
 
-       emit available@(availableValues, _) sv
-         | sv `Set.member` availableValues
+       emit available sv
+         | sv `Set.member` definitelyAvailable available
          = (available, empty, Set.empty, [])
          | True
          = let (after, docs, needed, decls) = emitAssignment available sv
+               marked = docs $$ if sv `Set.member` guardedValues then readyName sv <+> text "= true;" else empty
                guarded = text "if" P.<> parens (text "!" P.<> readyName sv)
                       $$ text "{"
-                      $$ nest 2 (docs $$ readyName sv <+> text "= true;")
+                      $$ nest 2 marked
                       $$ text "}"
-           in if sv `Set.member` sharedValues
-                then ((fst after, snd available), guarded, needed, decls)
-                else (after, docs, needed, decls)
+           in if sv `Set.member` possiblyAvailable available
+                then (after { availableCTables = availableCTables available
+                            , memoizedValues = Set.insert sv (memoizedValues after)
+                            }, guarded, needed, decls)
+                else (after, marked, needed, decls)
 
        emitAssignment available sv
          | Just expression@(SBVApp op arguments) <- Map.lookup sv assignmentMap
@@ -2267,9 +2290,9 @@ scheduleC cfg adts functionNames lambdaNames constants initialValues assignments
             , valueDeclarations ++ restDeclarations
             )
 
-       emitTable available@(_, availableTables) op
+       emitTable available op
          | LkUp (tableIndex, _, _, _) _ _ <- op
-         , tableIndex `Set.notMember` availableTables
+         , tableIndex `Set.notMember` availableCTables available
          = case [table | table@((candidateIndex, _, _), _) <- tables, candidateIndex == tableIndex] of
              [table] -> (insertAvailableTable tableIndex available, snd (ppTable cfg allowStatic constants table))
              _       -> die "Missing table while scheduling C evaluation"
@@ -2289,16 +2312,16 @@ scheduleC cfg adts functionNames lambdaNames constants initialValues assignments
                             _ -> die "Missing or inconsistent table while scheduling C evaluation"
                (nativeIndex, outOfRange) = tableIndexAndBounds cfg indexKind tableLength (showSV cfg constants index)
                checkedBounds = if tableNeedsBounds cfg indexKind then outOfRange else Nothing
-               entriesReady (values, _) = all (`Set.member` values) elements
+               entriesReady current = all (`Set.member` definitelyAvailable current) elements
 
                selectValue current
                  | entriesReady current
-                 , isNothing checkedBounds || defaultValue `Set.member` fst current
+                 , isNothing checkedBounds || defaultValue `Set.member` definitelyAvailable current
                  = renderLookup cfg current
                  | Just check <- checkedBounds
                  = let (withDefault, defaultDocs, defaultRequirements, defaultDeclarations) = emitChoice current defaultValue
                        (withEntry, entryDocs, entryRequirements, entryDeclarations) = selectEntry current
-                   in ( insertAvailableValue result (Set.intersection (fst withDefault) (fst withEntry), snd current)
+                   in ( insertAvailableValue result (joinAvailability current [withDefault, withEntry])
                       , text "if" P.<> parens check
                      $$ text "{" $$ nest 2 defaultDocs $$ text "}"
                      $$ text "else"
@@ -2311,7 +2334,7 @@ scheduleC cfg adts functionNames lambdaNames constants initialValues assignments
 
                selectEntry current
                  | entriesReady current
-                 , isNothing checkedBounds || defaultValue `Set.member` fst current
+                 , isNothing checkedBounds || defaultValue `Set.member` definitelyAvailable current
                  = renderLookup (cfg {cgRTC = False}) current
                  | True
                  = let cases = [(position, emitChoice current value) | (position, value) <- zip [0 :: Int ..] elements]
@@ -2319,10 +2342,8 @@ scheduleC cfg adts functionNames lambdaNames constants initialValues assignments
                                                            $$ text "{"
                                                            $$ nest 2 (docs $$ text "break;")
                                                            $$ text "}"
-                       availableAfter = case [fst values | (_, (values, _, _, _)) <- cases] of
-                                          []     -> fst current
-                                          (v:vs) -> foldl Set.intersection v vs
-                   in ( insertAvailableValue result (availableAfter, snd current)
+                       availableAfter = joinAvailability current [values | (_, (values, _, _, _)) <- cases]
+                   in ( insertAvailableValue result availableAfter
                       , text "switch" P.<> parens (text "(uint64_t)" <+> parens nativeIndex)
                      $$ text "{"
                      $$ nest 2 (vcat (map renderCase cases)
@@ -2367,18 +2388,16 @@ scheduleC cfg adts functionNames lambdaNames constants initialValues assignments
              needed = Set.unions [conditionRequirements, commonRequirements, trueRequirements, falseRequirements]
              -- Values are declared outside the branches, but branch-local C
              -- table declarations do not remain in scope after the join.
-             availableAfter = ( Set.intersection (fst withTrue) (fst withFalse)
-                              , snd withCommon
-                              )
+             availableAfter = joinAvailability withCommon [withTrue, withFalse]
              branchDeclarations = conditionDeclarations ++ commonDeclarations ++ trueDeclarations ++ falseDeclarations
          in (insertAvailableValue result availableAfter, docs, needed, branchDeclarations)
 
        -- Sharing a mandatory dependency is safe even for partial operations:
        -- either branch will demand it. Stop at nested guards rather than
        -- treating their inactive alternatives as mandatory dependencies.
-       mandatoryValues (availableValues, _) = walk Set.empty
+       mandatoryValues available = walk Set.empty
          where walk visited sv
-                 | sv `Set.member` availableValues || sv `Set.member` visited = visited
+                 | sv `Set.member` definitelyAvailable available || sv `Set.member` visited = visited
                  | True = foldl walk (Set.insert sv visited) dependencies
                  where dependencies = case Map.lookup sv assignmentMap of
                          Just (SBVApp Ite (condition:_)) -> [condition]
@@ -2388,9 +2407,19 @@ scheduleC cfg adts functionNames lambdaNames constants initialValues assignments
                          Just expression -> cExpressionDependencies cfg tables expression
                          Nothing         -> []
 
-       insertAvailableValue value (values, availableTables) = (Set.insert value values, availableTables)
+       joinAvailability current [] = current
+       joinAvailability current branches@(initial:rest) = current
+         { definitelyAvailable = foldl Set.intersection (definitelyAvailable initial) (map definitelyAvailable rest)
+         , possiblyAvailable = Set.unions (map possiblyAvailable branches)
+         , memoizedValues = Set.unions (map memoizedValues branches)
+         }
 
-       insertAvailableTable tableIndex (values, availableTables) = (values, Set.insert tableIndex availableTables)
+       insertAvailableValue value available = available
+         { definitelyAvailable = Set.insert value (definitelyAvailable available)
+         , possiblyAvailable = Set.insert value (possiblyAvailable available)
+         }
+
+       insertAvailableTable tableIndex available = available {availableCTables = Set.insert tableIndex (availableCTables available)}
 
 -- | Give a lambda-lifted array callback a name unique to its lexical owner.
 scopedArrayLambdaName :: String -> SV -> String
@@ -2572,6 +2601,15 @@ handleIEEE w consts as var = cvt w
   where same f                   = (f, f)
         named fnm dnm f          = (f fnm, f dnm)
 
+        unary f [a]         = f a
+        unary _ args        = wrongArity 1 args
+        binary f [a, b]     = f a b
+        binary _ args       = wrongArity 2 args
+        ternary f [a, b, c] = f a b c
+        ternary _ args      = wrongArity 3 args
+        wrongArity expected args = die $ "Native floating-point operation " ++ show w ++ " expects "
+                                      ++ show (expected :: Int) ++ " arguments, received " ++ show (length args)
+
         cvt FP_Cast{} = die "Floating-point cast escaped the exact cast lowering pipeline"
 
         cvt (FP_Reinterpret f t) = case (f, t) of
@@ -2580,29 +2618,28 @@ handleIEEE w consts as var = cvt w
                                      (KFloat,  KBounded False 32) -> cast $ cpy "sizeof(SWord32)"
                                      (KDouble, KBounded False 64) -> cast $ cpy "sizeof(SWord64)"
                                      _                            -> die $ "Reinterpretation from : " ++ show f ++ " to " ++ show t
-                                    where cpy sz = \[a] -> let alhs = text "&" P.<> var
-                                                               arhs = text "&" P.<> a
-                                                           in text "memcpy" P.<> parens (fsep (punctuate comma [alhs, arhs, text sz]))
-        cvt FP_Abs               = dispatch $ named "fabsf" "fabs" $ \nm _ [a] -> text nm P.<> parens a
-        cvt FP_Neg               = dispatch $ same $ \_ [a] -> text "-" P.<> a
-        cvt FP_Add               = dispatch $ same $ \_ [a, b] -> a <+> text "+" <+> b
-        cvt FP_Sub               = dispatch $ same $ \_ [a, b] -> a <+> text "-" <+> b
-        cvt FP_Mul               = dispatch $ same $ \_ [a, b] -> a <+> text "*" <+> b
-        cvt FP_Div               = dispatch $ same $ \_ [a, b] -> a <+> text "/" <+> b
-        cvt FP_FMA               = dispatch $ named "fmaf"  "fma"  $ \nm _ [a, b, c] -> text nm P.<> parens (fsep (punctuate comma [a, b, c]))
-        cvt FP_Sqrt              = dispatch $ named "sqrtf" "sqrt" $ \nm _ [a]       -> text nm P.<> parens a
-        cvt FP_Rem               = dispatch $ named "remainderf" "remainder" $ \nm _ [a, b] -> text nm P.<> parens (fsep (punctuate comma [a, b]))
-        cvt FP_RoundToIntegral   = dispatch $ named "rintf" "rint" $ \nm _ [a]       -> text nm P.<> parens a
-        cvt FP_Min               = dispatch $ named "fminf" "fmin" $ \nm k [a, b]    -> wrapMinMax k a b (text nm P.<> parens (fsep (punctuate comma [a, b])))
-        cvt FP_Max               = dispatch $ named "fmaxf" "fmax" $ \nm k [a, b]    -> wrapMinMax k a b (text nm P.<> parens (fsep (punctuate comma [a, b])))
-        cvt FP_ObjEqual          = dispatch $ same $ \_ [a, b] -> nativeFPObjectEqual a b
-        cvt FP_IsNormal          = dispatch $ same $ \_ [a] -> text "isnormal" P.<> parens a
-        cvt FP_IsSubnormal       = dispatch $ same $ \_ [a] -> text "FP_SUBNORMAL == fpclassify" P.<> parens a
-        cvt FP_IsZero            = dispatch $ same $ \_ [a] -> text "FP_ZERO == fpclassify" P.<> parens a
-        cvt FP_IsInfinite        = dispatch $ same $ \_ [a] -> text "isinf" P.<> parens a
-        cvt FP_IsNaN             = dispatch $ same $ \_ [a] -> text "isnan" P.<> parens a
-        cvt FP_IsNegative        = dispatch $ same $ \_ [a] -> text "!isnan" P.<> parens a <+> text "&&" <+> text "signbit"  P.<> parens a
-        cvt FP_IsPositive        = dispatch $ same $ \_ [a] -> text "!isnan" P.<> parens a <+> text "&&" <+> text "!signbit" P.<> parens a
+                                    where cpy sz = unary $ \a -> text "memcpy" P.<> parens (fsep (punctuate comma
+                                                                 [text "&" P.<> var, text "&" P.<> a, text sz]))
+        cvt FP_Abs               = dispatch $ named "fabsf" "fabs" $ \nm _ -> unary $ \a -> text nm P.<> parens a
+        cvt FP_Neg               = dispatch $ same $ \_ -> unary $ \a -> text "-" P.<> a
+        cvt FP_Add               = dispatch $ same $ \_ -> binary $ \a b -> a <+> text "+" <+> b
+        cvt FP_Sub               = dispatch $ same $ \_ -> binary $ \a b -> a <+> text "-" <+> b
+        cvt FP_Mul               = dispatch $ same $ \_ -> binary $ \a b -> a <+> text "*" <+> b
+        cvt FP_Div               = dispatch $ same $ \_ -> binary $ \a b -> a <+> text "/" <+> b
+        cvt FP_FMA               = dispatch $ named "fmaf"  "fma"  $ \nm _ -> ternary $ \a b c -> text nm P.<> parens (fsep (punctuate comma [a, b, c]))
+        cvt FP_Sqrt              = dispatch $ named "sqrtf" "sqrt" $ \nm _ -> unary $ \a       -> text nm P.<> parens a
+        cvt FP_Rem               = dispatch $ named "remainderf" "remainder" $ \nm _ -> binary $ \a b -> text nm P.<> parens (fsep (punctuate comma [a, b]))
+        cvt FP_RoundToIntegral   = dispatch $ named "rintf" "rint" $ \nm _ -> unary $ \a       -> text nm P.<> parens a
+        cvt FP_Min               = dispatch $ named "fminf" "fmin" $ \nm k -> binary $ \a b    -> wrapMinMax k a b (text nm P.<> parens (fsep (punctuate comma [a, b])))
+        cvt FP_Max               = dispatch $ named "fmaxf" "fmax" $ \nm k -> binary $ \a b    -> wrapMinMax k a b (text nm P.<> parens (fsep (punctuate comma [a, b])))
+        cvt FP_ObjEqual          = dispatch $ same $ \_ -> binary $ \a b -> nativeFPObjectEqual a b
+        cvt FP_IsNormal          = dispatch $ same $ \_ -> unary $ \a -> text "isnormal" P.<> parens a
+        cvt FP_IsSubnormal       = dispatch $ same $ \_ -> unary $ \a -> text "FP_SUBNORMAL == fpclassify" P.<> parens a
+        cvt FP_IsZero            = dispatch $ same $ \_ -> unary $ \a -> text "FP_ZERO == fpclassify" P.<> parens a
+        cvt FP_IsInfinite        = dispatch $ same $ \_ -> unary $ \a -> text "isinf" P.<> parens a
+        cvt FP_IsNaN             = dispatch $ same $ \_ -> unary $ \a -> text "isnan" P.<> parens a
+        cvt FP_IsNegative        = dispatch $ same $ \_ -> unary $ \a -> text "!isnan" P.<> parens a <+> text "&&" <+> text "signbit"  P.<> parens a
+        cvt FP_IsPositive        = dispatch $ same $ \_ -> unary $ \a -> text "!isnan" P.<> parens a <+> text "&&" <+> text "!signbit" P.<> parens a
 
         -- grab the rounding-mode, if present, and make sure it's RoundNearestTiesToEven. Otherwise skip.
         fpArgs = case as of
@@ -2775,7 +2812,8 @@ ppExpr cfg adts functionNames structuredLambdaNames consts (SBVApp op opArgs) re
           | needsCheckL                = cndLkUp checkLeft
           | needsCheckR                = cndLkUp checkRight
           | True                       = lkUp
-          where [index, defVal] = map (showSV cfg consts) [ind, def]
+          where index  = showSV cfg consts ind
+                defVal = showSV cfg consts def
 
                 lkUp = text "table" P.<> int t P.<> brackets renderedIndex
                 cndLkUp cnd = cnd <+> text "?" <+> defVal <+> text ":" <+> lkUp
@@ -3036,8 +3074,10 @@ align ds = map (text . pad) ss
         l     = maximum (0 : map length ss)
         pad s = replicate (l - length s) ' ' ++ s
 
--- | Merge a bunch of bundles to generate code for a library. For the final
--- config, we simply return the first config we receive, or the default if none.
+-- | Merge component bundles. Code-generation options have already been
+-- applied per component; the returned config describes the merged artifacts
+-- and permits overwriting only when every component explicitly permits it.
+-- Other returned settings are representative of the first component.
 mergeToLib :: String -> [(CgConfig, CgPgmBundle)] -> (CgConfig, CgPgmBundle)
 mergeToLib libName cfgBundles
   | length nubKinds /= 1
@@ -3057,9 +3097,9 @@ mergeToLib libName cfgBundles
                         []   -> error "Data.SBV.C: Impossible happened: mergeLibs: kinds ended up being empty!"
         files       = concat [fs | CgPgmBundle _ fs <- bundles]
         headerMeta  = [metadata | (_, (CgCHeader metadata, _)) <- files]
-        typeDecls   = nubBy sameDoc (map cgHeaderTypes headerMeta)
+        typeDecls   = uniqueOn render (map cgHeaderTypes headerMeta)
         sigs        = concatMap cgHeaderSignatures headerMeta
-        extProtos   = vcat $ nubBy sameDoc (map cgHeaderPrototypes headerMeta)
+        extProtos   = vcat $ uniqueOn render (map cgHeaderPrototypes headerMeta)
         floating    = any cgHeaderFloating headerMeta
         anyMake     = any (cgGenMakefile . fst) cfgBundles
         drivers     = [(takeBaseName sourceName, ds)
@@ -3083,9 +3123,10 @@ mergeToLib libName cfgBundles
         duplicateSymbols = duplicateNames $ map takeBaseName sourceNms ++ [fn ++ "_driver" | (fn, _) <- drivers] ++ ["main" | anyDriver]
         finalCfg    = case cfgBundles of
                         []         -> defaultCgConfig
-                        ((c, _):_) -> c
-
-        sameDoc left right = render left == render right
+                        ((c, _):_) -> c { cgGenDriver = anyDriver
+                                        , cgGenMakefile = anyMake
+                                        , cgOverwriteGenerated = all (cgOverwriteGenerated . fst) cfgBundles
+                                        }
 
 -- | Create a Makefile for the library
 genLibMake :: Bool -> Bool -> String -> [String] -> [String] -> Doc

@@ -216,7 +216,9 @@ Compile generated code with settings that preserve IEEE floating-point
 semantics; this precondition does not permit fast-math transformations that
 discard NaNs, signed zeros, or required rounding steps.
 Generated headers reject detectable fast-math and finite-math-only compiler
-modes. Generated Makefiles append @-ffp-contract=off@ after user compiler flags
+modes, and floating-point programs require @FLT_EVAL_METHOD == 0@ so native
+expressions do not acquire excess evaluation precision. Generated Makefiles
+append @-ffp-contract=off@ after user compiler flags
 when compiling and linking, so separate SBV operations cannot be silently fused.
 Custom build systems must disable implicit contraction as well, including at
 LTO link time; source pragmas alone are insufficient with some compiler options.
