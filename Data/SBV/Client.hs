@@ -56,9 +56,9 @@ import Language.Haskell.TH.ExpandSyns as TH
 
 import Data.SBV.Core.Concrete (cvRank)
 import Data.SBV.Core.Data
+import Data.SBV.Core.Kind (withADTDependencies)
 import Data.SBV.Core.Model
 import Data.SBV.Core.SizedFloats
-import Data.SBV.Core.Symbolic (registerKind)
 
 import Data.SBV.Provers.Prover
 import qualified Data.SBV.List as SL
@@ -108,9 +108,6 @@ deriving instance TH.Lift (TH.TyVarBndr TH.Specificity)
 deriving instance TH.Lift (TH.TyVarBndr ())
 deriving instance TH.Lift TH.TyLit
 #endif
-
--- A few other things we need to TH lift
-deriving instance TH.Lift Kind
 
 data ADTKind = ADTUninterpreted -- Completely uninterpreted
              | ADTEnum          -- Enumeration
@@ -274,24 +271,15 @@ mkADT adtKind typeName params cstrs = do
                        in [| Just ($minb, $maxb) |]
                   else [| Nothing |]
 
-    -- make the initializer to get the subtypes registered
-    st <- TH.newName "_st"  -- Get an underscored name here, since st might go unused if there're no subtypes
-    register <- do dependencies <- adtRegistrationTypes typeName
-                   end <- TH.noBindS [| pure () |]
-                   pure $ TH.DoE Nothing $ [TH.NoBindS (TH.AppE (TH.AppE (TH.VarE 'registerKind) (TH.VarE st))
-                                                                (TH.AppE (TH.VarE 'kindOf)
-                                                                         (TH.AppTypeE (TH.ConE 'Proxy) t)))
-                                           | t <- dependencies
-                                           ] ++ [end]
-
-    let regFun = TH.FunD 'mkSymValInit [TH.Clause [TH.VarP st, TH.WildP] (TH.NormalB register) []]
+    -- Retain declarations on the kind so literals and symbolic variables take
+    -- the same registration path, including beneath containers.
+    dependencies <- adtRegistrationTypes typeName
 
     let symVal = TH.InstanceD
                       Nothing
                       symCtx
                       (TH.AppT (TH.ConT ''SymVal) typeCon)
                       [ litFun
-                      , regFun
                       , TH.FunD 'minMaxBound [TH.Clause [] (TH.NormalB mmBound)   []]
                       , TH.FunD 'fromCV      [TH.Clause [] (TH.NormalB getFromCV) []]
                        ]
@@ -314,7 +302,11 @@ mkADT adtKind typeName params cstrs = do
                         Nothing
                         kindCtx
                         (TH.AppT (TH.ConT ''HasKind) typeCon)
-                        [TH.FunD 'kindOf [TH.Clause [TH.WildP] (TH.NormalB kindDef) []]]
+                        [TH.FunD 'kindOf [TH.Clause [TH.WildP] (TH.NormalB completeKindDef) []]]
+
+        completeKindDef = TH.AppE (TH.AppE (TH.VarE 'withADTDependencies)
+                                          (TH.ListE [TH.AppE (TH.VarE 'kindOf) (TH.AppTypeE (TH.ConE 'Proxy) t) | t <- dependencies]))
+                                 kindDef
 
     hasArbitrary <- TH.isInstance ''Arbitrary [typeCon]
     arbDecl <- case () of
@@ -587,7 +579,7 @@ dissect typeName = do
 
         pure (k, args, cs)
 
--- | Find all ADT definitions needed by a generated symbolic initializer, including
+-- | Find all ADT definitions needed by a generated kind, including
 -- references nested in containers and dependencies of those references. Visit each
 -- type constructor once so recursive and mutually recursive declarations terminate.
 -- Registration needs only the datatype schema: replace free type variables with
@@ -601,6 +593,9 @@ adtRegistrationTypes root = dependencies root >>= collect [root]
                      rest   <- collect (nm : seen) (pending ++ nested)
                      pure (concretize ty : rest)
 
+       -- Integer is only a registration placeholder used to obtain a schema,
+       -- not the program's instantiation; actual type arguments are substituted
+       -- separately when the schema is used.
        concretize TH.VarT{}       = TH.ConT ''Integer
        concretize (TH.AppT l arg) = TH.AppT (concretize l) (concretize arg)
        concretize ty              = ty

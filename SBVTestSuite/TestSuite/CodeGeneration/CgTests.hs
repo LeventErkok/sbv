@@ -21,6 +21,7 @@
 module TestSuite.CodeGeneration.CgTests(tests) where
 
 import Control.Exception (ErrorCall, displayException, evaluate, try)
+import Control.DeepSeq (force)
 import Control.Monad (forM, forM_, unless, void, when)
 import qualified Data.Bifunctor as B
 import Data.List (isInfixOf)
@@ -181,6 +182,7 @@ tests = testGroup "CodeGeneration.CgTests"
   , testCase "evaluate shared external calls at most once on each path" guardedExternalSharing
   , testCase "force and execute a deep memoized chain beneath nested branches" deepGuardedSharing
   , testCase "reuse the full ADT registry for nested and leaf-only literals" sharedADTConstantRegistry
+  , testCase "register ADT dependencies without symbolic ADT inputs" literalADTRegistration
   , testCase "straight-line sharing needs no runtime readiness flags" straightLineSharing
   , testCase "text arena rejects allocation-size overflow" textAllocationOverflow
   , testCase "shared arenas preserve allocation and cleanup contracts" ownershipArenaChecks
@@ -794,6 +796,49 @@ sharedADTConstantRegistry = mapM_ check [0, 1]
          let expected | seed == 0 = "CGEvenStep(CGOddStep(CGEvenEnd(9)))"
                       | True      = "CGEvenEnd(7)"
          assertBool outputText (expected `isInfixOf` outputText)
+
+-- | Literal-only ADTs retain their complete declarations without an ADT input
+-- or explicit registration. Metadata remains finite and does not affect kind
+-- identity, structural traversal, or constant folding, even under containers.
+literalADTRegistration :: Assertion
+literalADTRegistration = do
+  let leaf     = literal (CGEvenEnd 7)
+      rootKind = kindOf leaf
+  assertEqual "The leaf remains concrete" (Just "CGEvenEnd 7") (show <$> unliteral leaf)
+  assertEqual "The symbolic constructor remains concrete" (Just "CGEvenEnd 7") (show <$> unliteral (sCGEvenEnd 7))
+  void $ evaluate (force rootKind)
+  case rootKind of
+    KADT typeName parameters constructors -> do
+      let bare = KADT typeName parameters constructors
+      assertEqual "Metadata preserves kind equality" bare rootKind
+      assertEqual "Metadata preserves kind ordering" EQ (compare bare rootKind)
+      assertEqual "Metadata is not part of structural kind traversal" (expandKinds bare) (expandKinds rootKind)
+    _ -> assertFailure "Expected an ADT kind"
+  let parameterKind = kindOf (Proxy @(CodeGenEnvelope Word8))
+  assertEqual "Substitution must not enter independent declaration scopes"
+              (adtKindDependencies parameterKind)
+              (adtKindDependencies (substituteADTVars "CodeGenEnvelope" [("a", KBounded False 8)] parameterKind))
+  forM_ [ ("literalLeaf", cgReturn leaf, "CGEvenEnd(7)")
+        , ("constructorLeaf", cgReturn (sCGEvenEnd 7), "CGEvenEnd(7)")
+        , ("literalLeaves", cgReturn (literal [CGEvenEnd 7]), "CGEvenEnd(7)")
+        , ("literalEmptyLeaves", cgReturn (literal [] :: SList CodeGenEven), "")
+        , ("literalTupleLeaf", cgReturn (literal (CGEvenEnd 7, True)), "CGEvenEnd(7)")
+        , ("literalArrayLeaf", cgReturn (constArray leaf :: SArray Word8 CodeGenEven), "CGEvenEnd(7)")
+        ] $ \(entry, program, expected) -> withSystemTempDirectory "sbv-literal-adt" $ \dir -> do
+          outputText <- compileProgramAndRunGenerated dir entry program
+          headerText <- readFile (dir </> entry ++ ".h")
+          assertBool outputText (expected `isInfixOf` outputText)
+          assertBool "The unused partner still needs a declaration"
+                     ("typedef struct SBVADT_CodeGenOdd SBVADT_CodeGenOdd;" `isInfixOf` headerText)
+  withSystemTempDirectory "sbv-literal-adt-parameter" $ \dir -> do
+    outputText <- compileProgramAndRunGenerated dir "literalEnvelope" $
+      cgReturn (literal CGNoEnvelope :: SCodeGenEnvelope Word8)
+    headerText <- readFile (dir </> "literalEnvelope.h")
+    assertBool outputText ("CGNoEnvelope" `isInfixOf` outputText)
+    assertBool "The unused constructor must instantiate its dependency at Word8"
+               ("SBVADT_CodeGenADT_2_u8" `isInfixOf` headerText)
+    assertBool "The placeholder registration schema is not the generated ADT"
+               (not ("SBVADT_CodeGenADT_7_integer" `isInfixOf` headerText))
 
 -- | The original four-way file-kind match must stay exhaustive under -Werror
 -- and expose signatures for current and legacy generated headers alike.

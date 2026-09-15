@@ -50,7 +50,8 @@
 
   * ADTs containing other ADTs inside tuples, lists, sets, or arrays no longer
     need unrelated uses or explicit type registration to work reliably.
-    This also applies to named and unnamed query-mode fresh variables.
+    This also applies to literal-only computations and to named and unnamed
+    query-mode fresh variables.
 
   * Functions defined with `smtFunction` and its variants can now be first used
     in query mode without calling `registerFunction` beforehand.

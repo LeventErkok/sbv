@@ -1586,7 +1586,7 @@ registerKind st k
          KString   {}    -> pure ()
 
          KApp _ ks       -> mapM_ (registerKind st) ks
-         KADT _ pks cks  -> mapM_ (registerKind st) (map snd pks ++ concatMap snd cks)
+         KADT _ pks cks  -> mapM_ (registerKind st) (map snd pks ++ concatMap snd cks ++ adtKindDependencies k)
          KList     ek    -> registerKind st ek
          KSet      ek    -> registerKind st ek
          KTuple    eks   -> mapM_ (registerKind st) eks
