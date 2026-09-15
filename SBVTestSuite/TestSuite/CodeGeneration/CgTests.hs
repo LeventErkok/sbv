@@ -184,6 +184,7 @@ tests = testGroup "CodeGeneration.CgTests"
   , testCase "straight-line sharing needs no runtime readiness flags" straightLineSharing
   , testCase "text arena rejects allocation-size overflow" textAllocationOverflow
   , testCase "shared arenas preserve allocation and cleanup contracts" ownershipArenaChecks
+  , testCase "empty concatenation borrows internally and owns outputs" emptyConcatenation
   , testCase "original bundle header patterns cover both backends" compatibleHeaderPatterns
   , testCase "merged configuration describes artifacts and protects existing files" mergedConfiguration
   , testCase "reject excess-precision floating-point compilation" excessFloatingPrecision
@@ -984,6 +985,72 @@ ownershipArenaChecks = withSystemTempDirectory "sbv-ownership-arenas" $ \dir -> 
   forM_ [1 :: Int .. 7] $ \scenario -> do
     (runExit, _, runError) <- readProcessWithExitCode (dir </> "ownershipArenas") [show scenario] ""
     assertBool ("Expected arena size check " ++ show scenario ++ " to abort: " ++ runError) (runExit /= ExitSuccess)
+
+-- | Runtime-empty operands require no arena allocation for text, scalar lists,
+-- or lists of owned strings. Public outputs must still be independent copies,
+-- including when both operands are nonempty or contain embedded NULs and UTF-8.
+emptyConcatenation :: Assertion
+emptyConcatenation = withSystemTempDirectory "sbv-empty-concat" $ \dir -> do
+  compileToC (Just dir) "emptyConcat" $ do
+    cgGenerateDriver False
+    textLeft   <- cgInput "textLeft"   :: SBVCodeGen SString
+    textRight  <- cgInput "textRight"  :: SBVCodeGen SString
+    listLeft   <- cgInput "listLeft"   :: SBVCodeGen (SList Word32)
+    listRight  <- cgInput "listRight"  :: SBVCodeGen (SList Word32)
+    ownedLeft  <- cgInput "ownedLeft"  :: SBVCodeGen (SList String)
+    ownedRight <- cgInput "ownedRight" :: SBVCodeGen (SList String)
+    cgOutput "textCopy"  (textLeft SL.++ textRight)
+    cgOutput "listCopy"  (listLeft SL.++ listRight)
+    cgOutput "ownedCopy" (ownedLeft SL.++ ownedRight)
+  appendFile (dir </> "emptyConcat.c") $ unlines
+    [ "#include <assert.h>"
+    , "int main(void) {"
+    , "  for (unsigned scenario = 0; scenario < 4; ++scenario) {"
+    , "    sbv_text_ctx text_ctx = {NULL}; sbv_list_ctx list_ctx = {NULL};"
+    , "    uint8_t bytes[] = {0xc3, 0xa9, 0}; SWord32 numbers[] = {7, 11};"
+    , "    SString text_value = sbv_string_borrow(bytes, 3, 2);"
+    , "    SString text_empty = sbv_string_borrow(NULL, 0, 0);"
+    , "    SBVList_u32 list_value = {numbers, 2}, list_empty = {NULL, 0};"
+    , "    SBVList_string owned_value = {&text_value, 1}, owned_empty = {NULL, 0};"
+    , "    SString text_left = (scenario & 1) ? text_value : text_empty;"
+    , "    SString text_right = (scenario & 2) ? text_value : text_empty;"
+    , "    SBVList_u32 list_left = (scenario & 1) ? list_value : list_empty;"
+    , "    SBVList_u32 list_right = (scenario & 2) ? list_value : list_empty;"
+    , "    SBVList_string owned_left = (scenario & 1) ? owned_value : owned_empty;"
+    , "    SBVList_string owned_right = (scenario & 2) ? owned_value : owned_empty;"
+    , "    SString text_result = sbv_text_concat(&text_ctx, text_left, text_right);"
+    , "    SBVList_u32 list_result = sbv_list_u32_concat(&list_ctx, list_left, list_right);"
+    , "    SBVList_string owned_result = sbv_list_string_concat(&list_ctx, owned_left, owned_right);"
+    , "    const size_t copies = ((scenario & 1) != 0) + ((scenario & 2) != 0);"
+    , "    assert(text_result.byte_length == 3 * copies && text_result.length == 2 * copies);"
+    , "    assert(list_result.length == 2 * copies && owned_result.length == copies);"
+    , "    if (scenario != 3) {"
+    , "      assert(text_ctx.head == NULL && list_ctx.head == NULL);"
+    , "      assert(text_result.data == (scenario == 0 ? NULL : bytes));"
+    , "      assert(list_result.data == (scenario == 0 ? NULL : numbers));"
+    , "      assert(owned_result.data == (scenario == 0 ? NULL : &text_value));"
+    , "    } else {"
+    , "      assert(text_ctx.head != NULL && list_ctx.head != NULL);"
+    , "    }"
+    , "    sbv_text_ctx_end(&text_ctx); sbv_list_ctx_end(&list_ctx);"
+    , "    SString text_copy; SBVList_u32 list_copy; SBVList_string owned_copy;"
+    , "    emptyConcat(text_left, text_right, list_left, list_right, owned_left, owned_right,"
+    , "                &text_copy, &list_copy, &owned_copy);"
+    , "    bytes[0] = 'x'; numbers[0] = 99;"
+    , "    assert(text_copy.byte_length == 3 * copies && text_copy.length == 2 * copies);"
+    , "    assert(list_copy.length == 2 * copies && owned_copy.length == copies);"
+    , "    for (size_t i = 0; i < copies; ++i) {"
+    , "      assert(text_copy.data[3 * i] == 0xc3 && text_copy.data[3 * i + 1] == 0xa9 && text_copy.data[3 * i + 2] == 0);"
+    , "      assert(list_copy.data[2 * i] == 7 && list_copy.data[2 * i + 1] == 11);"
+    , "      assert(owned_copy.data[i].byte_length == 3 && owned_copy.data[i].length == 2);"
+    , "      assert(owned_copy.data[i].data[0] == 0xc3 && owned_copy.data[i].data[1] == 0xa9 && owned_copy.data[i].data[2] == 0);"
+    , "    }"
+    , "    sbv_string_release(&text_copy); sbv_list_release_u32(&list_copy); sbv_list_release_string(&owned_copy);"
+    , "  }"
+    , "  return 0;"
+    , "}"
+    ]
+  runEmbeddedCaller dir "emptyConcat"
 
 -- | Sharing non-speculatable arithmetic in a straight-line program needs one
 -- assignment, not a zero initializer, readiness flag, or conditional wrapper.

@@ -494,6 +494,8 @@ listKindRuntime cfg usesExactInteger kind@(KList elementKind) =
   , "static " ++ listType ++ " " ++ helper "concat" ++ "(sbv_list_ctx *ctx, " ++ listType ++ " left, " ++ listType ++ " right)"
   , "{"
   , "  if (right.length > SIZE_MAX - left.length) abort();"
+  , "  if (left.length == 0) return right;"
+  , "  if (right.length == 0) return left;"
   , "  const size_t length = left.length + right.length;"
   , "  " ++ elementType ++ " *data = (" ++ elementType ++ " *) sbv_list_alloc(ctx, length, sizeof(*data));"
   , "  if (left.length != 0) memcpy(data, left.data, left.length * sizeof(*data));"

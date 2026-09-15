@@ -391,6 +391,8 @@ commonRuntime = arenaRuntime TextArena ++
   , "static SString sbv_text_concat(sbv_text_ctx *ctx, SString left, SString right)"
   , "{"
   , "  if (SIZE_MAX - left.byte_length < right.byte_length || SIZE_MAX - left.length < right.length) abort();"
+  , "  if (left.byte_length == 0) return right;"
+  , "  if (right.byte_length == 0) return left;"
   , "  const size_t byte_length = left.byte_length + right.byte_length;"
   , "  uint8_t *data = sbv_text_alloc(ctx, byte_length);"
   , "  if (left.byte_length != 0) memcpy(data, left.data, left.byte_length);"
