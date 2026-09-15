@@ -3,27 +3,27 @@
 
 ### Version 14.8, Not yet released
 
-  * A new default C compiler supports standalone programs and static libraries using
+  * [BACKWARDS COMPATIBILITY] `Data.SBV.Tools.CodeGen` now selects a new C compiler.
+    Import `Data.SBV.Tools.CodeGen.Legacy` to keep using the original one, including
+    its low-level compilation functions.
+
+    The new compiler supports standalone programs and static libraries using
     arbitrary-width bit-vectors, native and arbitrary-format floating point, exact
     integers and rational-valued reals, strings, lists, sets, tuples, ADTs, arrays,
-    and recursive function definitions. It also supports closed array lambdas and
-    SBV's firstified higher-order functions. Unsupported constructs, including
-    solver-only features and captured array lambdas, produce explicit errors.
-
-  * [BACKWARDS COMPATIBILITY] Existing imports of `Data.SBV.Tools.CodeGen` select
-    the new compiler. Import `Data.SBV.Tools.CodeGen.Legacy` instead to keep using
-    the original compiler, including its low-level compilation functions.
+    recursive function definitions, closed array lambdas, and SBV's firstified
+    higher-order functions. Unsupported constructs, including solver-only features
+    and captured array lambdas, produce explicit errors.
 
     Unmapped `SInteger` and rational-valued `SReal` now use GMP instead of being
-    rejected. Keep `cgIntegerSize` or `cgSRealType` settings if native,
-    precision-losing representations are intentional. Arbitrary-format floats
-    and rounding-sensitive floating operations require LibBF; native bit-vector
-    programs require neither library.
+    rejected. Keep `cgIntegerSize` or `cgSRealType` if native, precision-losing
+    representations are intentional. Arbitrary-format floats and rounding-sensitive
+    floating operations require LibBF; native bit-vector programs need neither.
 
-    Regenerate C sources and headers together. See `Data.SBV.Tools.CodeGen` for
-    the supported features, dependencies, and ownership rules for composite values.
-    Detected runtime failures terminate the calling process; there is no
-    recoverable error-return API.
+    Regenerate C sources and headers together; generated type and helper names
+    have changed.
+    Detected runtime failures terminate the process; there is no error-return API.
+    See `Data.SBV.Tools.CodeGen` for supported features, dependencies, and the
+    ownership rules for composite values.
 
   * Generated floating-point code supports all five SBV rounding modes, including
     conversions and fused operations. Ordinary `SFloat` and `SDouble` arithmetic

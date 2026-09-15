@@ -174,6 +174,9 @@ Standalone programs and multi-function static libraries share these mappings:
 * Symbolic arrays use persistent descriptors supporting constant arrays,
   writes, retained lambdas, and caller-provided lookup callbacks. They are
   distinct from finite lookup tables and 'cgInputArr'/'cgOutputArr' groups.
+  Reads walk the stored writes, taking time linear in their number in the
+  worst case. Embedding a function-scoped array in an aggregate copies its
+  stored-write chain, not its logical domain; already-owned storage can be shared.
 
 Generated headers supply ownership helpers for managed values. Inputs borrow
 their storage for the call; owned outputs must be released with the appropriate
