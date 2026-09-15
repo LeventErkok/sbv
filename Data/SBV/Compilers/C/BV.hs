@@ -29,6 +29,7 @@ module Data.SBV.Compilers.C.BV
   , wideBVPrint
   ) where
 
+import Data.SBV.Compilers.C.Syntax (cUnusedAttribute)
 import Data.Bits                  (shiftL, shiftR, (.&.))
 import Data.Char                  (toUpper)
 import Data.List                  (intercalate, nub, stripPrefix, tails)
@@ -57,13 +58,7 @@ wideBVTypeDecls :: [Kind] -> Doc
 wideBVTypeDecls [] = empty
 wideBVTypeDecls ks = text . unlines $
      ["/* Exact-width bit-vectors (least-significant limb first). */"
-     , "#ifndef SBV_CGEN_UNUSED"
-     , "#if defined(__GNUC__) || defined(__clang__)"
-     , "#define SBV_CGEN_UNUSED __attribute__((unused))"
-     , "#else"
-     , "#define SBV_CGEN_UNUSED"
-     , "#endif"
-     , "#endif"]
+     , cUnusedAttribute]
   ++ concatMap decl ks
  where decl k = ["#ifndef " ++ guard k
                 , "#define " ++ guard k
@@ -89,13 +84,7 @@ bitVectorRuntime integerWidth ks asgns
   | null routines = empty
   | True          = text . unlines . map markUnused $
        [ "/* Exact bit-vector runtime. All arithmetic is modulo the declared width. */"
-       , "#ifndef SBV_CGEN_UNUSED"
-       , "#if defined(__GNUC__) || defined(__clang__)"
-       , "#define SBV_CGEN_UNUSED __attribute__((unused))"
-       , "#else"
-       , "#define SBV_CGEN_UNUSED"
-       , "#endif"
-       , "#endif"
+       , cUnusedAttribute
        , ""
        ]
     ++ routines
@@ -205,7 +194,7 @@ wideBVExpr op svs resultKind args
       (SignExtend _                  , [a]      , x:_)    -> namedCall (convertName True  (kindOf x) resultKind) [a]
       (OverflowOp ov                 , as       , x:_)    -> argCall x (overflowName ov) as
       (IEEEFP (FP_Reinterpret fr to) , [a]      , _)
-          | isBounded fr || isBounded to                  -> namedCall (convertName False fr to) [a]
+          | isBounded fr && isBounded to                  -> namedCall (convertName False fr to) [a]
       _                                                   -> error $ "SBV->C: exact bit-vector lowering does not yet support " ++ show op
                                                                   ++ " with argument kinds " ++ show (map kindOf svs)
                                                                   ++ " and result kind " ++ show resultKind
@@ -465,7 +454,7 @@ nativeArithmeticRuntime arith kind =
        -- Euclidean correction fit the signed type. Subtract the negative
        -- divisor directly so its minimum value is never negated.
        euclideanBody quotient =
-         [ "  if (b == (" ++ ty ++ ") 0) return " ++ (if quotient then "0" else "a") ++ ";"
+         [ "  if (b == (" ++ ty ++ ") 0) return a;"
          , "  if (a == " ++ minimumValue ++ " && b == (" ++ ty ++ ") -1) return " ++ (if quotient then "a" else "0") ++ ";"
          , "  const " ++ ty ++ " remainder = (" ++ ty ++ ") (a % b);"
          ]

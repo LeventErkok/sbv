@@ -16,27 +16,60 @@
 module Utils.CCodeGen (locateLibBF, generatedMakeOptions) where
 
 import Control.Exception (IOException, catch)
-import Data.List (isInfixOf, isPrefixOf, isSuffixOf)
+import Control.Concurrent.MVar (MVar, modifyMVar, newMVar)
+import Data.List (isInfixOf, isPrefixOf, isSuffixOf, sort)
 import System.Directory (doesDirectoryExist, doesFileExist, listDirectory)
 import System.Environment (lookupEnv)
 import System.FilePath ((</>), takeDirectory)
 import System.Process (readProcessWithExitCode)
+import System.Exit (ExitCode(..))
+import System.IO.Unsafe (unsafePerformIO)
 
 -- | Locate the header and static archive installed for the Haskell @libBF@
 -- dependency so integration tests exercise the same C implementation.
 locateLibBF :: IO (FilePath, FilePath)
-locateLibBF = do
-  (_, pathOutput, pathError) <- readProcessWithExitCode "cabal" ["path"] ""
+locateLibBF = modifyMVar libBFLocation $ \cached -> do
+  result <- maybe discoverLibBF pure cached
+  pure (Just result, result)
+
+-- | Share immutable dependency discovery across parallel integration tests.
+{-# NOINLINE libBFLocation #-}
+libBFLocation :: MVar (Maybe (FilePath, FilePath))
+libBFLocation = unsafePerformIO (newMVar Nothing)
+
+-- | Allow explicit installations; otherwise find a matching header/archive
+-- pair from one Cabal package, never from different package versions.
+discoverLibBF :: IO (FilePath, FilePath)
+discoverLibBF = do
+  includeOverride <- lookupEnv "SBV_C_LIBBF_INCLUDE"
+  libraryOverride <- lookupEnv "SBV_C_LIBBF_LIBRARY"
+  case (includeOverride, libraryOverride) of
+    (Just includeDir, Just archive) -> do
+      headerExists <- doesFileExist (includeDir </> "libbf.h")
+      archiveExists <- doesFileExist archive
+      if headerExists && archiveExists then pure (includeDir, archive)
+        else fail "SBV_C_LIBBF_INCLUDE/SBV_C_LIBBF_LIBRARY must name an installed libbf.h and library."
+    (Nothing, Nothing) -> discoverStoredLibBF
+    _ -> fail "Set both SBV_C_LIBBF_INCLUDE and SBV_C_LIBBF_LIBRARY, or neither."
+
+-- | Discover the installed Haskell dependency's bundled C library.
+discoverStoredLibBF :: IO (FilePath, FilePath)
+discoverStoredLibBF = do
+  (pathExit, pathOutput, pathError) <- readProcessWithExitCode "cabal" ["path"] ""
+  case pathExit of
+    ExitSuccess -> pure ()
+    _ -> fail $ "Unable to query Cabal store: " ++ pathError
   let storePrefix = "compiler-store-path: "
       stores      = [drop (length storePrefix) line | line <- lines pathOutput, storePrefix `isInfixOf` line]
   store <- case stores of
              path:_ -> pure path
              []     -> fail $ "Unable to find Cabal store: " ++ pathError
   packages <- listDirectory store
-  let libBFDirs = [store </> entry | entry <- packages, "lbBF-" `isPrefixOf` entry]
-  header  <- firstSuccessful [findInstalledFile path "libbf.h" | path <- libBFDirs]
-  archive <- firstSuccessful [findInstalledFile path "libHSlbBF" | path <- libBFDirs]
-  pure (takeDirectory header, archive)
+  let libBFDirs = [store </> entry | entry <- sort packages, "lbBF-" `isPrefixOf` entry]
+  firstSuccessful [do header <- findInstalledFile path "libbf.h"
+                      archive <- findInstalledFile path "libHSlbBF"
+                      pure (takeDirectory header, archive)
+                  | path <- libBFDirs]
 
 -- | Recursively find an installed file by exact name or filename prefix.
 findInstalledFile :: FilePath -> String -> IO FilePath
@@ -77,5 +110,5 @@ generatedMakeOptions dir = do
   let flags = "CCFLAGS=-std=c11 -Wall -Werror -O2" ++ extraFlags
   if "-lbf" `isInfixOf` makefile
     then do (includeDir, archive) <- locateLibBF
-            pure [flags ++ " -I\"" ++ includeDir ++ "\"", "LDFLAGS=\"" ++ archive ++ "\" -lm ${GMP_LIBS}"]
+            pure [flags ++ " -I\"" ++ includeDir ++ "\"", "SBV_LIBS=\"" ++ archive ++ "\" -lm ${GMP_LIBS}"]
     else pure [flags]

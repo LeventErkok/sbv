@@ -32,6 +32,7 @@ module Data.SBV.Compilers.C.FP
   , nativeFPObjectEqual
   ) where
 
+import Data.SBV.Compilers.C.Syntax (cUnusedAttribute)
 import Data.Bits                       (shiftL, shiftR, (.&.))
 import Data.List                       (intercalate, nub, tails)
 import qualified Data.Set as Set
@@ -58,9 +59,7 @@ import Data.SBV.Core.SizedFloats       (FP(..), mkBFOpts)
 nativeFPCompilePragmas :: Doc
 nativeFPCompilePragmas = text . unlines $
   ["/* Preserve separate SBV rounding steps; explicit fma calls remain fused. */"
-  , "#if defined(__GNUC__) && !defined(__clang__)"
-  , "#pragma GCC optimize (\"fp-contract=off\")"
-  , "#else"
+  , "#if defined(__clang__)"
   , "#pragma STDC FP_CONTRACT OFF"
   , "#endif"
   , ""]
@@ -101,13 +100,7 @@ arbitraryFPTypeDecls :: [Kind] -> Doc
 arbitraryFPTypeDecls [] = empty
 arbitraryFPTypeDecls ks = text . unlines $
      ["/* Arbitrary IEEE-754 values, encoded as raw interchange bits. */"
-     , "#ifndef SBV_CGEN_UNUSED"
-     , "#if defined(__GNUC__) || defined(__clang__)"
-     , "#define SBV_CGEN_UNUSED __attribute__((unused))"
-     , "#else"
-     , "#define SBV_CGEN_UNUSED"
-     , "#endif"
-     , "#endif"]
+     , cUnusedAttribute]
   ++ concatMap decl ks
  where decl k = ["#ifndef " ++ typeGuard k
                 , "#define " ++ typeGuard k
@@ -131,13 +124,7 @@ arbitraryFPRuntime cfg ks asgns
   | null ks && null floatCasts = empty
   | True                       = text . unlines . map markUnused $
      ["/* LibBF-backed arbitrary floating-point runtime. */"
-     , "#ifndef SBV_CGEN_UNUSED"
-     , "#if defined(__GNUC__) || defined(__clang__)"
-     , "#define SBV_CGEN_UNUSED __attribute__((unused))"
-     , "#else"
-     , "#define SBV_CGEN_UNUSED"
-     , "#endif"
-     , "#endif"
+     , cUnusedAttribute
      , ""
      , "static inline bf_rnd_t sbv_bf_rounding_mode(int mode)"
      , "{"
@@ -171,7 +158,7 @@ arbitraryFPRuntime cfg ks asgns
        reinterprets _ = []
 
        casts (_, SBVApp (IEEEFP (FP_Cast fr to _)) _)
-         | supportedCast fr to
+         | supportedFPCast cfg fr to
          , not (exactNativeFPCast (floatCastKind cfg fr) (floatCastKind cfg to)) = [FloatCast fr to]
        casts (_, SBVApp castOp@(KindCast fr to) _)
          | Nothing <- mappedRealFloorWidth cfg castOp
@@ -183,22 +170,13 @@ arbitraryFPRuntime cfg ks asgns
        castUsesExact (FloatCast fr to) = isExactGMPKind cfg fr || isExactGMPKind cfg to
        castUsesReal  (FloatCast fr to) = KReal `elem` [fr, to]
 
-       exactNativeCast fr to = (isExactGMPKind cfg fr && isNativeFloat to)
-                            || (isNativeFloat fr && isExactGMPKind cfg to)
-
-       nativeBitVectorCast fr to = (isBounded fr && isNativeFloat to)
-                                || (isNativeFloat fr && isBounded to)
-
-       nativeFloatCast fr to = isNativeFloat fr && isNativeFloat to
-
-       supportedCast fr to = isFP fr
-                          || isFP to
-                          || mappedFloatCast cfg fr to
-                          || exactNativeCast fr to
-                          || nativeBitVectorCast fr to
-                          || nativeFloatCast fr to
-
-       isNativeFloat k = k == KFloat || k == KDouble
+-- | Shared ownership predicate for cast lowering and helper emission. Keeping
+-- this decision in one place prevents generation of calls without definitions.
+supportedFPCast :: CgConfig -> Kind -> Kind -> Bool
+supportedFPCast cfg fr to = isFP fr || isFP to || mappedFloatCast cfg fr to
+                        || (native fr && (native to || isBounded to || isExactGMPKind cfg to))
+                        || (native to && (isBounded fr || isExactGMPKind cfg fr))
+ where native kind = isFloat kind || isDouble kind
 
 -- | Render an arbitrary floating-point constant in raw interchange form.
 arbitraryFPConst :: Kind -> FP -> Maybe Doc
@@ -227,10 +205,7 @@ arbitraryFPExpr cfg consts op svs resultKind args
       _  -> parens $ fsep (punctuate comma (map (text "(void)" <+>) ignored ++ [cast]))
   | not (isFP resultKind
       || any (isFP . kindOf) svs
-      || isExactNativeCast
-      || isNativeBitVectorCast
-      || isNativeFloatCast
-      || isMappedCast)
+      || isSupportedCast)
   = Nothing
   | LkUp{} <- op
   = Nothing
@@ -239,12 +214,12 @@ arbitraryFPExpr cfg consts op svs resultKind args
   | True
   = Just . expressionLowering requirements $ case (op, args, svs) of
       (Label _         , [a]         , _)            -> a
-      (Ite             , [c, a, b]   , _)            -> c <+> text "?" <+> a <+> text ":" <+> b
       (UNeg            , [a]         , x:_)          -> argCall x "neg" [a]
       (Abs             , [a]         , x:_)          -> argCall x "abs" [a]
       (Plus            , [a, b]      , x:_)          -> argCall x "add" [a, b, text "BF_RNDN"]
       (Minus           , [a, b]      , x:_)          -> argCall x "sub" [a, b, text "BF_RNDN"]
       (Times           , [a, b]      , x:_)          -> argCall x "mul" [a, b, text "BF_RNDN"]
+      (Quot            , [a, b]      , x:_)          -> argCall x "div" [a, b, text "BF_RNDN"]
       (Equal False     , [a, b]      , x:_)          -> argCall x "eq" [a, b]
       (Equal True      , [a, b]      , x:_)          -> argCall x "obj_eq" [a, b]
       (NotEqual        , as          , x:_)          -> distinctExpr x as
@@ -254,7 +229,7 @@ arbitraryFPExpr cfg consts op svs resultKind args
       (GreaterEq       , [a, b]      , x:_)          -> argCall x "le" [b, a]
       (IEEEFP fpOp     , as          , fpArgs)       -> fpExpr fpOp as fpArgs
       (KindCast fr to  , [a]         , _)            -> namedCall (castName fr to)
-                                                         ([text "&__sbv_gmp_ctx" | isExactGMPKind cfg to]
+                                                         ([text "&sbv_local_gmp_ctx" | isExactGMPKind cfg to]
                                                        ++ [a, text (if fr == KReal && to == KUnbounded then "BF_RNDD" else "BF_RNDN")])
       _                                              -> unsupported
  where argCall sv suffix = namedCall (prefix (kindOf sv) ++ "_" ++ suffix)
@@ -290,33 +265,17 @@ arbitraryFPExpr cfg consts op svs resultKind args
          _                                              -> unsupported
 
        castArgs to a rm
-         | isExactGMPKind cfg to = [text "&__sbv_gmp_ctx", a, bfRoundingMode consts rm]
+         | isExactGMPKind cfg to = [text "&sbv_local_gmp_ctx", a, bfRoundingMode consts rm]
          | True                  = [a, bfRoundingMode consts rm]
 
        requirements = [CRequiresLibBF, CRequiresLibM] ++ [CRequiresGMP | usesExact]
 
        usesExact = isExactGMPKind cfg resultKind || any (isExactGMPKind cfg . kindOf) svs
 
-       isExactNativeCast = case op of
-         IEEEFP (FP_Cast fr to _) -> (isExactGMPKind cfg fr && isNativeFloat to)
-                                  || (isNativeFloat fr && isExactGMPKind cfg to)
-         _                         -> False
-
-       isNativeBitVectorCast = case op of
-         IEEEFP (FP_Cast fr to _) -> (isBounded fr     && isNativeFloat to)
-                                  || (isNativeFloat fr && isBounded to)
-         _                         -> False
-
-       isNativeFloatCast = case op of
-         IEEEFP (FP_Cast fr to _) -> isNativeFloat fr && isNativeFloat to
-         _                         -> False
-
-       isMappedCast = case op of
-         IEEEFP (FP_Cast fr to _) -> mappedFloatCast cfg fr to
+       isSupportedCast = case op of
+         IEEEFP (FP_Cast fr to _) -> supportedFPCast cfg fr to
          KindCast fr to          -> mappedFloatCast cfg fr to
          _                        -> False
-
-       isNativeFloat k = k == KFloat || k == KDouble
 
        unsupported = error $ "SBV->C: arbitrary floating-point lowering does not yet support " ++ show op
                           ++ " with argument kinds " ++ show (map kindOf svs)
@@ -339,13 +298,7 @@ exactNativeFPCast from to
 nativeFPRuntime :: Doc
 nativeFPRuntime = text . unlines . map markUnused $
      ["/* Exact rounding adapters for native floating-point operations. */"
-     , "#ifndef SBV_CGEN_UNUSED"
-     , "#if defined(__GNUC__) || defined(__clang__)"
-     , "#define SBV_CGEN_UNUSED __attribute__((unused))"
-     , "#else"
-     , "#define SBV_CGEN_UNUSED"
-     , "#endif"
-     , "#endif"
+     , cUnusedAttribute
      , ""
      , "static inline bf_rnd_t sbv_native_bf_rounding_mode(int mode)"
      , "{"
@@ -1211,7 +1164,7 @@ arithmeticRuntime k@(KFP eb sb) =
      , "  bf_context_t ctx; bf_t x, y, z, r; " ++ ty ++ " raw;"
      , "  bf_context_init(&ctx, sbv_bf_realloc, NULL);"
      , "  " ++ p ++ "_decode(&ctx, &x, a); " ++ p ++ "_decode(&ctx, &y, b); " ++ p ++ "_decode(&ctx, &z, c); bf_init(&ctx, &r);"
-     , "  bf_mul(&r, &x, &y, BF_PREC_INF, BF_RNDN); bf_add(&r, &r, &z, " ++ show sb ++ ", " ++ p ++ "_flags(rnd));"
+     , "  bf_mul(&r, &x, &y, BF_PREC_INF, BF_FLAG_EXT_EXP | BF_RNDN); bf_add(&r, &r, &z, " ++ show sb ++ ", " ++ p ++ "_flags(rnd));"
      , "  raw = " ++ p ++ "_encode(&r);"
      , "  bf_delete(&r); bf_delete(&z); bf_delete(&y); bf_delete(&x); bf_context_end(&ctx); return raw;"
      , "}"
@@ -1235,14 +1188,14 @@ arithmeticRuntime k@(KFP eb sb) =
      , "static inline " ++ ty ++ " " ++ p ++ "_min(" ++ ty ++ " a, " ++ ty ++ " b)"
      , "{"
      , "  if (" ++ p ++ "_is_nan(a)) return b; if (" ++ p ++ "_is_nan(b)) return a;"
-     , "  if (" ++ p ++ "_is_zero(a) && " ++ p ++ "_is_zero(b)) return " ++ p ++ "_zero();"
+     , "  if (" ++ p ++ "_is_zero(a) && " ++ p ++ "_is_zero(b)) return " ++ p ++ "_is_negative(a) ? a : b;"
      , "  return " ++ p ++ "_lt(a, b) ? a : b;"
      , "}"
      , ""
      , "static inline " ++ ty ++ " " ++ p ++ "_max(" ++ ty ++ " a, " ++ ty ++ " b)"
      , "{"
      , "  if (" ++ p ++ "_is_nan(a)) return b; if (" ++ p ++ "_is_nan(b)) return a;"
-     , "  if (" ++ p ++ "_is_zero(a) && " ++ p ++ "_is_zero(b)) return " ++ p ++ "_zero();"
+     , "  if (" ++ p ++ "_is_zero(a) && " ++ p ++ "_is_zero(b)) return " ++ p ++ "_is_negative(a) ? b : a;"
      , "  return " ++ p ++ "_lt(b, a) ? a : b;"
      , "}"
      , ""

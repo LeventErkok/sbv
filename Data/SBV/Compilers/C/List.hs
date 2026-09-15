@@ -35,6 +35,7 @@ module Data.SBV.Compilers.C.List
   , listContextEnd
   ) where
 
+import Data.SBV.Compilers.C.Syntax (cUnusedAttribute)
 import Data.List                       (nub, sortOn, stripPrefix, tails)
 import qualified Data.Set as Set
 
@@ -44,7 +45,7 @@ import qualified Text.PrettyPrint.HughesPJ as P ((<>))
 import Data.SBV.Compilers.C.Array      (arrayStoredLoad, arrayStoredValue)
 import Data.SBV.Compilers.C.GMP        (isExactGMPKind)
 import Data.SBV.Compilers.C.Lowering   (CLowering, CRequirement(..), expressionLowering)
-import Data.SBV.Compilers.C.Types      (constElementCType, elementCType, kindTag)
+import Data.SBV.Compilers.C.Types      (isConcreteADT, constElementCType, elementCType, kindTag)
 import Data.SBV.Compilers.C.Value      ( byValueEqual
                                        , managedValueClone
                                        , managedValueRelease
@@ -128,13 +129,7 @@ listTypeDecls cfg kinds
   | null kinds = empty
   | True       = listForwardTypeDecls kinds $$ text (unlines $
       ["/* Typed symbolic lists. Inputs borrow their elements; outputs and returns own them. */"
-      , "#ifndef SBV_CGEN_UNUSED"
-      , "#if defined(__GNUC__) || defined(__clang__)"
-      , "#define SBV_CGEN_UNUSED __attribute__((unused))"
-      , "#else"
-      , "#define SBV_CGEN_UNUSED"
-      , "#endif"
-      , "#endif"
+      , cUnusedAttribute
       ]
       ++ concatMap declaration kinds
       )
@@ -298,20 +293,19 @@ listExpr cfg op svs resultSV args
       (TupleAccess{}             , _        )                    -> Nothing
       (Uninterpreted{}           , _        )                    -> Nothing
       (Label _                   , [a]      )                    -> lower a
-      (Ite                       , [c, a, b])                    -> lower $ c <+> text "?" <+> a <+> text ":" <+> b
       (Equal _                   , [a, b]   )                    -> lower $ call (helper "equal") [a, b]
       (NotEqual                  , as       )                    -> lower $ distinctLists as
       (SeqOp (SeqLen kind)       , [a]      ) | kind /= KChar   -> lowerInteger False $ call (helperFor kind "length") [a]
       (SeqOp (SeqConcat _)       , as       )
         | KList elementKind <- resultKind                       -> lower $ foldLists elementKind as
       (SeqOp (SeqNth kind)       , [a, i]   ) | kind /= KChar   -> loadArray $ indexed kind "nth" [a] i
-      (SeqOp (SeqUnit kind)      , [a]      ) | kind /= KChar   -> lower $ call (helperFor kind "unit") [text "&__sbv_list_ctx", arrayStoredValue kind a]
+      (SeqOp (SeqUnit kind)      , [a]      ) | kind /= KChar   -> lower $ call (helperFor kind "unit") [text "&sbv_local_list_ctx", arrayStoredValue kind a]
       (SeqOp (SeqSubseq kind)    , [a, i, n]) | kind /= KChar   -> lower $ indexed2 kind "substring" a i n
       (SeqOp (SeqIndexOf kind)   , [a, b, i]) | kind /= KChar   -> lowerInteger True $ indexed kind "index_of" [a, b] i
       (SeqOp (SeqContains kind)  , [a, b]   ) | kind /= KChar   -> lower $ call (helperFor kind "contains") [a, b]
       (SeqOp (SeqPrefixOf kind)  , [a, b]   ) | kind /= KChar   -> lower $ call (helperFor kind "prefix_of") [a, b]
       (SeqOp (SeqSuffixOf kind)  , [a, b]   ) | kind /= KChar   -> lower $ call (helperFor kind "suffix_of") [a, b]
-      (SeqOp (SeqReplace kind)   , [a, b, c]) | kind /= KChar   -> lower $ call (helperFor kind "replace") [text "&__sbv_list_ctx", a, b, c]
+      (SeqOp (SeqReplace kind)   , [a, b, c]) | kind /= KChar   -> lower $ call (helperFor kind "replace") [text "&sbv_local_list_ctx", a, b, c]
       _ -> unsupported
  where resultKind = kindOf resultSV
 
@@ -331,7 +325,7 @@ listExpr cfg op svs resultSV args
          | isExactGMPKind cfg resultKind
          = Just $ expressionLowering [CRequiresLists, CRequiresGMP]
                 $ call (if signed then "sbv_gmp_integer_from_s64" else "sbv_gmp_integer_from_u64")
-                       [text "&__sbv_gmp_ctx", expression]
+                       [text "&sbv_local_gmp_ctx", expression]
          | True
          = lower $ parens (text "SInteger") <+> expression
 
@@ -350,19 +344,19 @@ listExpr cfg op svs resultSV args
        foldLists _           []           = text "((" P.<> text (listCType listKind) P.<> text ") {NULL, 0})"
        foldLists _           [value]      = value
        foldLists elementKind (value:rest) = foldl combine value rest
-         where combine left right = call (helperFor elementKind "concat") [text "&__sbv_list_ctx", left, right]
+         where combine left right = call (helperFor elementKind "concat") [text "&sbv_local_list_ctx", left, right]
 
        indexed elementKind suffix prefix index
         | exactIndex = call (helperFor elementKind (suffix ++ "_mpz")) (context ++ prefix ++ [index])
         | True       = call (helperFor elementKind suffix) (context ++ prefix ++ [parens (text "int64_t") <+> index])
         where context
-                | suffix == "nth" && isExactGMPKind cfg elementKind = [text "&__sbv_gmp_ctx"]
+                | suffix == "nth" && isExactGMPKind cfg elementKind = [text "&sbv_local_gmp_ctx"]
                 | True                                               = []
 
        indexed2 elementKind suffix value offset count
-         | exactIndex = call (helperFor elementKind (suffix ++ "_mpz")) [text "&__sbv_list_ctx", value, offset, count]
+         | exactIndex = call (helperFor elementKind (suffix ++ "_mpz")) [text "&sbv_local_list_ctx", value, offset, count]
          | True       = call (helperFor elementKind suffix)
-                             [text "&__sbv_list_ctx", value, parens (text "int64_t") <+> offset, parens (text "int64_t") <+> count]
+                             [text "&sbv_local_list_ctx", value, parens (text "int64_t") <+> offset, parens (text "int64_t") <+> count]
 
        exactIndex = any (isExactGMPKind cfg . kindOf) svs
 
@@ -430,16 +424,16 @@ listPrint printElement (KList elementKind) value
            )
  $$ text "}"
  $$ text "printf(\"]\");"
- where index = text ("__sbv_list_print_index_" ++ kindTag elementKind)
+ where index = text ("sbv_local_list_print_index_" ++ kindTag elementKind)
 listPrint _ kind _ = error $ "SBV->C: Expected a list kind, received " ++ show kind
 
 -- | Initialize the arena used by list temporaries in a generated function.
 listContextStart :: Doc
-listContextStart = text "sbv_list_ctx __sbv_list_ctx = {NULL};"
+listContextStart = text "sbv_list_ctx sbv_local_list_ctx = {NULL};"
 
 -- | Release all list temporaries allocated by a generated function.
 listContextEnd :: Doc
-listContextEnd = call "sbv_list_ctx_end" [text "&__sbv_list_ctx"] P.<> semi
+listContextEnd = call "sbv_list_ctx_end" [text "&sbv_local_list_ctx"] P.<> semi
 
 -- | Test whether an operation belongs to the non-character sequence family.
 isListOp :: Op -> Bool
@@ -657,8 +651,3 @@ listKindRuntime cfg usesExactInteger kind@(KList elementKind) =
              ]
          | True = []
 listKindRuntime _ _ kind = error $ "SBV->C: Expected a list kind, received " ++ show kind
-
--- | Test whether a kind is a concrete user ADT supported as a collection
--- element.
-isConcreteADT :: Kind -> Bool
-isConcreteADT kind = isADT kind && not (isRoundingMode kind) && not (isUninterpreted kind)

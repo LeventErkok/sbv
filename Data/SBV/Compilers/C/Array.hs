@@ -48,8 +48,9 @@ import qualified Text.PrettyPrint.HughesPJ as P ((<>), render)
 import Data.SBV.Compilers.C.BV         (isWideBV)
 import Data.SBV.Compilers.C.GMP        (isExactGMPKind)
 import Data.SBV.Compilers.C.Lowering   (CLowering(..), CRequirement(..), expressionLowering)
-import Data.SBV.Compilers.C.Syntax     (cCommentText)
-import Data.SBV.Compilers.C.Types      ( constElementCType
+import Data.SBV.Compilers.C.Syntax     (cUnusedAttribute, cCommentText)
+import Data.SBV.Compilers.C.Types      ( isConcreteADT
+                                       , constElementCType
                                        , arrayKindTag
                                        , arrayOutputCTypeName
                                        , arrayStoredCloneName
@@ -144,7 +145,7 @@ arrayStoredValue :: Kind -> Doc -> Doc
 arrayStoredValue kind value
   | isArray kind
   = text (arrayStoredExportName kind)
-      P.<> parens (fsep (punctuate comma [text "&__sbv_array_ctx", value]))
+      P.<> parens (fsep (punctuate comma [text "&sbv_local_array_ctx", value]))
   | True
   = value
 
@@ -165,8 +166,8 @@ arrayStoredLoad resultSV descriptor = CLowering
   , loweringRequirements = Set.singleton CRequiresArrays
   }
  where kind             = kindOf resultSV
-       descriptorName   = "__sbv_array_descriptor_" ++ show resultSV
-       nodeName         = "__sbv_array_" ++ show resultSV
+       descriptorName   = "sbv_local_array_descriptor_" ++ show resultSV
+       nodeName         = "sbv_local_array_" ++ show resultSV
        descriptorFields = [ text ".kind = SBV_ARRAY_CALLBACK"
                           , text ".lookup ="  <+> text descriptorName P.<> text "->lookup"
                           , text ".context =" <+> text descriptorName P.<> text "->context"
@@ -184,13 +185,7 @@ arrayForwardTypeDecls kinds = text . unlines $
   ++ concatMap declaration kinds
  where commonDeclarations =
          [ "/* Forward declarations for retained array descriptors. */"
-         , "#ifndef SBV_CGEN_UNUSED"
-         , "#if defined(__GNUC__) || defined(__clang__)"
-         , "#define SBV_CGEN_UNUSED __attribute__((unused))"
-         , "#else"
-         , "#define SBV_CGEN_UNUSED"
-         , "#endif"
-         , "#endif"
+         , cUnusedAttribute
          , "#ifndef SBV_ARRAY_CONTEXT_LIFETIME_DEFINED"
          , "#define SBV_ARRAY_CONTEXT_LIFETIME_DEFINED"
          , "typedef const void *(*SBVArrayContextRetain)(const void *context);"
@@ -537,7 +532,7 @@ arrayInputSetup typeWidth sv externalName
     , text "const" <+> paddedType <+> text (show sv) <+> text "=" <+> text "&" P.<> text nodeName P.<> semi
     ]
  where external   = text externalName
-       nodeName   = "__sbv_array_input_" ++ show sv
+       nodeName   = "sbv_local_array_input_" ++ show sv
        paddedType = text $ arrayCType (kindOf sv) ++ replicate (typeWidth - length (arrayCType (kindOf sv))) ' '
        fields     = [ text ".kind = SBV_ARRAY_CALLBACK"
                     , text ".lookup ="  <+> external P.<> text ".lookup"
@@ -722,7 +717,7 @@ arrayExpr cfg definedFunctionName structuredLambdaName op svs resultSV args
         | isArray resultKind
         , Just functionName <- definedFunctionName symbol
         -> Just $ arrayStoredLoad resultSV
-             (namedCall functionName (text "&__sbv_function_ctx" : renderedArguments))
+             (namedCall functionName (text "&sbv_local_function_ctx" : renderedArguments))
         | True
         -> Nothing
       (ArrayInit (Left pair), [_], [defaultValue])
@@ -735,7 +730,7 @@ arrayExpr cfg definedFunctionName structuredLambdaName op svs resultSV args
         -> nodeLowering resultKind
              [ text ".kind = SBV_ARRAY_CALLBACK"
              , text ".lookup ="  <+> text callbackName
-             , text ".context =" <+> text "&__sbv_function_ctx"
+             , text ".context =" <+> text "&sbv_local_function_ctx"
              , text ".retain ="  <+> text "sbv_function_ctx_retain_empty"
              , text ".release =" <+> text "sbv_function_ctx_release_owned"
              ]
@@ -754,10 +749,6 @@ arrayExpr cfg definedFunctionName structuredLambdaName op svs resultSV args
              , text ".key ="    <+> renderedKey
              , text ".value ="  <+> storedValue (kindOf value) renderedValue
              ]
-      (Ite, [_condition, left, right], [renderedCondition, renderedLeft, renderedRight])
-        | resultKind == kindOf left
-        , resultKind == kindOf right
-        -> expression $ renderedCondition <+> text "?" <+> renderedLeft <+> text ":" <+> renderedRight
       (Label label, [_], [array])
         -> expression $ array <+> text "/*" <+> cCommentText label <+> text "*/"
       (Equal{}, initial:rest, a:as)
@@ -785,7 +776,7 @@ arrayExpr cfg definedFunctionName structuredLambdaName op svs resultSV args
          , loweringRequirements = Set.fromList requirements
          }
 
-       nodeName = "__sbv_array_" ++ show resultSV
+       nodeName = "sbv_local_array_" ++ show resultSV
 
        storedValue = arrayStoredValue
 
@@ -811,11 +802,11 @@ arrayEqualName kind = "sbv_array_equal_" ++ arraySuffix kind
 -- | Initialize the arena that owns array descriptors embedded in temporary
 -- generated values.
 arrayContextStart :: Doc
-arrayContextStart = text "sbv_array_ctx __sbv_array_ctx = {NULL};"
+arrayContextStart = text "sbv_array_ctx sbv_local_array_ctx = {NULL};"
 
 -- | Release the array descriptors embedded in temporary generated values.
 arrayContextEnd :: Doc
-arrayContextEnd = text "sbv_array_ctx_end" P.<> parens (text "&__sbv_array_ctx") P.<> semi
+arrayContextEnd = text "sbv_array_ctx_end" P.<> parens (text "&sbv_local_array_ctx") P.<> semi
 
 -- | Return the concrete node-structure name for an array kind.
 arrayNodeType :: Kind -> String
@@ -831,15 +822,15 @@ arrayLookupType kind = "SBVArrayLookup_" ++ arraySuffix kind
 
 -- | Return the generated example-driver callback name for an array kind.
 arrayDriverCallbackName :: Kind -> String
-arrayDriverCallbackName kind = "__sbv_array_driver_lookup_" ++ arraySuffix kind
+arrayDriverCallbackName kind = "sbv_local_array_driver_lookup_" ++ arraySuffix kind
 
 -- | Return the generated example-driver context-retain callback name.
 arrayDriverRetainName :: Kind -> String
-arrayDriverRetainName kind = "__sbv_array_retain_driver_" ++ arraySuffix kind
+arrayDriverRetainName kind = "sbv_local_array_retain_driver_" ++ arraySuffix kind
 
 -- | Return the generated example-driver context-release callback name.
 arrayDriverReleaseName :: Kind -> String
-arrayDriverReleaseName kind = "__sbv_array_release_driver_" ++ arraySuffix kind
+arrayDriverReleaseName kind = "sbv_local_array_release_driver_" ++ arraySuffix kind
 
 -- | Return the preprocessor guard that deduplicates a per-kind driver callback
 -- when independently generated library components share an array type.
@@ -876,8 +867,3 @@ arrayFieldNeedsOwnership cfg kind
   | isExactGMPKind cfg kind = False
   | isConcreteADT kind      = True
   | True                    = valueNeedsOwnership cfg kind
-
--- | Test whether a kind is a concrete user ADT rather than a built-in or
--- uninterpreted sort.
-isConcreteADT :: Kind -> Bool
-isConcreteADT kind = isADT kind && not (isRoundingMode kind) && not (isUninterpreted kind)

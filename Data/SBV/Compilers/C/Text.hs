@@ -24,6 +24,7 @@ module Data.SBV.Compilers.C.Text
   , textContextEnd
   ) where
 
+import Data.SBV.Compilers.C.Syntax (cUnusedAttribute)
 import Data.Bits                       ((.&.), (.|.), shiftR)
 import Data.Char                       (chr, ord)
 import Data.List                       (intercalate, stripPrefix, tails)
@@ -53,13 +54,7 @@ textTypeDecls kinds
       , "#ifndef SBV_TEXT_TYPES_DEFINED"
       , "#define SBV_TEXT_TYPES_DEFINED"
       , "#include <limits.h>"
-      , "#ifndef SBV_CGEN_UNUSED"
-      , "#if defined(__GNUC__) || defined(__clang__)"
-      , "#define SBV_CGEN_UNUSED __attribute__((unused))"
-      , "#else"
-      , "#define SBV_CGEN_UNUSED"
-      , "#endif"
-      , "#endif"
+      , cUnusedAttribute
       , "typedef uint32_t SChar;"
       , "typedef struct {"
       , "  const uint8_t *data;"
@@ -183,7 +178,6 @@ textExpr cfg op svs resultKind args
       (ADTOp{}                   , _        ) -> Nothing
       (Uninterpreted{}           , _        ) -> Nothing
       (Label _                   , [a]      ) -> lower a
-      (Ite                       , [c, a, b]) -> lower $ c <+> text "?" <+> a <+> text ":" <+> b
       (Equal _                   , [a, b]   ) -> lower $ equal a b
       (NotEqual                  , as       ) -> lower $ distinctText as
       (LessThan                  , [a, b]   ) -> lower $ ordered "<"  a b
@@ -193,13 +187,13 @@ textExpr cfg op svs resultKind args
       (SeqOp (SeqLen KChar)      , [a]      ) -> lowerInteger False $ text "sbv_text_length" P.<> parens a
       (SeqOp (SeqConcat KChar)   , as       ) -> lower $ foldText "sbv_text_concat" as
       (SeqOp (SeqNth KChar)      , [a, i]   ) -> lower $ indexed "sbv_text_nth" [a] i
-      (SeqOp (SeqUnit KChar)     , [a]      ) -> lower $ call "sbv_text_unit" [text "&__sbv_text_ctx", a]
+      (SeqOp (SeqUnit KChar)     , [a]      ) -> lower $ call "sbv_text_unit" [text "&sbv_local_text_ctx", a]
       (SeqOp (SeqSubseq KChar)   , [a, i, n]) -> lower $ indexed2 "sbv_text_substring" a i n
       (SeqOp (SeqIndexOf KChar)  , [a, b, i]) -> lowerInteger True $ indexed "sbv_text_index_of" [a, b] i
       (SeqOp (SeqContains KChar) , [a, b]   ) -> lower $ call "sbv_text_contains" [a, b]
       (SeqOp (SeqPrefixOf KChar) , [a, b]   ) -> lower $ call "sbv_text_prefix_of" [a, b]
       (SeqOp (SeqSuffixOf KChar) , [a, b]   ) -> lower $ call "sbv_text_suffix_of" [a, b]
-      (SeqOp (SeqReplace KChar)  , [a, b, c]) -> lower $ call "sbv_text_replace" [text "&__sbv_text_ctx", a, b, c]
+      (SeqOp (SeqReplace KChar)  , [a, b, c]) -> lower $ call "sbv_text_replace" [text "&sbv_local_text_ctx", a, b, c]
       (StrOp StrToCode           , [a]      ) -> lowerInteger False a
       (StrOp StrFromCode         , [a]      ) -> lower $ fromCode a
       (StrOp StrStrToNat         , [a]      ) -> lowerNat a
@@ -224,7 +218,7 @@ textExpr cfg op svs resultKind args
          | isExactGMPKind cfg resultKind
          = Just $ expressionLowering [CRequiresText, CRequiresGMP]
                 $ call (if signed then "sbv_gmp_integer_from_s64" else "sbv_gmp_integer_from_u64")
-                       [text "&__sbv_gmp_ctx", expression]
+                       [text "&sbv_local_gmp_ctx", expression]
          | True
          = lower $ parens (text "SInteger") <+> expression
 
@@ -246,15 +240,15 @@ textExpr cfg op svs resultKind args
 
        foldText _      []     = text "((SString) {NULL, 0, 0})"
        foldText _      [a]    = a
-       foldText helper (a:as) = foldl (\left right -> call helper [text "&__sbv_text_ctx", left, right]) a as
+       foldText helper (a:as) = foldl (\left right -> call helper [text "&sbv_local_text_ctx", left, right]) a as
 
        indexed helper prefix index
          | exactIndex = call (helper ++ "_mpz") (prefix ++ [index])
          | True       = call helper (prefix ++ [parens (text "int64_t") <+> index])
 
        indexed2 helper value offset count
-         | exactIndex = call (helper ++ "_mpz") [text "&__sbv_text_ctx", value, offset, count]
-         | True       = call helper [text "&__sbv_text_ctx", value, parens (text "int64_t") <+> offset, parens (text "int64_t") <+> count]
+         | exactIndex = call (helper ++ "_mpz") [text "&sbv_local_text_ctx", value, offset, count]
+         | True       = call helper [text "&sbv_local_text_ctx", value, parens (text "int64_t") <+> offset, parens (text "int64_t") <+> count]
 
        exactIndex = any (isExactGMPKind cfg . kindOf) svs
 
@@ -264,13 +258,13 @@ textExpr cfg op svs resultKind args
 
        toNat value
          | isExactGMPKind cfg resultKind
-         = call "sbv_text_to_nat_mpz" [text "&__sbv_gmp_ctx", text "&__sbv_text_ctx", value]
+         = call "sbv_text_to_nat_mpz" [text "&sbv_local_gmp_ctx", text "&sbv_local_text_ctx", value]
          | True
          = call "sbv_text_to_nat" [value]
 
        fromNat value
-         | exactIndex = call "sbv_text_from_nat_mpz" [text "&__sbv_text_ctx", value]
-         | True       = call "sbv_text_from_nat" [text "&__sbv_text_ctx", parens (text "int64_t") <+> value]
+         | exactIndex = call "sbv_text_from_nat_mpz" [text "&sbv_local_text_ctx", value]
+         | True       = call "sbv_text_from_nat" [text "&sbv_local_text_ctx", parens (text "int64_t") <+> value]
 
        unsupported what = error $ "SBV->C: text lowering does not yet support " ++ what
                                ++ " with argument kinds " ++ show (map kindOf svs)
@@ -300,11 +294,11 @@ textDriverValue kind    _    = error $ "SBV->C: Expected a text kind, received "
 
 -- | Initialize the arena used by string temporaries in a generated function.
 textContextStart :: Doc
-textContextStart = text "sbv_text_ctx __sbv_text_ctx = {NULL};"
+textContextStart = text "sbv_text_ctx sbv_local_text_ctx = {NULL};"
 
 -- | Release all string temporaries allocated by a generated function.
 textContextEnd :: Doc
-textContextEnd = call "sbv_text_ctx_end" [text "&__sbv_text_ctx"] P.<> semi
+textContextEnd = call "sbv_text_ctx_end" [text "&sbv_local_text_ctx"] P.<> semi
 
 -- | Test whether an operation belongs to the string/character family even
 -- when neither its result nor all of its operands have a text kind.
@@ -592,6 +586,7 @@ exactIntegerRuntime =
   , "  const size_t count = mpz_sizeinbase(value, 10);"
   , "  uint8_t *data = sbv_text_alloc(ctx, count + 1);"
   , "  (void) mpz_get_str((char *) data, 10, value);"
-  , "  return sbv_string_borrow(data, count, count);"
+  , "  const size_t length = strlen((const char *) data);"
+  , "  return sbv_string_borrow(data, length, length);"
   , "}"
   ]

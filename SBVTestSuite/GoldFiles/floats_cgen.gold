@@ -5,9 +5,7 @@
 #include <libbf.h>
 
 /* Preserve separate SBV rounding steps; explicit fma calls remain fused. */
-#if defined(__GNUC__) && !defined(__clang__)
-#pragma GCC optimize ("fp-contract=off")
-#else
+#if defined(__clang__)
 #pragma STDC FP_CONTRACT OFF
 #endif
 
@@ -28,9 +26,7 @@ SFloat toFP_Int8_ToFloat(const SInt8 sbv_input_0)
 #include <libbf.h>
 
 /* Preserve separate SBV rounding steps; explicit fma calls remain fused. */
-#if defined(__GNUC__) && !defined(__clang__)
-#pragma GCC optimize ("fp-contract=off")
-#else
+#if defined(__clang__)
 #pragma STDC FP_CONTRACT OFF
 #endif
 
@@ -51,9 +47,7 @@ SFloat toFP_Int16_ToFloat(const SInt16 sbv_input_0)
 #include <libbf.h>
 
 /* Preserve separate SBV rounding steps; explicit fma calls remain fused. */
-#if defined(__GNUC__) && !defined(__clang__)
-#pragma GCC optimize ("fp-contract=off")
-#else
+#if defined(__clang__)
 #pragma STDC FP_CONTRACT OFF
 #endif
 
@@ -126,9 +120,7 @@ SFloat toFP_Int32_ToFloat(const SInt32 sbv_input_0)
 #include <libbf.h>
 
 /* Preserve separate SBV rounding steps; explicit fma calls remain fused. */
-#if defined(__GNUC__) && !defined(__clang__)
-#pragma GCC optimize ("fp-contract=off")
-#else
+#if defined(__clang__)
 #pragma STDC FP_CONTRACT OFF
 #endif
 
@@ -201,9 +193,7 @@ SFloat toFP_Int64_ToFloat(const SInt64 sbv_input_0)
 #include <libbf.h>
 
 /* Preserve separate SBV rounding steps; explicit fma calls remain fused. */
-#if defined(__GNUC__) && !defined(__clang__)
-#pragma GCC optimize ("fp-contract=off")
-#else
+#if defined(__clang__)
 #pragma STDC FP_CONTRACT OFF
 #endif
 
@@ -224,9 +214,7 @@ SFloat toFP_Word8_ToFloat(const SWord8 sbv_input_0)
 #include <libbf.h>
 
 /* Preserve separate SBV rounding steps; explicit fma calls remain fused. */
-#if defined(__GNUC__) && !defined(__clang__)
-#pragma GCC optimize ("fp-contract=off")
-#else
+#if defined(__clang__)
 #pragma STDC FP_CONTRACT OFF
 #endif
 
@@ -247,9 +235,7 @@ SFloat toFP_Word16_ToFloat(const SWord16 sbv_input_0)
 #include <libbf.h>
 
 /* Preserve separate SBV rounding steps; explicit fma calls remain fused. */
-#if defined(__GNUC__) && !defined(__clang__)
-#pragma GCC optimize ("fp-contract=off")
-#else
+#if defined(__clang__)
 #pragma STDC FP_CONTRACT OFF
 #endif
 
@@ -322,9 +308,7 @@ SFloat toFP_Word32_ToFloat(const SWord32 sbv_input_0)
 #include <libbf.h>
 
 /* Preserve separate SBV rounding steps; explicit fma calls remain fused. */
-#if defined(__GNUC__) && !defined(__clang__)
-#pragma GCC optimize ("fp-contract=off")
-#else
+#if defined(__clang__)
 #pragma STDC FP_CONTRACT OFF
 #endif
 
@@ -397,9 +381,7 @@ SFloat toFP_Word64_ToFloat(const SWord64 sbv_input_0)
 #include <libbf.h>
 
 /* Preserve separate SBV rounding steps; explicit fma calls remain fused. */
-#if defined(__GNUC__) && !defined(__clang__)
-#pragma GCC optimize ("fp-contract=off")
-#else
+#if defined(__clang__)
 #pragma STDC FP_CONTRACT OFF
 #endif
 
@@ -417,9 +399,7 @@ SFloat toFP_Float_ToFloat(const SFloat sbv_input_0)
 #include <libbf.h>
 
 /* Preserve separate SBV rounding steps; explicit fma calls remain fused. */
-#if defined(__GNUC__) && !defined(__clang__)
-#pragma GCC optimize ("fp-contract=off")
-#else
+#if defined(__clang__)
 #pragma STDC FP_CONTRACT OFF
 #endif
 
@@ -476,9 +456,7 @@ SFloat toFP_Double_ToFloat(const SDouble sbv_input_0)
 #include <libbf.h>
 
 /* Preserve separate SBV rounding steps; explicit fma calls remain fused. */
-#if defined(__GNUC__) && !defined(__clang__)
-#pragma GCC optimize ("fp-contract=off")
-#else
+#if defined(__clang__)
 #pragma STDC FP_CONTRACT OFF
 #endif
 
@@ -551,9 +529,7 @@ SFloat toFP_Integer_ToFloat(const SInteger sbv_input_0)
 #include <libbf.h>
 
 /* Preserve separate SBV rounding steps; explicit fma calls remain fused. */
-#if defined(__GNUC__) && !defined(__clang__)
-#pragma GCC optimize ("fp-contract=off")
-#else
+#if defined(__clang__)
 #pragma STDC FP_CONTRACT OFF
 #endif
 
@@ -664,9 +640,7 @@ SFloat toFP_Real_ToFloat(const SReal sbv_input_0)
 #include <libbf.h>
 
 /* Preserve separate SBV rounding steps; explicit fma calls remain fused. */
-#if defined(__GNUC__) && !defined(__clang__)
-#pragma GCC optimize ("fp-contract=off")
-#else
+#if defined(__clang__)
 #pragma STDC FP_CONTRACT OFF
 #endif
 
@@ -687,9 +661,7 @@ SDouble toFP_Int8_ToDouble(const SInt8 sbv_input_0)
 #include <libbf.h>
 
 /* Preserve separate SBV rounding steps; explicit fma calls remain fused. */
-#if defined(__GNUC__) && !defined(__clang__)
-#pragma GCC optimize ("fp-contract=off")
-#else
+#if defined(__clang__)
 #pragma STDC FP_CONTRACT OFF
 #endif
 
@@ -710,9 +682,7 @@ SDouble toFP_Int16_ToDouble(const SInt16 sbv_input_0)
 #include <libbf.h>
 
 /* Preserve separate SBV rounding steps; explicit fma calls remain fused. */
-#if defined(__GNUC__) && !defined(__clang__)
-#pragma GCC optimize ("fp-contract=off")
-#else
+#if defined(__clang__)
 #pragma STDC FP_CONTRACT OFF
 #endif
 
@@ -733,9 +703,7 @@ SDouble toFP_Int32_ToDouble(const SInt32 sbv_input_0)
 #include <libbf.h>
 
 /* Preserve separate SBV rounding steps; explicit fma calls remain fused. */
-#if defined(__GNUC__) && !defined(__clang__)
-#pragma GCC optimize ("fp-contract=off")
-#else
+#if defined(__clang__)
 #pragma STDC FP_CONTRACT OFF
 #endif
 
@@ -808,9 +776,7 @@ SDouble toFP_Int64_ToDouble(const SInt64 sbv_input_0)
 #include <libbf.h>
 
 /* Preserve separate SBV rounding steps; explicit fma calls remain fused. */
-#if defined(__GNUC__) && !defined(__clang__)
-#pragma GCC optimize ("fp-contract=off")
-#else
+#if defined(__clang__)
 #pragma STDC FP_CONTRACT OFF
 #endif
 
@@ -831,9 +797,7 @@ SDouble toFP_Word8_ToDouble(const SWord8 sbv_input_0)
 #include <libbf.h>
 
 /* Preserve separate SBV rounding steps; explicit fma calls remain fused. */
-#if defined(__GNUC__) && !defined(__clang__)
-#pragma GCC optimize ("fp-contract=off")
-#else
+#if defined(__clang__)
 #pragma STDC FP_CONTRACT OFF
 #endif
 
@@ -854,9 +818,7 @@ SDouble toFP_Word16_ToDouble(const SWord16 sbv_input_0)
 #include <libbf.h>
 
 /* Preserve separate SBV rounding steps; explicit fma calls remain fused. */
-#if defined(__GNUC__) && !defined(__clang__)
-#pragma GCC optimize ("fp-contract=off")
-#else
+#if defined(__clang__)
 #pragma STDC FP_CONTRACT OFF
 #endif
 
@@ -877,9 +839,7 @@ SDouble toFP_Word32_ToDouble(const SWord32 sbv_input_0)
 #include <libbf.h>
 
 /* Preserve separate SBV rounding steps; explicit fma calls remain fused. */
-#if defined(__GNUC__) && !defined(__clang__)
-#pragma GCC optimize ("fp-contract=off")
-#else
+#if defined(__clang__)
 #pragma STDC FP_CONTRACT OFF
 #endif
 
@@ -952,9 +912,7 @@ SDouble toFP_Word64_ToDouble(const SWord64 sbv_input_0)
 #include <libbf.h>
 
 /* Preserve separate SBV rounding steps; explicit fma calls remain fused. */
-#if defined(__GNUC__) && !defined(__clang__)
-#pragma GCC optimize ("fp-contract=off")
-#else
+#if defined(__clang__)
 #pragma STDC FP_CONTRACT OFF
 #endif
 
@@ -975,9 +933,7 @@ SDouble toFP_Float_ToDouble(const SFloat sbv_input_0)
 #include <libbf.h>
 
 /* Preserve separate SBV rounding steps; explicit fma calls remain fused. */
-#if defined(__GNUC__) && !defined(__clang__)
-#pragma GCC optimize ("fp-contract=off")
-#else
+#if defined(__clang__)
 #pragma STDC FP_CONTRACT OFF
 #endif
 
@@ -995,9 +951,7 @@ SDouble toFP_Double_ToDouble(const SDouble sbv_input_0)
 #include <libbf.h>
 
 /* Preserve separate SBV rounding steps; explicit fma calls remain fused. */
-#if defined(__GNUC__) && !defined(__clang__)
-#pragma GCC optimize ("fp-contract=off")
-#else
+#if defined(__clang__)
 #pragma STDC FP_CONTRACT OFF
 #endif
 
@@ -1070,9 +1024,7 @@ SDouble toFP_Integer_ToDouble(const SInteger sbv_input_0)
 #include <libbf.h>
 
 /* Preserve separate SBV rounding steps; explicit fma calls remain fused. */
-#if defined(__GNUC__) && !defined(__clang__)
-#pragma GCC optimize ("fp-contract=off")
-#else
+#if defined(__clang__)
 #pragma STDC FP_CONTRACT OFF
 #endif
 
@@ -1183,9 +1135,7 @@ SDouble toFP_Real_ToDouble(const SReal sbv_input_0)
 #include <libbf.h>
 
 /* Preserve separate SBV rounding steps; explicit fma calls remain fused. */
-#if defined(__GNUC__) && !defined(__clang__)
-#pragma GCC optimize ("fp-contract=off")
-#else
+#if defined(__clang__)
 #pragma STDC FP_CONTRACT OFF
 #endif
 
@@ -1250,9 +1200,7 @@ SInt8 fromFP_Float_ToInt8(const SFloat sbv_input_0)
 #include <libbf.h>
 
 /* Preserve separate SBV rounding steps; explicit fma calls remain fused. */
-#if defined(__GNUC__) && !defined(__clang__)
-#pragma GCC optimize ("fp-contract=off")
-#else
+#if defined(__clang__)
 #pragma STDC FP_CONTRACT OFF
 #endif
 
@@ -1317,9 +1265,7 @@ SInt16 fromFP_Float_ToInt16(const SFloat sbv_input_0)
 #include <libbf.h>
 
 /* Preserve separate SBV rounding steps; explicit fma calls remain fused. */
-#if defined(__GNUC__) && !defined(__clang__)
-#pragma GCC optimize ("fp-contract=off")
-#else
+#if defined(__clang__)
 #pragma STDC FP_CONTRACT OFF
 #endif
 
@@ -1384,9 +1330,7 @@ SInt32 fromFP_Float_ToInt32(const SFloat sbv_input_0)
 #include <libbf.h>
 
 /* Preserve separate SBV rounding steps; explicit fma calls remain fused. */
-#if defined(__GNUC__) && !defined(__clang__)
-#pragma GCC optimize ("fp-contract=off")
-#else
+#if defined(__clang__)
 #pragma STDC FP_CONTRACT OFF
 #endif
 
@@ -1451,9 +1395,7 @@ SInt64 fromFP_Float_ToInt64(const SFloat sbv_input_0)
 #include <libbf.h>
 
 /* Preserve separate SBV rounding steps; explicit fma calls remain fused. */
-#if defined(__GNUC__) && !defined(__clang__)
-#pragma GCC optimize ("fp-contract=off")
-#else
+#if defined(__clang__)
 #pragma STDC FP_CONTRACT OFF
 #endif
 
@@ -1518,9 +1460,7 @@ SWord8 fromFP_Float_ToWord8(const SFloat sbv_input_0)
 #include <libbf.h>
 
 /* Preserve separate SBV rounding steps; explicit fma calls remain fused. */
-#if defined(__GNUC__) && !defined(__clang__)
-#pragma GCC optimize ("fp-contract=off")
-#else
+#if defined(__clang__)
 #pragma STDC FP_CONTRACT OFF
 #endif
 
@@ -1585,9 +1525,7 @@ SWord16 fromFP_Float_ToWord16(const SFloat sbv_input_0)
 #include <libbf.h>
 
 /* Preserve separate SBV rounding steps; explicit fma calls remain fused. */
-#if defined(__GNUC__) && !defined(__clang__)
-#pragma GCC optimize ("fp-contract=off")
-#else
+#if defined(__clang__)
 #pragma STDC FP_CONTRACT OFF
 #endif
 
@@ -1652,9 +1590,7 @@ SWord32 fromFP_Float_ToWord32(const SFloat sbv_input_0)
 #include <libbf.h>
 
 /* Preserve separate SBV rounding steps; explicit fma calls remain fused. */
-#if defined(__GNUC__) && !defined(__clang__)
-#pragma GCC optimize ("fp-contract=off")
-#else
+#if defined(__clang__)
 #pragma STDC FP_CONTRACT OFF
 #endif
 
@@ -1719,9 +1655,7 @@ SWord64 fromFP_Float_ToWord64(const SFloat sbv_input_0)
 #include <libbf.h>
 
 /* Preserve separate SBV rounding steps; explicit fma calls remain fused. */
-#if defined(__GNUC__) && !defined(__clang__)
-#pragma GCC optimize ("fp-contract=off")
-#else
+#if defined(__clang__)
 #pragma STDC FP_CONTRACT OFF
 #endif
 
@@ -1739,9 +1673,7 @@ SFloat fromFP_Float_ToFloat(const SFloat sbv_input_0)
 #include <libbf.h>
 
 /* Preserve separate SBV rounding steps; explicit fma calls remain fused. */
-#if defined(__GNUC__) && !defined(__clang__)
-#pragma GCC optimize ("fp-contract=off")
-#else
+#if defined(__clang__)
 #pragma STDC FP_CONTRACT OFF
 #endif
 
@@ -1762,9 +1694,7 @@ SDouble fromFP_Float_ToDouble(const SFloat sbv_input_0)
 #include <libbf.h>
 
 /* Preserve separate SBV rounding steps; explicit fma calls remain fused. */
-#if defined(__GNUC__) && !defined(__clang__)
-#pragma GCC optimize ("fp-contract=off")
-#else
+#if defined(__clang__)
 #pragma STDC FP_CONTRACT OFF
 #endif
 
@@ -1829,9 +1759,7 @@ SInteger fromFP_Float_ToInteger(const SFloat sbv_input_0)
 #include <libbf.h>
 
 /* Preserve separate SBV rounding steps; explicit fma calls remain fused. */
-#if defined(__GNUC__) && !defined(__clang__)
-#pragma GCC optimize ("fp-contract=off")
-#else
+#if defined(__clang__)
 #pragma STDC FP_CONTRACT OFF
 #endif
 
@@ -1942,9 +1870,7 @@ SReal fromFP_Float_ToReal(const SFloat sbv_input_0)
 #include <libbf.h>
 
 /* Preserve separate SBV rounding steps; explicit fma calls remain fused. */
-#if defined(__GNUC__) && !defined(__clang__)
-#pragma GCC optimize ("fp-contract=off")
-#else
+#if defined(__clang__)
 #pragma STDC FP_CONTRACT OFF
 #endif
 
@@ -2009,9 +1935,7 @@ SInt8 fromFP_DoubleTo_Int8(const SDouble sbv_input_0)
 #include <libbf.h>
 
 /* Preserve separate SBV rounding steps; explicit fma calls remain fused. */
-#if defined(__GNUC__) && !defined(__clang__)
-#pragma GCC optimize ("fp-contract=off")
-#else
+#if defined(__clang__)
 #pragma STDC FP_CONTRACT OFF
 #endif
 
@@ -2076,9 +2000,7 @@ SInt16 fromFP_DoubleTo_Int16(const SDouble sbv_input_0)
 #include <libbf.h>
 
 /* Preserve separate SBV rounding steps; explicit fma calls remain fused. */
-#if defined(__GNUC__) && !defined(__clang__)
-#pragma GCC optimize ("fp-contract=off")
-#else
+#if defined(__clang__)
 #pragma STDC FP_CONTRACT OFF
 #endif
 
@@ -2143,9 +2065,7 @@ SInt32 fromFP_DoubleTo_Int32(const SDouble sbv_input_0)
 #include <libbf.h>
 
 /* Preserve separate SBV rounding steps; explicit fma calls remain fused. */
-#if defined(__GNUC__) && !defined(__clang__)
-#pragma GCC optimize ("fp-contract=off")
-#else
+#if defined(__clang__)
 #pragma STDC FP_CONTRACT OFF
 #endif
 
@@ -2210,9 +2130,7 @@ SInt64 fromFP_DoubleTo_Int64(const SDouble sbv_input_0)
 #include <libbf.h>
 
 /* Preserve separate SBV rounding steps; explicit fma calls remain fused. */
-#if defined(__GNUC__) && !defined(__clang__)
-#pragma GCC optimize ("fp-contract=off")
-#else
+#if defined(__clang__)
 #pragma STDC FP_CONTRACT OFF
 #endif
 
@@ -2277,9 +2195,7 @@ SWord8 fromFP_DoubleTo_Word8(const SDouble sbv_input_0)
 #include <libbf.h>
 
 /* Preserve separate SBV rounding steps; explicit fma calls remain fused. */
-#if defined(__GNUC__) && !defined(__clang__)
-#pragma GCC optimize ("fp-contract=off")
-#else
+#if defined(__clang__)
 #pragma STDC FP_CONTRACT OFF
 #endif
 
@@ -2344,9 +2260,7 @@ SWord16 fromFP_DoubleTo_Word16(const SDouble sbv_input_0)
 #include <libbf.h>
 
 /* Preserve separate SBV rounding steps; explicit fma calls remain fused. */
-#if defined(__GNUC__) && !defined(__clang__)
-#pragma GCC optimize ("fp-contract=off")
-#else
+#if defined(__clang__)
 #pragma STDC FP_CONTRACT OFF
 #endif
 
@@ -2411,9 +2325,7 @@ SWord32 fromFP_DoubleTo_Word32(const SDouble sbv_input_0)
 #include <libbf.h>
 
 /* Preserve separate SBV rounding steps; explicit fma calls remain fused. */
-#if defined(__GNUC__) && !defined(__clang__)
-#pragma GCC optimize ("fp-contract=off")
-#else
+#if defined(__clang__)
 #pragma STDC FP_CONTRACT OFF
 #endif
 
@@ -2478,9 +2390,7 @@ SWord64 fromFP_DoubleTo_Word64(const SDouble sbv_input_0)
 #include <libbf.h>
 
 /* Preserve separate SBV rounding steps; explicit fma calls remain fused. */
-#if defined(__GNUC__) && !defined(__clang__)
-#pragma GCC optimize ("fp-contract=off")
-#else
+#if defined(__clang__)
 #pragma STDC FP_CONTRACT OFF
 #endif
 
@@ -2537,9 +2447,7 @@ SFloat fromFP_DoubleTo_Float(const SDouble sbv_input_0)
 #include <libbf.h>
 
 /* Preserve separate SBV rounding steps; explicit fma calls remain fused. */
-#if defined(__GNUC__) && !defined(__clang__)
-#pragma GCC optimize ("fp-contract=off")
-#else
+#if defined(__clang__)
 #pragma STDC FP_CONTRACT OFF
 #endif
 
@@ -2557,9 +2465,7 @@ SDouble fromFP_DoubleTo_Double(const SDouble sbv_input_0)
 #include <libbf.h>
 
 /* Preserve separate SBV rounding steps; explicit fma calls remain fused. */
-#if defined(__GNUC__) && !defined(__clang__)
-#pragma GCC optimize ("fp-contract=off")
-#else
+#if defined(__clang__)
 #pragma STDC FP_CONTRACT OFF
 #endif
 
@@ -2624,9 +2530,7 @@ SInteger fromFP_DoubleTo_Integer(const SDouble sbv_input_0)
 #include <libbf.h>
 
 /* Preserve separate SBV rounding steps; explicit fma calls remain fused. */
-#if defined(__GNUC__) && !defined(__clang__)
-#pragma GCC optimize ("fp-contract=off")
-#else
+#if defined(__clang__)
 #pragma STDC FP_CONTRACT OFF
 #endif
 
@@ -2737,9 +2641,7 @@ SReal fromFP_DoubleTo_Real(const SDouble sbv_input_0)
 #include <libbf.h>
 
 /* Preserve separate SBV rounding steps; explicit fma calls remain fused. */
-#if defined(__GNUC__) && !defined(__clang__)
-#pragma GCC optimize ("fp-contract=off")
-#else
+#if defined(__clang__)
 #pragma STDC FP_CONTRACT OFF
 #endif
 
@@ -2760,9 +2662,7 @@ SFloat fromFP_SWord32_SFloat(const SWord32 sbv_input_0)
 #include <libbf.h>
 
 /* Preserve separate SBV rounding steps; explicit fma calls remain fused. */
-#if defined(__GNUC__) && !defined(__clang__)
-#pragma GCC optimize ("fp-contract=off")
-#else
+#if defined(__clang__)
 #pragma STDC FP_CONTRACT OFF
 #endif
 
@@ -2783,9 +2683,7 @@ SDouble fromFP_SWord64_SDouble(const SWord64 sbv_input_0)
 #include <libbf.h>
 
 /* Preserve separate SBV rounding steps; explicit fma calls remain fused. */
-#if defined(__GNUC__) && !defined(__clang__)
-#pragma GCC optimize ("fp-contract=off")
-#else
+#if defined(__clang__)
 #pragma STDC FP_CONTRACT OFF
 #endif
 
@@ -2806,9 +2704,7 @@ SWord32 fromFP_SFloat_SWord32(const SFloat sbv_input_0)
 #include <libbf.h>
 
 /* Preserve separate SBV rounding steps; explicit fma calls remain fused. */
-#if defined(__GNUC__) && !defined(__clang__)
-#pragma GCC optimize ("fp-contract=off")
-#else
+#if defined(__clang__)
 #pragma STDC FP_CONTRACT OFF
 #endif
 
@@ -2829,9 +2725,7 @@ SWord64 fromFP_SDouble_SWord64(const SDouble sbv_input_0)
 #include <libbf.h>
 
 /* Preserve separate SBV rounding steps; explicit fma calls remain fused. */
-#if defined(__GNUC__) && !defined(__clang__)
-#pragma GCC optimize ("fp-contract=off")
-#else
+#if defined(__clang__)
 #pragma STDC FP_CONTRACT OFF
 #endif
 
@@ -2852,9 +2746,7 @@ SFloat f_FP_Abs(const SFloat sbv_input_0)
 #include <libbf.h>
 
 /* Preserve separate SBV rounding steps; explicit fma calls remain fused. */
-#if defined(__GNUC__) && !defined(__clang__)
-#pragma GCC optimize ("fp-contract=off")
-#else
+#if defined(__clang__)
 #pragma STDC FP_CONTRACT OFF
 #endif
 
@@ -2875,9 +2767,7 @@ SDouble d_FP_Abs(const SDouble sbv_input_0)
 #include <libbf.h>
 
 /* Preserve separate SBV rounding steps; explicit fma calls remain fused. */
-#if defined(__GNUC__) && !defined(__clang__)
-#pragma GCC optimize ("fp-contract=off")
-#else
+#if defined(__clang__)
 #pragma STDC FP_CONTRACT OFF
 #endif
 
@@ -2898,9 +2788,7 @@ SFloat f_FP_Neg(const SFloat sbv_input_0)
 #include <libbf.h>
 
 /* Preserve separate SBV rounding steps; explicit fma calls remain fused. */
-#if defined(__GNUC__) && !defined(__clang__)
-#pragma GCC optimize ("fp-contract=off")
-#else
+#if defined(__clang__)
 #pragma STDC FP_CONTRACT OFF
 #endif
 
@@ -2921,9 +2809,7 @@ SDouble d_FP_Neg(const SDouble sbv_input_0)
 #include <libbf.h>
 
 /* Preserve separate SBV rounding steps; explicit fma calls remain fused. */
-#if defined(__GNUC__) && !defined(__clang__)
-#pragma GCC optimize ("fp-contract=off")
-#else
+#if defined(__clang__)
 #pragma STDC FP_CONTRACT OFF
 #endif
 
@@ -2945,9 +2831,7 @@ SFloat f_FP_Add(const SFloat sbv_input_0, const SFloat sbv_input_1)
 #include <libbf.h>
 
 /* Preserve separate SBV rounding steps; explicit fma calls remain fused. */
-#if defined(__GNUC__) && !defined(__clang__)
-#pragma GCC optimize ("fp-contract=off")
-#else
+#if defined(__clang__)
 #pragma STDC FP_CONTRACT OFF
 #endif
 
@@ -2970,9 +2854,7 @@ SDouble d_FP_Add(const SDouble sbv_input_0,
 #include <libbf.h>
 
 /* Preserve separate SBV rounding steps; explicit fma calls remain fused. */
-#if defined(__GNUC__) && !defined(__clang__)
-#pragma GCC optimize ("fp-contract=off")
-#else
+#if defined(__clang__)
 #pragma STDC FP_CONTRACT OFF
 #endif
 
@@ -2994,9 +2876,7 @@ SFloat f_FP_Sub(const SFloat sbv_input_0, const SFloat sbv_input_1)
 #include <libbf.h>
 
 /* Preserve separate SBV rounding steps; explicit fma calls remain fused. */
-#if defined(__GNUC__) && !defined(__clang__)
-#pragma GCC optimize ("fp-contract=off")
-#else
+#if defined(__clang__)
 #pragma STDC FP_CONTRACT OFF
 #endif
 
@@ -3019,9 +2899,7 @@ SDouble d_FP_Sub(const SDouble sbv_input_0,
 #include <libbf.h>
 
 /* Preserve separate SBV rounding steps; explicit fma calls remain fused. */
-#if defined(__GNUC__) && !defined(__clang__)
-#pragma GCC optimize ("fp-contract=off")
-#else
+#if defined(__clang__)
 #pragma STDC FP_CONTRACT OFF
 #endif
 
@@ -3043,9 +2921,7 @@ SFloat f_FP_Mul(const SFloat sbv_input_0, const SFloat sbv_input_1)
 #include <libbf.h>
 
 /* Preserve separate SBV rounding steps; explicit fma calls remain fused. */
-#if defined(__GNUC__) && !defined(__clang__)
-#pragma GCC optimize ("fp-contract=off")
-#else
+#if defined(__clang__)
 #pragma STDC FP_CONTRACT OFF
 #endif
 
@@ -3068,9 +2944,7 @@ SDouble d_FP_Mul(const SDouble sbv_input_0,
 #include <libbf.h>
 
 /* Preserve separate SBV rounding steps; explicit fma calls remain fused. */
-#if defined(__GNUC__) && !defined(__clang__)
-#pragma GCC optimize ("fp-contract=off")
-#else
+#if defined(__clang__)
 #pragma STDC FP_CONTRACT OFF
 #endif
 
@@ -3092,9 +2966,7 @@ SFloat f_FP_Div(const SFloat sbv_input_0, const SFloat sbv_input_1)
 #include <libbf.h>
 
 /* Preserve separate SBV rounding steps; explicit fma calls remain fused. */
-#if defined(__GNUC__) && !defined(__clang__)
-#pragma GCC optimize ("fp-contract=off")
-#else
+#if defined(__clang__)
 #pragma STDC FP_CONTRACT OFF
 #endif
 
@@ -3117,9 +2989,7 @@ SDouble d_FP_Div(const SDouble sbv_input_0,
 #include <libbf.h>
 
 /* Preserve separate SBV rounding steps; explicit fma calls remain fused. */
-#if defined(__GNUC__) && !defined(__clang__)
-#pragma GCC optimize ("fp-contract=off")
-#else
+#if defined(__clang__)
 #pragma STDC FP_CONTRACT OFF
 #endif
 
@@ -3143,9 +3013,7 @@ SFloat f_FP_FMA(const SFloat sbv_input_0, const SFloat sbv_input_1,
 #include <libbf.h>
 
 /* Preserve separate SBV rounding steps; explicit fma calls remain fused. */
-#if defined(__GNUC__) && !defined(__clang__)
-#pragma GCC optimize ("fp-contract=off")
-#else
+#if defined(__clang__)
 #pragma STDC FP_CONTRACT OFF
 #endif
 
@@ -3169,9 +3037,7 @@ SDouble d_FP_FMA(const SDouble sbv_input_0,
 #include <libbf.h>
 
 /* Preserve separate SBV rounding steps; explicit fma calls remain fused. */
-#if defined(__GNUC__) && !defined(__clang__)
-#pragma GCC optimize ("fp-contract=off")
-#else
+#if defined(__clang__)
 #pragma STDC FP_CONTRACT OFF
 #endif
 
@@ -3192,9 +3058,7 @@ SFloat f_FP_Sqrt(const SFloat sbv_input_0)
 #include <libbf.h>
 
 /* Preserve separate SBV rounding steps; explicit fma calls remain fused. */
-#if defined(__GNUC__) && !defined(__clang__)
-#pragma GCC optimize ("fp-contract=off")
-#else
+#if defined(__clang__)
 #pragma STDC FP_CONTRACT OFF
 #endif
 
@@ -3215,9 +3079,7 @@ SDouble d_FP_Sqrt(const SDouble sbv_input_0)
 #include <libbf.h>
 
 /* Preserve separate SBV rounding steps; explicit fma calls remain fused. */
-#if defined(__GNUC__) && !defined(__clang__)
-#pragma GCC optimize ("fp-contract=off")
-#else
+#if defined(__clang__)
 #pragma STDC FP_CONTRACT OFF
 #endif
 
@@ -3239,9 +3101,7 @@ SFloat f_FP_Rem(const SFloat sbv_input_0, const SFloat sbv_input_1)
 #include <libbf.h>
 
 /* Preserve separate SBV rounding steps; explicit fma calls remain fused. */
-#if defined(__GNUC__) && !defined(__clang__)
-#pragma GCC optimize ("fp-contract=off")
-#else
+#if defined(__clang__)
 #pragma STDC FP_CONTRACT OFF
 #endif
 
@@ -3264,9 +3124,7 @@ SDouble d_FP_Rem(const SDouble sbv_input_0,
 #include <libbf.h>
 
 /* Preserve separate SBV rounding steps; explicit fma calls remain fused. */
-#if defined(__GNUC__) && !defined(__clang__)
-#pragma GCC optimize ("fp-contract=off")
-#else
+#if defined(__clang__)
 #pragma STDC FP_CONTRACT OFF
 #endif
 
@@ -3287,9 +3145,7 @@ SFloat f_FP_RoundToIntegral(const SFloat sbv_input_0)
 #include <libbf.h>
 
 /* Preserve separate SBV rounding steps; explicit fma calls remain fused. */
-#if defined(__GNUC__) && !defined(__clang__)
-#pragma GCC optimize ("fp-contract=off")
-#else
+#if defined(__clang__)
 #pragma STDC FP_CONTRACT OFF
 #endif
 
@@ -3310,9 +3166,7 @@ SDouble d_FP_RoundToIntegral(const SDouble sbv_input_0)
 #include <libbf.h>
 
 /* Preserve separate SBV rounding steps; explicit fma calls remain fused. */
-#if defined(__GNUC__) && !defined(__clang__)
-#pragma GCC optimize ("fp-contract=off")
-#else
+#if defined(__clang__)
 #pragma STDC FP_CONTRACT OFF
 #endif
 
@@ -3335,9 +3189,7 @@ SFloat f_FP_Min(const SFloat sbv_input_0, const SFloat sbv_input_1)
 #include <libbf.h>
 
 /* Preserve separate SBV rounding steps; explicit fma calls remain fused. */
-#if defined(__GNUC__) && !defined(__clang__)
-#pragma GCC optimize ("fp-contract=off")
-#else
+#if defined(__clang__)
 #pragma STDC FP_CONTRACT OFF
 #endif
 
@@ -3361,9 +3213,7 @@ SDouble d_FP_Min(const SDouble sbv_input_0,
 #include <libbf.h>
 
 /* Preserve separate SBV rounding steps; explicit fma calls remain fused. */
-#if defined(__GNUC__) && !defined(__clang__)
-#pragma GCC optimize ("fp-contract=off")
-#else
+#if defined(__clang__)
 #pragma STDC FP_CONTRACT OFF
 #endif
 
@@ -3386,9 +3236,7 @@ SFloat f_FP_Max(const SFloat sbv_input_0, const SFloat sbv_input_1)
 #include <libbf.h>
 
 /* Preserve separate SBV rounding steps; explicit fma calls remain fused. */
-#if defined(__GNUC__) && !defined(__clang__)
-#pragma GCC optimize ("fp-contract=off")
-#else
+#if defined(__clang__)
 #pragma STDC FP_CONTRACT OFF
 #endif
 
@@ -3412,9 +3260,7 @@ SDouble d_FP_Max(const SDouble sbv_input_0,
 #include <libbf.h>
 
 /* Preserve separate SBV rounding steps; explicit fma calls remain fused. */
-#if defined(__GNUC__) && !defined(__clang__)
-#pragma GCC optimize ("fp-contract=off")
-#else
+#if defined(__clang__)
 #pragma STDC FP_CONTRACT OFF
 #endif
 
@@ -3437,9 +3283,7 @@ SBool f_FP_IsEqualObject(const SFloat sbv_input_0,
 #include <libbf.h>
 
 /* Preserve separate SBV rounding steps; explicit fma calls remain fused. */
-#if defined(__GNUC__) && !defined(__clang__)
-#pragma GCC optimize ("fp-contract=off")
-#else
+#if defined(__clang__)
 #pragma STDC FP_CONTRACT OFF
 #endif
 
@@ -3462,9 +3306,7 @@ SBool d_FP_IsEqualObject(const SDouble sbv_input_0,
 #include <libbf.h>
 
 /* Preserve separate SBV rounding steps; explicit fma calls remain fused. */
-#if defined(__GNUC__) && !defined(__clang__)
-#pragma GCC optimize ("fp-contract=off")
-#else
+#if defined(__clang__)
 #pragma STDC FP_CONTRACT OFF
 #endif
 
@@ -3485,9 +3327,7 @@ SBool f_FP_IsNormal(const SFloat sbv_input_0)
 #include <libbf.h>
 
 /* Preserve separate SBV rounding steps; explicit fma calls remain fused. */
-#if defined(__GNUC__) && !defined(__clang__)
-#pragma GCC optimize ("fp-contract=off")
-#else
+#if defined(__clang__)
 #pragma STDC FP_CONTRACT OFF
 #endif
 
@@ -3508,9 +3348,7 @@ SBool d_FP_IsNormal(const SDouble sbv_input_0)
 #include <libbf.h>
 
 /* Preserve separate SBV rounding steps; explicit fma calls remain fused. */
-#if defined(__GNUC__) && !defined(__clang__)
-#pragma GCC optimize ("fp-contract=off")
-#else
+#if defined(__clang__)
 #pragma STDC FP_CONTRACT OFF
 #endif
 
@@ -3531,9 +3369,7 @@ SBool f_FP_IsZero(const SFloat sbv_input_0)
 #include <libbf.h>
 
 /* Preserve separate SBV rounding steps; explicit fma calls remain fused. */
-#if defined(__GNUC__) && !defined(__clang__)
-#pragma GCC optimize ("fp-contract=off")
-#else
+#if defined(__clang__)
 #pragma STDC FP_CONTRACT OFF
 #endif
 
@@ -3554,9 +3390,7 @@ SBool d_FP_IsZero(const SDouble sbv_input_0)
 #include <libbf.h>
 
 /* Preserve separate SBV rounding steps; explicit fma calls remain fused. */
-#if defined(__GNUC__) && !defined(__clang__)
-#pragma GCC optimize ("fp-contract=off")
-#else
+#if defined(__clang__)
 #pragma STDC FP_CONTRACT OFF
 #endif
 
@@ -3577,9 +3411,7 @@ SBool f_FP_IsSubnormal(const SFloat sbv_input_0)
 #include <libbf.h>
 
 /* Preserve separate SBV rounding steps; explicit fma calls remain fused. */
-#if defined(__GNUC__) && !defined(__clang__)
-#pragma GCC optimize ("fp-contract=off")
-#else
+#if defined(__clang__)
 #pragma STDC FP_CONTRACT OFF
 #endif
 
@@ -3600,9 +3432,7 @@ SBool d_FP_IsSubnormal(const SDouble sbv_input_0)
 #include <libbf.h>
 
 /* Preserve separate SBV rounding steps; explicit fma calls remain fused. */
-#if defined(__GNUC__) && !defined(__clang__)
-#pragma GCC optimize ("fp-contract=off")
-#else
+#if defined(__clang__)
 #pragma STDC FP_CONTRACT OFF
 #endif
 
@@ -3623,9 +3453,7 @@ SBool f_FP_IsInfinite(const SFloat sbv_input_0)
 #include <libbf.h>
 
 /* Preserve separate SBV rounding steps; explicit fma calls remain fused. */
-#if defined(__GNUC__) && !defined(__clang__)
-#pragma GCC optimize ("fp-contract=off")
-#else
+#if defined(__clang__)
 #pragma STDC FP_CONTRACT OFF
 #endif
 
@@ -3646,9 +3474,7 @@ SBool d_FP_IsInfinite(const SDouble sbv_input_0)
 #include <libbf.h>
 
 /* Preserve separate SBV rounding steps; explicit fma calls remain fused. */
-#if defined(__GNUC__) && !defined(__clang__)
-#pragma GCC optimize ("fp-contract=off")
-#else
+#if defined(__clang__)
 #pragma STDC FP_CONTRACT OFF
 #endif
 
@@ -3669,9 +3495,7 @@ SBool f_FP_IsNaN(const SFloat sbv_input_0)
 #include <libbf.h>
 
 /* Preserve separate SBV rounding steps; explicit fma calls remain fused. */
-#if defined(__GNUC__) && !defined(__clang__)
-#pragma GCC optimize ("fp-contract=off")
-#else
+#if defined(__clang__)
 #pragma STDC FP_CONTRACT OFF
 #endif
 
@@ -3692,9 +3516,7 @@ SBool d_FP_IsNaN(const SDouble sbv_input_0)
 #include <libbf.h>
 
 /* Preserve separate SBV rounding steps; explicit fma calls remain fused. */
-#if defined(__GNUC__) && !defined(__clang__)
-#pragma GCC optimize ("fp-contract=off")
-#else
+#if defined(__clang__)
 #pragma STDC FP_CONTRACT OFF
 #endif
 
@@ -3715,9 +3537,7 @@ SBool f_FP_IsNegative(const SFloat sbv_input_0)
 #include <libbf.h>
 
 /* Preserve separate SBV rounding steps; explicit fma calls remain fused. */
-#if defined(__GNUC__) && !defined(__clang__)
-#pragma GCC optimize ("fp-contract=off")
-#else
+#if defined(__clang__)
 #pragma STDC FP_CONTRACT OFF
 #endif
 
@@ -3738,9 +3558,7 @@ SBool d_FP_IsNegative(const SDouble sbv_input_0)
 #include <libbf.h>
 
 /* Preserve separate SBV rounding steps; explicit fma calls remain fused. */
-#if defined(__GNUC__) && !defined(__clang__)
-#pragma GCC optimize ("fp-contract=off")
-#else
+#if defined(__clang__)
 #pragma STDC FP_CONTRACT OFF
 #endif
 
@@ -3761,9 +3579,7 @@ SBool f_FP_IsPositive(const SFloat sbv_input_0)
 #include <libbf.h>
 
 /* Preserve separate SBV rounding steps; explicit fma calls remain fused. */
-#if defined(__GNUC__) && !defined(__clang__)
-#pragma GCC optimize ("fp-contract=off")
-#else
+#if defined(__clang__)
 #pragma STDC FP_CONTRACT OFF
 #endif
 
@@ -3780,8 +3596,8 @@ SBool d_FP_IsPositive(const SDouble sbv_input_0)
 == BEGIN: "floatCodeGen.h" ================
 /* Header file for floatCodeGen. Automatically generated by SBV. Do not edit! */
 
-#ifndef __floatCodeGen__HEADER_INCLUDED__
-#define __floatCodeGen__HEADER_INCLUDED__
+#ifndef SBV_GENERATED_floatCodeGen_HEADER_INCLUDED
+#define SBV_GENERATED_floatCodeGen_HEADER_INCLUDED
 
 #if defined(__FAST_MATH__) || (defined(__FINITE_MATH_ONLY__) && __FINITE_MATH_ONLY__ > 0)
 #error "SBV-generated C requires IEEE floating-point semantics; disable fast-math and finite-math-only."
@@ -3932,7 +3748,7 @@ SBool d_FP_IsNegative(const SDouble a);
 SBool f_FP_IsPositive(const SFloat a);
 SBool d_FP_IsPositive(const SDouble a);
 
-#endif /* __floatCodeGen__HEADER_INCLUDED__ */
+#endif /* SBV_GENERATED_floatCodeGen_HEADER_INCLUDED */
 == END: "floatCodeGen.h" ==================
 == BEGIN: "floatCodeGen_driver.c" ================
 /* Example driver program for floatCodeGen. */
@@ -3944,664 +3760,664 @@ SBool d_FP_IsPositive(const SDouble a);
 
 void toFP_Int8_ToFloat_driver(void)
 {
-  const SFloat __result = toFP_Int8_ToFloat(42);
+  const SFloat sbv_result = toFP_Int8_ToFloat(42);
 
-  printf("toFP_Int8_ToFloat(42) = %a\n", __result);
+  printf("toFP_Int8_ToFloat(42) = %a\n", sbv_result);
 }
 
 void toFP_Int16_ToFloat_driver(void)
 {
-  const SFloat __result = toFP_Int16_ToFloat(0x002a);
+  const SFloat sbv_result = toFP_Int16_ToFloat(0x002a);
 
-  printf("toFP_Int16_ToFloat(0x002a) = %a\n", __result);
+  printf("toFP_Int16_ToFloat(0x002a) = %a\n", sbv_result);
 }
 
 void toFP_Int32_ToFloat_driver(void)
 {
-  const SFloat __result = toFP_Int32_ToFloat(0x0000002aL);
+  const SFloat sbv_result = toFP_Int32_ToFloat(0x0000002aL);
 
-  printf("toFP_Int32_ToFloat(0x0000002aL) = %a\n", __result);
+  printf("toFP_Int32_ToFloat(0x0000002aL) = %a\n", sbv_result);
 }
 
 void toFP_Int64_ToFloat_driver(void)
 {
-  const SFloat __result = toFP_Int64_ToFloat(0x000000000000002aLL);
+  const SFloat sbv_result = toFP_Int64_ToFloat(0x000000000000002aLL);
 
-  printf("toFP_Int64_ToFloat(0x000000000000002aLL) = %a\n", __result);
+  printf("toFP_Int64_ToFloat(0x000000000000002aLL) = %a\n", sbv_result);
 }
 
 void toFP_Word8_ToFloat_driver(void)
 {
-  const SFloat __result = toFP_Word8_ToFloat(42);
+  const SFloat sbv_result = toFP_Word8_ToFloat(42);
 
-  printf("toFP_Word8_ToFloat(42) = %a\n", __result);
+  printf("toFP_Word8_ToFloat(42) = %a\n", sbv_result);
 }
 
 void toFP_Word16_ToFloat_driver(void)
 {
-  const SFloat __result = toFP_Word16_ToFloat(0x002aU);
+  const SFloat sbv_result = toFP_Word16_ToFloat(0x002aU);
 
-  printf("toFP_Word16_ToFloat(0x002aU) = %a\n", __result);
+  printf("toFP_Word16_ToFloat(0x002aU) = %a\n", sbv_result);
 }
 
 void toFP_Word32_ToFloat_driver(void)
 {
-  const SFloat __result = toFP_Word32_ToFloat(0x0000002aUL);
+  const SFloat sbv_result = toFP_Word32_ToFloat(0x0000002aUL);
 
-  printf("toFP_Word32_ToFloat(0x0000002aUL) = %a\n", __result);
+  printf("toFP_Word32_ToFloat(0x0000002aUL) = %a\n", sbv_result);
 }
 
 void toFP_Word64_ToFloat_driver(void)
 {
-  const SFloat __result = toFP_Word64_ToFloat(0x000000000000002aULL);
+  const SFloat sbv_result = toFP_Word64_ToFloat(0x000000000000002aULL);
 
-  printf("toFP_Word64_ToFloat(0x000000000000002aULL) = %a\n", __result);
+  printf("toFP_Word64_ToFloat(0x000000000000002aULL) = %a\n", sbv_result);
 }
 
 void toFP_Float_ToFloat_driver(void)
 {
-  const SFloat __result = toFP_Float_ToFloat(0x1.5p5F /* 42.0F */);
+  const SFloat sbv_result = toFP_Float_ToFloat(0x1.5p5F /* 42.0F */);
 
-  printf("toFP_Float_ToFloat(0x1.5p5F /* 42.0F */) = %a\n", __result);
+  printf("toFP_Float_ToFloat(0x1.5p5F /* 42.0F */) = %a\n", sbv_result);
 }
 
 void toFP_Double_ToFloat_driver(void)
 {
-  const SFloat __result = toFP_Double_ToFloat(0x1.5p5 /* 42.0 */);
+  const SFloat sbv_result = toFP_Double_ToFloat(0x1.5p5 /* 42.0 */);
 
-  printf("toFP_Double_ToFloat(0x1.5p5 /* 42.0 */) = %a\n", __result);
+  printf("toFP_Double_ToFloat(0x1.5p5 /* 42.0 */) = %a\n", sbv_result);
 }
 
 void toFP_Integer_ToFloat_driver(void)
 {
-  const SFloat __result = toFP_Integer_ToFloat(0x000000000000002aLL);
+  const SFloat sbv_result = toFP_Integer_ToFloat(0x000000000000002aLL);
 
-  printf("toFP_Integer_ToFloat(0x000000000000002aLL) = %a\n", __result);
+  printf("toFP_Integer_ToFloat(0x000000000000002aLL) = %a\n", sbv_result);
 }
 
 void toFP_Real_ToFloat_driver(void)
 {
-  const SFloat __result = toFP_Real_ToFloat(42.0L);
+  const SFloat sbv_result = toFP_Real_ToFloat(42.0L);
 
-  printf("toFP_Real_ToFloat(42.0L) = %a\n", __result);
+  printf("toFP_Real_ToFloat(42.0L) = %a\n", sbv_result);
 }
 
 void toFP_Int8_ToDouble_driver(void)
 {
-  const SDouble __result = toFP_Int8_ToDouble(42);
+  const SDouble sbv_result = toFP_Int8_ToDouble(42);
 
-  printf("toFP_Int8_ToDouble(42) = %a\n", __result);
+  printf("toFP_Int8_ToDouble(42) = %a\n", sbv_result);
 }
 
 void toFP_Int16_ToDouble_driver(void)
 {
-  const SDouble __result = toFP_Int16_ToDouble(0x002a);
+  const SDouble sbv_result = toFP_Int16_ToDouble(0x002a);
 
-  printf("toFP_Int16_ToDouble(0x002a) = %a\n", __result);
+  printf("toFP_Int16_ToDouble(0x002a) = %a\n", sbv_result);
 }
 
 void toFP_Int32_ToDouble_driver(void)
 {
-  const SDouble __result = toFP_Int32_ToDouble(0x0000002aL);
+  const SDouble sbv_result = toFP_Int32_ToDouble(0x0000002aL);
 
-  printf("toFP_Int32_ToDouble(0x0000002aL) = %a\n", __result);
+  printf("toFP_Int32_ToDouble(0x0000002aL) = %a\n", sbv_result);
 }
 
 void toFP_Int64_ToDouble_driver(void)
 {
-  const SDouble __result = toFP_Int64_ToDouble(0x000000000000002aLL);
+  const SDouble sbv_result = toFP_Int64_ToDouble(0x000000000000002aLL);
 
-  printf("toFP_Int64_ToDouble(0x000000000000002aLL) = %a\n", __result);
+  printf("toFP_Int64_ToDouble(0x000000000000002aLL) = %a\n", sbv_result);
 }
 
 void toFP_Word8_ToDouble_driver(void)
 {
-  const SDouble __result = toFP_Word8_ToDouble(42);
+  const SDouble sbv_result = toFP_Word8_ToDouble(42);
 
-  printf("toFP_Word8_ToDouble(42) = %a\n", __result);
+  printf("toFP_Word8_ToDouble(42) = %a\n", sbv_result);
 }
 
 void toFP_Word16_ToDouble_driver(void)
 {
-  const SDouble __result = toFP_Word16_ToDouble(0x002aU);
+  const SDouble sbv_result = toFP_Word16_ToDouble(0x002aU);
 
-  printf("toFP_Word16_ToDouble(0x002aU) = %a\n", __result);
+  printf("toFP_Word16_ToDouble(0x002aU) = %a\n", sbv_result);
 }
 
 void toFP_Word32_ToDouble_driver(void)
 {
-  const SDouble __result = toFP_Word32_ToDouble(0x0000002aUL);
+  const SDouble sbv_result = toFP_Word32_ToDouble(0x0000002aUL);
 
-  printf("toFP_Word32_ToDouble(0x0000002aUL) = %a\n", __result);
+  printf("toFP_Word32_ToDouble(0x0000002aUL) = %a\n", sbv_result);
 }
 
 void toFP_Word64_ToDouble_driver(void)
 {
-  const SDouble __result = toFP_Word64_ToDouble(0x000000000000002aULL);
+  const SDouble sbv_result = toFP_Word64_ToDouble(0x000000000000002aULL);
 
-  printf("toFP_Word64_ToDouble(0x000000000000002aULL) = %a\n", __result);
+  printf("toFP_Word64_ToDouble(0x000000000000002aULL) = %a\n", sbv_result);
 }
 
 void toFP_Float_ToDouble_driver(void)
 {
-  const SDouble __result = toFP_Float_ToDouble(0x1.5p5F /* 42.0F */);
+  const SDouble sbv_result = toFP_Float_ToDouble(0x1.5p5F /* 42.0F */);
 
-  printf("toFP_Float_ToDouble(0x1.5p5F /* 42.0F */) = %a\n", __result);
+  printf("toFP_Float_ToDouble(0x1.5p5F /* 42.0F */) = %a\n", sbv_result);
 }
 
 void toFP_Double_ToDouble_driver(void)
 {
-  const SDouble __result = toFP_Double_ToDouble(0x1.5p5 /* 42.0 */);
+  const SDouble sbv_result = toFP_Double_ToDouble(0x1.5p5 /* 42.0 */);
 
-  printf("toFP_Double_ToDouble(0x1.5p5 /* 42.0 */) = %a\n", __result);
+  printf("toFP_Double_ToDouble(0x1.5p5 /* 42.0 */) = %a\n", sbv_result);
 }
 
 void toFP_Integer_ToDouble_driver(void)
 {
-  const SDouble __result = toFP_Integer_ToDouble(0x000000000000002aLL);
+  const SDouble sbv_result = toFP_Integer_ToDouble(0x000000000000002aLL);
 
-  printf("toFP_Integer_ToDouble(0x000000000000002aLL) = %a\n", __result);
+  printf("toFP_Integer_ToDouble(0x000000000000002aLL) = %a\n", sbv_result);
 }
 
 void toFP_Real_ToDouble_driver(void)
 {
-  const SDouble __result = toFP_Real_ToDouble(42.0L);
+  const SDouble sbv_result = toFP_Real_ToDouble(42.0L);
 
-  printf("toFP_Real_ToDouble(42.0L) = %a\n", __result);
+  printf("toFP_Real_ToDouble(42.0L) = %a\n", sbv_result);
 }
 
 void fromFP_Float_ToInt8_driver(void)
 {
-  const SInt8 __result = fromFP_Float_ToInt8(0x1.5p5F /* 42.0F */);
+  const SInt8 sbv_result = fromFP_Float_ToInt8(0x1.5p5F /* 42.0F */);
 
-  printf("fromFP_Float_ToInt8(0x1.5p5F /* 42.0F */) = %"PRId8"\n", __result);
+  printf("fromFP_Float_ToInt8(0x1.5p5F /* 42.0F */) = %"PRId8"\n", sbv_result);
 }
 
 void fromFP_Float_ToInt16_driver(void)
 {
-  const SInt16 __result = fromFP_Float_ToInt16(0x1.5p5F /* 42.0F */);
+  const SInt16 sbv_result = fromFP_Float_ToInt16(0x1.5p5F /* 42.0F */);
 
-  printf("fromFP_Float_ToInt16(0x1.5p5F /* 42.0F */) = %"PRId16"\n", __result);
+  printf("fromFP_Float_ToInt16(0x1.5p5F /* 42.0F */) = %"PRId16"\n", sbv_result);
 }
 
 void fromFP_Float_ToInt32_driver(void)
 {
-  const SInt32 __result = fromFP_Float_ToInt32(0x1.5p5F /* 42.0F */);
+  const SInt32 sbv_result = fromFP_Float_ToInt32(0x1.5p5F /* 42.0F */);
 
-  printf("fromFP_Float_ToInt32(0x1.5p5F /* 42.0F */) = %"PRId32"L\n", __result);
+  printf("fromFP_Float_ToInt32(0x1.5p5F /* 42.0F */) = %"PRId32"L\n", sbv_result);
 }
 
 void fromFP_Float_ToInt64_driver(void)
 {
-  const SInt64 __result = fromFP_Float_ToInt64(0x1.5p5F /* 42.0F */);
+  const SInt64 sbv_result = fromFP_Float_ToInt64(0x1.5p5F /* 42.0F */);
 
-  printf("fromFP_Float_ToInt64(0x1.5p5F /* 42.0F */) = %"PRId64"LL\n", __result);
+  printf("fromFP_Float_ToInt64(0x1.5p5F /* 42.0F */) = %"PRId64"LL\n", sbv_result);
 }
 
 void fromFP_Float_ToWord8_driver(void)
 {
-  const SWord8 __result = fromFP_Float_ToWord8(0x1.5p5F /* 42.0F */);
+  const SWord8 sbv_result = fromFP_Float_ToWord8(0x1.5p5F /* 42.0F */);
 
-  printf("fromFP_Float_ToWord8(0x1.5p5F /* 42.0F */) = %"PRIu8"\n", __result);
+  printf("fromFP_Float_ToWord8(0x1.5p5F /* 42.0F */) = %"PRIu8"\n", sbv_result);
 }
 
 void fromFP_Float_ToWord16_driver(void)
 {
-  const SWord16 __result = fromFP_Float_ToWord16(0x1.5p5F /* 42.0F */);
+  const SWord16 sbv_result = fromFP_Float_ToWord16(0x1.5p5F /* 42.0F */);
 
-  printf("fromFP_Float_ToWord16(0x1.5p5F /* 42.0F */) = 0x%04"PRIx16"U\n", __result);
+  printf("fromFP_Float_ToWord16(0x1.5p5F /* 42.0F */) = 0x%04"PRIx16"U\n", sbv_result);
 }
 
 void fromFP_Float_ToWord32_driver(void)
 {
-  const SWord32 __result = fromFP_Float_ToWord32(0x1.5p5F /* 42.0F */);
+  const SWord32 sbv_result = fromFP_Float_ToWord32(0x1.5p5F /* 42.0F */);
 
-  printf("fromFP_Float_ToWord32(0x1.5p5F /* 42.0F */) = 0x%08"PRIx32"UL\n", __result);
+  printf("fromFP_Float_ToWord32(0x1.5p5F /* 42.0F */) = 0x%08"PRIx32"UL\n", sbv_result);
 }
 
 void fromFP_Float_ToWord64_driver(void)
 {
-  const SWord64 __result = fromFP_Float_ToWord64(0x1.5p5F /* 42.0F */);
+  const SWord64 sbv_result = fromFP_Float_ToWord64(0x1.5p5F /* 42.0F */);
 
-  printf("fromFP_Float_ToWord64(0x1.5p5F /* 42.0F */) = 0x%016"PRIx64"ULL\n", __result);
+  printf("fromFP_Float_ToWord64(0x1.5p5F /* 42.0F */) = 0x%016"PRIx64"ULL\n", sbv_result);
 }
 
 void fromFP_Float_ToFloat_driver(void)
 {
-  const SFloat __result = fromFP_Float_ToFloat(0x1.5p5F /* 42.0F */);
+  const SFloat sbv_result = fromFP_Float_ToFloat(0x1.5p5F /* 42.0F */);
 
-  printf("fromFP_Float_ToFloat(0x1.5p5F /* 42.0F */) = %a\n", __result);
+  printf("fromFP_Float_ToFloat(0x1.5p5F /* 42.0F */) = %a\n", sbv_result);
 }
 
 void fromFP_Float_ToDouble_driver(void)
 {
-  const SDouble __result = fromFP_Float_ToDouble(0x1.5p5F /* 42.0F */);
+  const SDouble sbv_result = fromFP_Float_ToDouble(0x1.5p5F /* 42.0F */);
 
-  printf("fromFP_Float_ToDouble(0x1.5p5F /* 42.0F */) = %a\n", __result);
+  printf("fromFP_Float_ToDouble(0x1.5p5F /* 42.0F */) = %a\n", sbv_result);
 }
 
 void fromFP_Float_ToInteger_driver(void)
 {
-  const SInteger __result = fromFP_Float_ToInteger(0x1.5p5F /* 42.0F */);
+  const SInteger sbv_result = fromFP_Float_ToInteger(0x1.5p5F /* 42.0F */);
 
-  printf("fromFP_Float_ToInteger(0x1.5p5F /* 42.0F */) = %"PRId64"LL\n", __result);
+  printf("fromFP_Float_ToInteger(0x1.5p5F /* 42.0F */) = %"PRId64"LL\n", sbv_result);
 }
 
 void fromFP_Float_ToReal_driver(void)
 {
-  const SReal __result = fromFP_Float_ToReal(0x1.5p5F /* 42.0F */);
+  const SReal sbv_result = fromFP_Float_ToReal(0x1.5p5F /* 42.0F */);
 
-  printf("fromFP_Float_ToReal(0x1.5p5F /* 42.0F */) = %Lf\n", __result);
+  printf("fromFP_Float_ToReal(0x1.5p5F /* 42.0F */) = %Lf\n", sbv_result);
 }
 
 void fromFP_DoubleTo_Int8_driver(void)
 {
-  const SInt8 __result = fromFP_DoubleTo_Int8(0x1.5p5 /* 42.0 */);
+  const SInt8 sbv_result = fromFP_DoubleTo_Int8(0x1.5p5 /* 42.0 */);
 
-  printf("fromFP_DoubleTo_Int8(0x1.5p5 /* 42.0 */) = %"PRId8"\n", __result);
+  printf("fromFP_DoubleTo_Int8(0x1.5p5 /* 42.0 */) = %"PRId8"\n", sbv_result);
 }
 
 void fromFP_DoubleTo_Int16_driver(void)
 {
-  const SInt16 __result = fromFP_DoubleTo_Int16(0x1.5p5 /* 42.0 */);
+  const SInt16 sbv_result = fromFP_DoubleTo_Int16(0x1.5p5 /* 42.0 */);
 
-  printf("fromFP_DoubleTo_Int16(0x1.5p5 /* 42.0 */) = %"PRId16"\n", __result);
+  printf("fromFP_DoubleTo_Int16(0x1.5p5 /* 42.0 */) = %"PRId16"\n", sbv_result);
 }
 
 void fromFP_DoubleTo_Int32_driver(void)
 {
-  const SInt32 __result = fromFP_DoubleTo_Int32(0x1.5p5 /* 42.0 */);
+  const SInt32 sbv_result = fromFP_DoubleTo_Int32(0x1.5p5 /* 42.0 */);
 
-  printf("fromFP_DoubleTo_Int32(0x1.5p5 /* 42.0 */) = %"PRId32"L\n", __result);
+  printf("fromFP_DoubleTo_Int32(0x1.5p5 /* 42.0 */) = %"PRId32"L\n", sbv_result);
 }
 
 void fromFP_DoubleTo_Int64_driver(void)
 {
-  const SInt64 __result = fromFP_DoubleTo_Int64(0x1.5p5 /* 42.0 */);
+  const SInt64 sbv_result = fromFP_DoubleTo_Int64(0x1.5p5 /* 42.0 */);
 
-  printf("fromFP_DoubleTo_Int64(0x1.5p5 /* 42.0 */) = %"PRId64"LL\n", __result);
+  printf("fromFP_DoubleTo_Int64(0x1.5p5 /* 42.0 */) = %"PRId64"LL\n", sbv_result);
 }
 
 void fromFP_DoubleTo_Word8_driver(void)
 {
-  const SWord8 __result = fromFP_DoubleTo_Word8(0x1.5p5 /* 42.0 */);
+  const SWord8 sbv_result = fromFP_DoubleTo_Word8(0x1.5p5 /* 42.0 */);
 
-  printf("fromFP_DoubleTo_Word8(0x1.5p5 /* 42.0 */) = %"PRIu8"\n", __result);
+  printf("fromFP_DoubleTo_Word8(0x1.5p5 /* 42.0 */) = %"PRIu8"\n", sbv_result);
 }
 
 void fromFP_DoubleTo_Word16_driver(void)
 {
-  const SWord16 __result = fromFP_DoubleTo_Word16(0x1.5p5 /* 42.0 */);
+  const SWord16 sbv_result = fromFP_DoubleTo_Word16(0x1.5p5 /* 42.0 */);
 
-  printf("fromFP_DoubleTo_Word16(0x1.5p5 /* 42.0 */) = 0x%04"PRIx16"U\n", __result);
+  printf("fromFP_DoubleTo_Word16(0x1.5p5 /* 42.0 */) = 0x%04"PRIx16"U\n", sbv_result);
 }
 
 void fromFP_DoubleTo_Word32_driver(void)
 {
-  const SWord32 __result = fromFP_DoubleTo_Word32(0x1.5p5 /* 42.0 */);
+  const SWord32 sbv_result = fromFP_DoubleTo_Word32(0x1.5p5 /* 42.0 */);
 
-  printf("fromFP_DoubleTo_Word32(0x1.5p5 /* 42.0 */) = 0x%08"PRIx32"UL\n", __result);
+  printf("fromFP_DoubleTo_Word32(0x1.5p5 /* 42.0 */) = 0x%08"PRIx32"UL\n", sbv_result);
 }
 
 void fromFP_DoubleTo_Word64_driver(void)
 {
-  const SWord64 __result = fromFP_DoubleTo_Word64(0x1.5p5 /* 42.0 */);
+  const SWord64 sbv_result = fromFP_DoubleTo_Word64(0x1.5p5 /* 42.0 */);
 
-  printf("fromFP_DoubleTo_Word64(0x1.5p5 /* 42.0 */) = 0x%016"PRIx64"ULL\n", __result);
+  printf("fromFP_DoubleTo_Word64(0x1.5p5 /* 42.0 */) = 0x%016"PRIx64"ULL\n", sbv_result);
 }
 
 void fromFP_DoubleTo_Float_driver(void)
 {
-  const SFloat __result = fromFP_DoubleTo_Float(0x1.5p5 /* 42.0 */);
+  const SFloat sbv_result = fromFP_DoubleTo_Float(0x1.5p5 /* 42.0 */);
 
-  printf("fromFP_DoubleTo_Float(0x1.5p5 /* 42.0 */) = %a\n", __result);
+  printf("fromFP_DoubleTo_Float(0x1.5p5 /* 42.0 */) = %a\n", sbv_result);
 }
 
 void fromFP_DoubleTo_Double_driver(void)
 {
-  const SDouble __result = fromFP_DoubleTo_Double(0x1.5p5 /* 42.0 */);
+  const SDouble sbv_result = fromFP_DoubleTo_Double(0x1.5p5 /* 42.0 */);
 
-  printf("fromFP_DoubleTo_Double(0x1.5p5 /* 42.0 */) = %a\n", __result);
+  printf("fromFP_DoubleTo_Double(0x1.5p5 /* 42.0 */) = %a\n", sbv_result);
 }
 
 void fromFP_DoubleTo_Integer_driver(void)
 {
-  const SInteger __result = fromFP_DoubleTo_Integer(0x1.5p5 /* 42.0 */);
+  const SInteger sbv_result = fromFP_DoubleTo_Integer(0x1.5p5 /* 42.0 */);
 
-  printf("fromFP_DoubleTo_Integer(0x1.5p5 /* 42.0 */) = %"PRId64"LL\n", __result);
+  printf("fromFP_DoubleTo_Integer(0x1.5p5 /* 42.0 */) = %"PRId64"LL\n", sbv_result);
 }
 
 void fromFP_DoubleTo_Real_driver(void)
 {
-  const SReal __result = fromFP_DoubleTo_Real(0x1.5p5 /* 42.0 */);
+  const SReal sbv_result = fromFP_DoubleTo_Real(0x1.5p5 /* 42.0 */);
 
-  printf("fromFP_DoubleTo_Real(0x1.5p5 /* 42.0 */) = %Lf\n", __result);
+  printf("fromFP_DoubleTo_Real(0x1.5p5 /* 42.0 */) = %Lf\n", sbv_result);
 }
 
 void fromFP_SWord32_SFloat_driver(void)
 {
-  const SFloat __result = fromFP_SWord32_SFloat(0x0000002aUL);
+  const SFloat sbv_result = fromFP_SWord32_SFloat(0x0000002aUL);
 
-  printf("fromFP_SWord32_SFloat(0x0000002aUL) = %a\n", __result);
+  printf("fromFP_SWord32_SFloat(0x0000002aUL) = %a\n", sbv_result);
 }
 
 void fromFP_SWord64_SDouble_driver(void)
 {
-  const SDouble __result = fromFP_SWord64_SDouble(0x000000000000002aULL);
+  const SDouble sbv_result = fromFP_SWord64_SDouble(0x000000000000002aULL);
 
-  printf("fromFP_SWord64_SDouble(0x000000000000002aULL) = %a\n", __result);
+  printf("fromFP_SWord64_SDouble(0x000000000000002aULL) = %a\n", sbv_result);
 }
 
 void fromFP_SFloat_SWord32_driver(void)
 {
-  const SWord32 __result = fromFP_SFloat_SWord32(0x1.5p5F /* 42.0F */);
+  const SWord32 sbv_result = fromFP_SFloat_SWord32(0x1.5p5F /* 42.0F */);
 
-  printf("fromFP_SFloat_SWord32(0x1.5p5F /* 42.0F */) = 0x%08"PRIx32"UL\n", __result);
+  printf("fromFP_SFloat_SWord32(0x1.5p5F /* 42.0F */) = 0x%08"PRIx32"UL\n", sbv_result);
 }
 
 void fromFP_SDouble_SWord64_driver(void)
 {
-  const SWord64 __result = fromFP_SDouble_SWord64(0x1.5p5 /* 42.0 */);
+  const SWord64 sbv_result = fromFP_SDouble_SWord64(0x1.5p5 /* 42.0 */);
 
-  printf("fromFP_SDouble_SWord64(0x1.5p5 /* 42.0 */) = 0x%016"PRIx64"ULL\n", __result);
+  printf("fromFP_SDouble_SWord64(0x1.5p5 /* 42.0 */) = 0x%016"PRIx64"ULL\n", sbv_result);
 }
 
 void f_FP_Abs_driver(void)
 {
-  const SFloat __result = f_FP_Abs(0x1.5p5F /* 42.0F */);
+  const SFloat sbv_result = f_FP_Abs(0x1.5p5F /* 42.0F */);
 
-  printf("f_FP_Abs(0x1.5p5F /* 42.0F */) = %a\n", __result);
+  printf("f_FP_Abs(0x1.5p5F /* 42.0F */) = %a\n", sbv_result);
 }
 
 void d_FP_Abs_driver(void)
 {
-  const SDouble __result = d_FP_Abs(0x1.5p5 /* 42.0 */);
+  const SDouble sbv_result = d_FP_Abs(0x1.5p5 /* 42.0 */);
 
-  printf("d_FP_Abs(0x1.5p5 /* 42.0 */) = %a\n", __result);
+  printf("d_FP_Abs(0x1.5p5 /* 42.0 */) = %a\n", sbv_result);
 }
 
 void f_FP_Neg_driver(void)
 {
-  const SFloat __result = f_FP_Neg(0x1.5p5F /* 42.0F */);
+  const SFloat sbv_result = f_FP_Neg(0x1.5p5F /* 42.0F */);
 
-  printf("f_FP_Neg(0x1.5p5F /* 42.0F */) = %a\n", __result);
+  printf("f_FP_Neg(0x1.5p5F /* 42.0F */) = %a\n", sbv_result);
 }
 
 void d_FP_Neg_driver(void)
 {
-  const SDouble __result = d_FP_Neg(0x1.5p5 /* 42.0 */);
+  const SDouble sbv_result = d_FP_Neg(0x1.5p5 /* 42.0 */);
 
-  printf("d_FP_Neg(0x1.5p5 /* 42.0 */) = %a\n", __result);
+  printf("d_FP_Neg(0x1.5p5 /* 42.0 */) = %a\n", sbv_result);
 }
 
 void f_FP_Add_driver(void)
 {
-  const SFloat __result = f_FP_Add(0x1.5p5F /* 42.0F */,
-                                   0x1.58p5F /* 43.0F */);
+  const SFloat sbv_result = f_FP_Add(0x1.5p5F /* 42.0F */,
+                                     0x1.58p5F /* 43.0F */);
 
-  printf("f_FP_Add(0x1.5p5F /* 42.0F */, 0x1.58p5F /* 43.0F */) = %a\n", __result);
+  printf("f_FP_Add(0x1.5p5F /* 42.0F */, 0x1.58p5F /* 43.0F */) = %a\n", sbv_result);
 }
 
 void d_FP_Add_driver(void)
 {
-  const SDouble __result = d_FP_Add(0x1.5p5 /* 42.0 */,
-                                    0x1.58p5 /* 43.0 */);
+  const SDouble sbv_result = d_FP_Add(0x1.5p5 /* 42.0 */,
+                                      0x1.58p5 /* 43.0 */);
 
-  printf("d_FP_Add(0x1.5p5 /* 42.0 */, 0x1.58p5 /* 43.0 */) = %a\n", __result);
+  printf("d_FP_Add(0x1.5p5 /* 42.0 */, 0x1.58p5 /* 43.0 */) = %a\n", sbv_result);
 }
 
 void f_FP_Sub_driver(void)
 {
-  const SFloat __result = f_FP_Sub(0x1.5p5F /* 42.0F */,
-                                   0x1.58p5F /* 43.0F */);
+  const SFloat sbv_result = f_FP_Sub(0x1.5p5F /* 42.0F */,
+                                     0x1.58p5F /* 43.0F */);
 
-  printf("f_FP_Sub(0x1.5p5F /* 42.0F */, 0x1.58p5F /* 43.0F */) = %a\n", __result);
+  printf("f_FP_Sub(0x1.5p5F /* 42.0F */, 0x1.58p5F /* 43.0F */) = %a\n", sbv_result);
 }
 
 void d_FP_Sub_driver(void)
 {
-  const SDouble __result = d_FP_Sub(0x1.5p5 /* 42.0 */,
-                                    0x1.58p5 /* 43.0 */);
+  const SDouble sbv_result = d_FP_Sub(0x1.5p5 /* 42.0 */,
+                                      0x1.58p5 /* 43.0 */);
 
-  printf("d_FP_Sub(0x1.5p5 /* 42.0 */, 0x1.58p5 /* 43.0 */) = %a\n", __result);
+  printf("d_FP_Sub(0x1.5p5 /* 42.0 */, 0x1.58p5 /* 43.0 */) = %a\n", sbv_result);
 }
 
 void f_FP_Mul_driver(void)
 {
-  const SFloat __result = f_FP_Mul(0x1.5p5F /* 42.0F */,
-                                   0x1.58p5F /* 43.0F */);
+  const SFloat sbv_result = f_FP_Mul(0x1.5p5F /* 42.0F */,
+                                     0x1.58p5F /* 43.0F */);
 
-  printf("f_FP_Mul(0x1.5p5F /* 42.0F */, 0x1.58p5F /* 43.0F */) = %a\n", __result);
+  printf("f_FP_Mul(0x1.5p5F /* 42.0F */, 0x1.58p5F /* 43.0F */) = %a\n", sbv_result);
 }
 
 void d_FP_Mul_driver(void)
 {
-  const SDouble __result = d_FP_Mul(0x1.5p5 /* 42.0 */,
-                                    0x1.58p5 /* 43.0 */);
+  const SDouble sbv_result = d_FP_Mul(0x1.5p5 /* 42.0 */,
+                                      0x1.58p5 /* 43.0 */);
 
-  printf("d_FP_Mul(0x1.5p5 /* 42.0 */, 0x1.58p5 /* 43.0 */) = %a\n", __result);
+  printf("d_FP_Mul(0x1.5p5 /* 42.0 */, 0x1.58p5 /* 43.0 */) = %a\n", sbv_result);
 }
 
 void f_FP_Div_driver(void)
 {
-  const SFloat __result = f_FP_Div(0x1.5p5F /* 42.0F */,
-                                   0x1.58p5F /* 43.0F */);
+  const SFloat sbv_result = f_FP_Div(0x1.5p5F /* 42.0F */,
+                                     0x1.58p5F /* 43.0F */);
 
-  printf("f_FP_Div(0x1.5p5F /* 42.0F */, 0x1.58p5F /* 43.0F */) = %a\n", __result);
+  printf("f_FP_Div(0x1.5p5F /* 42.0F */, 0x1.58p5F /* 43.0F */) = %a\n", sbv_result);
 }
 
 void d_FP_Div_driver(void)
 {
-  const SDouble __result = d_FP_Div(0x1.5p5 /* 42.0 */,
-                                    0x1.58p5 /* 43.0 */);
+  const SDouble sbv_result = d_FP_Div(0x1.5p5 /* 42.0 */,
+                                      0x1.58p5 /* 43.0 */);
 
-  printf("d_FP_Div(0x1.5p5 /* 42.0 */, 0x1.58p5 /* 43.0 */) = %a\n", __result);
+  printf("d_FP_Div(0x1.5p5 /* 42.0 */, 0x1.58p5 /* 43.0 */) = %a\n", sbv_result);
 }
 
 void f_FP_FMA_driver(void)
 {
-  const SFloat __result = f_FP_FMA(0x1.5p5F /* 42.0F */,
-                                   0x1.58p5F /* 43.0F */, 0x1.6p5F /* 44.0F */);
+  const SFloat sbv_result = f_FP_FMA(0x1.5p5F /* 42.0F */,
+                                     0x1.58p5F /* 43.0F */, 0x1.6p5F /* 44.0F */);
 
-  printf("f_FP_FMA(0x1.5p5F /* 42.0F */, 0x1.58p5F /* 43.0F */, 0x1.6p5F /* 44.0F */) = %a\n", __result);
+  printf("f_FP_FMA(0x1.5p5F /* 42.0F */, 0x1.58p5F /* 43.0F */, 0x1.6p5F /* 44.0F */) = %a\n", sbv_result);
 }
 
 void d_FP_FMA_driver(void)
 {
-  const SDouble __result = d_FP_FMA(0x1.5p5 /* 42.0 */,
-                                    0x1.58p5 /* 43.0 */, 0x1.6p5 /* 44.0 */);
+  const SDouble sbv_result = d_FP_FMA(0x1.5p5 /* 42.0 */,
+                                      0x1.58p5 /* 43.0 */, 0x1.6p5 /* 44.0 */);
 
-  printf("d_FP_FMA(0x1.5p5 /* 42.0 */, 0x1.58p5 /* 43.0 */, 0x1.6p5 /* 44.0 */) = %a\n", __result);
+  printf("d_FP_FMA(0x1.5p5 /* 42.0 */, 0x1.58p5 /* 43.0 */, 0x1.6p5 /* 44.0 */) = %a\n", sbv_result);
 }
 
 void f_FP_Sqrt_driver(void)
 {
-  const SFloat __result = f_FP_Sqrt(0x1.5p5F /* 42.0F */);
+  const SFloat sbv_result = f_FP_Sqrt(0x1.5p5F /* 42.0F */);
 
-  printf("f_FP_Sqrt(0x1.5p5F /* 42.0F */) = %a\n", __result);
+  printf("f_FP_Sqrt(0x1.5p5F /* 42.0F */) = %a\n", sbv_result);
 }
 
 void d_FP_Sqrt_driver(void)
 {
-  const SDouble __result = d_FP_Sqrt(0x1.5p5 /* 42.0 */);
+  const SDouble sbv_result = d_FP_Sqrt(0x1.5p5 /* 42.0 */);
 
-  printf("d_FP_Sqrt(0x1.5p5 /* 42.0 */) = %a\n", __result);
+  printf("d_FP_Sqrt(0x1.5p5 /* 42.0 */) = %a\n", sbv_result);
 }
 
 void f_FP_Rem_driver(void)
 {
-  const SFloat __result = f_FP_Rem(0x1.5p5F /* 42.0F */,
-                                   0x1.58p5F /* 43.0F */);
+  const SFloat sbv_result = f_FP_Rem(0x1.5p5F /* 42.0F */,
+                                     0x1.58p5F /* 43.0F */);
 
-  printf("f_FP_Rem(0x1.5p5F /* 42.0F */, 0x1.58p5F /* 43.0F */) = %a\n", __result);
+  printf("f_FP_Rem(0x1.5p5F /* 42.0F */, 0x1.58p5F /* 43.0F */) = %a\n", sbv_result);
 }
 
 void d_FP_Rem_driver(void)
 {
-  const SDouble __result = d_FP_Rem(0x1.5p5 /* 42.0 */,
-                                    0x1.58p5 /* 43.0 */);
+  const SDouble sbv_result = d_FP_Rem(0x1.5p5 /* 42.0 */,
+                                      0x1.58p5 /* 43.0 */);
 
-  printf("d_FP_Rem(0x1.5p5 /* 42.0 */, 0x1.58p5 /* 43.0 */) = %a\n", __result);
+  printf("d_FP_Rem(0x1.5p5 /* 42.0 */, 0x1.58p5 /* 43.0 */) = %a\n", sbv_result);
 }
 
 void f_FP_RoundToIntegral_driver(void)
 {
-  const SFloat __result = f_FP_RoundToIntegral(0x1.5p5F /* 42.0F */);
+  const SFloat sbv_result = f_FP_RoundToIntegral(0x1.5p5F /* 42.0F */);
 
-  printf("f_FP_RoundToIntegral(0x1.5p5F /* 42.0F */) = %a\n", __result);
+  printf("f_FP_RoundToIntegral(0x1.5p5F /* 42.0F */) = %a\n", sbv_result);
 }
 
 void d_FP_RoundToIntegral_driver(void)
 {
-  const SDouble __result = d_FP_RoundToIntegral(0x1.5p5 /* 42.0 */);
+  const SDouble sbv_result = d_FP_RoundToIntegral(0x1.5p5 /* 42.0 */);
 
-  printf("d_FP_RoundToIntegral(0x1.5p5 /* 42.0 */) = %a\n", __result);
+  printf("d_FP_RoundToIntegral(0x1.5p5 /* 42.0 */) = %a\n", sbv_result);
 }
 
 void f_FP_Min_driver(void)
 {
-  const SFloat __result = f_FP_Min(0x1.5p5F /* 42.0F */,
-                                   0x1.58p5F /* 43.0F */);
+  const SFloat sbv_result = f_FP_Min(0x1.5p5F /* 42.0F */,
+                                     0x1.58p5F /* 43.0F */);
 
-  printf("f_FP_Min(0x1.5p5F /* 42.0F */, 0x1.58p5F /* 43.0F */) = %a\n", __result);
+  printf("f_FP_Min(0x1.5p5F /* 42.0F */, 0x1.58p5F /* 43.0F */) = %a\n", sbv_result);
 }
 
 void d_FP_Min_driver(void)
 {
-  const SDouble __result = d_FP_Min(0x1.5p5 /* 42.0 */,
-                                    0x1.58p5 /* 43.0 */);
+  const SDouble sbv_result = d_FP_Min(0x1.5p5 /* 42.0 */,
+                                      0x1.58p5 /* 43.0 */);
 
-  printf("d_FP_Min(0x1.5p5 /* 42.0 */, 0x1.58p5 /* 43.0 */) = %a\n", __result);
+  printf("d_FP_Min(0x1.5p5 /* 42.0 */, 0x1.58p5 /* 43.0 */) = %a\n", sbv_result);
 }
 
 void f_FP_Max_driver(void)
 {
-  const SFloat __result = f_FP_Max(0x1.5p5F /* 42.0F */,
-                                   0x1.58p5F /* 43.0F */);
+  const SFloat sbv_result = f_FP_Max(0x1.5p5F /* 42.0F */,
+                                     0x1.58p5F /* 43.0F */);
 
-  printf("f_FP_Max(0x1.5p5F /* 42.0F */, 0x1.58p5F /* 43.0F */) = %a\n", __result);
+  printf("f_FP_Max(0x1.5p5F /* 42.0F */, 0x1.58p5F /* 43.0F */) = %a\n", sbv_result);
 }
 
 void d_FP_Max_driver(void)
 {
-  const SDouble __result = d_FP_Max(0x1.5p5 /* 42.0 */,
-                                    0x1.58p5 /* 43.0 */);
+  const SDouble sbv_result = d_FP_Max(0x1.5p5 /* 42.0 */,
+                                      0x1.58p5 /* 43.0 */);
 
-  printf("d_FP_Max(0x1.5p5 /* 42.0 */, 0x1.58p5 /* 43.0 */) = %a\n", __result);
+  printf("d_FP_Max(0x1.5p5 /* 42.0 */, 0x1.58p5 /* 43.0 */) = %a\n", sbv_result);
 }
 
 void f_FP_IsEqualObject_driver(void)
 {
-  const SBool __result = f_FP_IsEqualObject(0x1.5p5F /* 42.0F */,
-                                            0x1.58p5F /* 43.0F */);
+  const SBool sbv_result = f_FP_IsEqualObject(0x1.5p5F /* 42.0F */,
+                                              0x1.58p5F /* 43.0F */);
 
-  printf("f_FP_IsEqualObject(0x1.5p5F /* 42.0F */, 0x1.58p5F /* 43.0F */) = %d\n", __result);
+  printf("f_FP_IsEqualObject(0x1.5p5F /* 42.0F */, 0x1.58p5F /* 43.0F */) = %d\n", sbv_result);
 }
 
 void d_FP_IsEqualObject_driver(void)
 {
-  const SBool __result = d_FP_IsEqualObject(0x1.5p5 /* 42.0 */,
-                                            0x1.58p5 /* 43.0 */);
+  const SBool sbv_result = d_FP_IsEqualObject(0x1.5p5 /* 42.0 */,
+                                              0x1.58p5 /* 43.0 */);
 
-  printf("d_FP_IsEqualObject(0x1.5p5 /* 42.0 */, 0x1.58p5 /* 43.0 */) = %d\n", __result);
+  printf("d_FP_IsEqualObject(0x1.5p5 /* 42.0 */, 0x1.58p5 /* 43.0 */) = %d\n", sbv_result);
 }
 
 void f_FP_IsNormal_driver(void)
 {
-  const SBool __result = f_FP_IsNormal(0x1.5p5F /* 42.0F */);
+  const SBool sbv_result = f_FP_IsNormal(0x1.5p5F /* 42.0F */);
 
-  printf("f_FP_IsNormal(0x1.5p5F /* 42.0F */) = %d\n", __result);
+  printf("f_FP_IsNormal(0x1.5p5F /* 42.0F */) = %d\n", sbv_result);
 }
 
 void d_FP_IsNormal_driver(void)
 {
-  const SBool __result = d_FP_IsNormal(0x1.5p5 /* 42.0 */);
+  const SBool sbv_result = d_FP_IsNormal(0x1.5p5 /* 42.0 */);
 
-  printf("d_FP_IsNormal(0x1.5p5 /* 42.0 */) = %d\n", __result);
+  printf("d_FP_IsNormal(0x1.5p5 /* 42.0 */) = %d\n", sbv_result);
 }
 
 void f_FP_IsZero_driver(void)
 {
-  const SBool __result = f_FP_IsZero(0x1.5p5F /* 42.0F */);
+  const SBool sbv_result = f_FP_IsZero(0x1.5p5F /* 42.0F */);
 
-  printf("f_FP_IsZero(0x1.5p5F /* 42.0F */) = %d\n", __result);
+  printf("f_FP_IsZero(0x1.5p5F /* 42.0F */) = %d\n", sbv_result);
 }
 
 void d_FP_IsZero_driver(void)
 {
-  const SBool __result = d_FP_IsZero(0x1.5p5 /* 42.0 */);
+  const SBool sbv_result = d_FP_IsZero(0x1.5p5 /* 42.0 */);
 
-  printf("d_FP_IsZero(0x1.5p5 /* 42.0 */) = %d\n", __result);
+  printf("d_FP_IsZero(0x1.5p5 /* 42.0 */) = %d\n", sbv_result);
 }
 
 void f_FP_IsSubnormal_driver(void)
 {
-  const SBool __result = f_FP_IsSubnormal(0x1.5p5F /* 42.0F */);
+  const SBool sbv_result = f_FP_IsSubnormal(0x1.5p5F /* 42.0F */);
 
-  printf("f_FP_IsSubnormal(0x1.5p5F /* 42.0F */) = %d\n", __result);
+  printf("f_FP_IsSubnormal(0x1.5p5F /* 42.0F */) = %d\n", sbv_result);
 }
 
 void d_FP_IsSubnormal_driver(void)
 {
-  const SBool __result = d_FP_IsSubnormal(0x1.5p5 /* 42.0 */);
+  const SBool sbv_result = d_FP_IsSubnormal(0x1.5p5 /* 42.0 */);
 
-  printf("d_FP_IsSubnormal(0x1.5p5 /* 42.0 */) = %d\n", __result);
+  printf("d_FP_IsSubnormal(0x1.5p5 /* 42.0 */) = %d\n", sbv_result);
 }
 
 void f_FP_IsInfinite_driver(void)
 {
-  const SBool __result = f_FP_IsInfinite(0x1.5p5F /* 42.0F */);
+  const SBool sbv_result = f_FP_IsInfinite(0x1.5p5F /* 42.0F */);
 
-  printf("f_FP_IsInfinite(0x1.5p5F /* 42.0F */) = %d\n", __result);
+  printf("f_FP_IsInfinite(0x1.5p5F /* 42.0F */) = %d\n", sbv_result);
 }
 
 void d_FP_IsInfinite_driver(void)
 {
-  const SBool __result = d_FP_IsInfinite(0x1.5p5 /* 42.0 */);
+  const SBool sbv_result = d_FP_IsInfinite(0x1.5p5 /* 42.0 */);
 
-  printf("d_FP_IsInfinite(0x1.5p5 /* 42.0 */) = %d\n", __result);
+  printf("d_FP_IsInfinite(0x1.5p5 /* 42.0 */) = %d\n", sbv_result);
 }
 
 void f_FP_IsNaN_driver(void)
 {
-  const SBool __result = f_FP_IsNaN(0x1.5p5F /* 42.0F */);
+  const SBool sbv_result = f_FP_IsNaN(0x1.5p5F /* 42.0F */);
 
-  printf("f_FP_IsNaN(0x1.5p5F /* 42.0F */) = %d\n", __result);
+  printf("f_FP_IsNaN(0x1.5p5F /* 42.0F */) = %d\n", sbv_result);
 }
 
 void d_FP_IsNaN_driver(void)
 {
-  const SBool __result = d_FP_IsNaN(0x1.5p5 /* 42.0 */);
+  const SBool sbv_result = d_FP_IsNaN(0x1.5p5 /* 42.0 */);
 
-  printf("d_FP_IsNaN(0x1.5p5 /* 42.0 */) = %d\n", __result);
+  printf("d_FP_IsNaN(0x1.5p5 /* 42.0 */) = %d\n", sbv_result);
 }
 
 void f_FP_IsNegative_driver(void)
 {
-  const SBool __result = f_FP_IsNegative(0x1.5p5F /* 42.0F */);
+  const SBool sbv_result = f_FP_IsNegative(0x1.5p5F /* 42.0F */);
 
-  printf("f_FP_IsNegative(0x1.5p5F /* 42.0F */) = %d\n", __result);
+  printf("f_FP_IsNegative(0x1.5p5F /* 42.0F */) = %d\n", sbv_result);
 }
 
 void d_FP_IsNegative_driver(void)
 {
-  const SBool __result = d_FP_IsNegative(0x1.5p5 /* 42.0 */);
+  const SBool sbv_result = d_FP_IsNegative(0x1.5p5 /* 42.0 */);
 
-  printf("d_FP_IsNegative(0x1.5p5 /* 42.0 */) = %d\n", __result);
+  printf("d_FP_IsNegative(0x1.5p5 /* 42.0 */) = %d\n", sbv_result);
 }
 
 void f_FP_IsPositive_driver(void)
 {
-  const SBool __result = f_FP_IsPositive(0x1.5p5F /* 42.0F */);
+  const SBool sbv_result = f_FP_IsPositive(0x1.5p5F /* 42.0F */);
 
-  printf("f_FP_IsPositive(0x1.5p5F /* 42.0F */) = %d\n", __result);
+  printf("f_FP_IsPositive(0x1.5p5F /* 42.0F */) = %d\n", sbv_result);
 }
 
 void d_FP_IsPositive_driver(void)
 {
-  const SBool __result = d_FP_IsPositive(0x1.5p5 /* 42.0 */);
+  const SBool sbv_result = d_FP_IsPositive(0x1.5p5 /* 42.0 */);
 
-  printf("d_FP_IsPositive(0x1.5p5 /* 42.0 */) = %d\n", __result);
+  printf("d_FP_IsPositive(0x1.5p5 /* 42.0 */) = %d\n", sbv_result);
 }
 
 int main(void)
@@ -5077,7 +4893,7 @@ int main(void)
 
 CC?=gcc
 CCFLAGS?=-Wall -O3 -DNDEBUG -fomit-frame-pointer
-LDFLAGS?=-lm -lbf
+SBV_LIBS?=-lm -lbf
 AR?=ar
 ARFLAGS?=cr
 
@@ -5089,7 +4905,7 @@ floatCodeGen.a: toFP_Int8_ToFloat.o toFP_Int16_ToFloat.o toFP_Int32_ToFloat.o to
 	mv -f $@.tmp $@
 
 floatCodeGen_driver: floatCodeGen_driver.c floatCodeGen.h floatCodeGen.a
-	${CC} ${CCFLAGS} -ffp-contract=off $< -o $@ floatCodeGen.a ${LDFLAGS}
+	${CC} ${CCFLAGS} -ffp-contract=off $< -o $@ floatCodeGen.a ${LDFLAGS} ${SBV_LIBS}
 
 toFP_Int8_ToFloat.o: toFP_Int8_ToFloat.c floatCodeGen.h
 	${CC} ${CCFLAGS} -ffp-contract=off -c $< -o $@

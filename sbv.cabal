@@ -326,7 +326,7 @@ Library
                   , Data.SBV.Compilers.C.List
                   , Data.SBV.Compilers.C.Lowering
                   , Data.SBV.Compilers.C.NonLinear
-                  , Data.SBV.Compilers.C.New
+                  , Data.SBV.Compilers.C.Backend
                   , Data.SBV.Compilers.C.PseudoBoolean
                   , Data.SBV.Compilers.C.Real
                   , Data.SBV.Compilers.C.RegExp

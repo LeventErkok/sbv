@@ -2081,6 +2081,8 @@ extractSymbolicSimulationState st@State{ runMode=rrm
 -- | Generalization of 'Data.SBV.addNewSMTOption'
 addNewSMTOption :: MonadSymbolic m => SMTOption -> m ()
 addNewSMTOption o = do st <- symbolicEnv
+                       codeGeneration <- liftIO $ isCodeGenMode st
+                       when codeGeneration $ error "SBV->C: SMT solver options have no executable C semantics; remove setOption from the code-generation program."
                        liftIO $ modifyState st rSMTOptions (o:) (pure ())
 
 -- | Generalization of 'Data.SBV.imposeConstraint'

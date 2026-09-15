@@ -100,12 +100,13 @@ checkNodes count = do
   let limit = cgRegexMaxNodes (configuration budget)
   when (count > limit) $ exceeded "expression-node" limit
 
--- | Construct a bounded node, charging its full tree size conservatively.
+-- | Construct a bounded node. Children are shared, not copied; charge the
+-- immediate traversal while retaining the full expression-size bound.
 node :: Bool -> RegexForm -> [Regex] -> Build Regex
 node accepts shape children = do
   let count = 1 + sum (map nodeCount children)
   checkNodes count
-  charge count
+  charge (1 + toInteger (length children))
   pure (Regex accepts count shape)
 
 -- | Traverse a source list without first allocating an unbounded converted
@@ -121,15 +122,16 @@ boundedTraverse convert values = reverse . snd <$> foldM step (0, []) values
 -- | Flatten an associative operation after charging its input traversal.
 flatten :: (RegexForm -> Maybe [Regex]) -> [Regex] -> Build [Regex]
 flatten children rs = do
-  charge (1 + sum (map nodeCount rs))
-  pure $ concatMap (\r -> fromMaybe [r] (children (form r))) rs
+  let result = concatMap (\r -> fromMaybe [r] (children (form r))) rs
+  charge (1 + toInteger (length rs + length result))
+  pure result
 
 -- | Canonicalize a Boolean operation without distributing it over other
 -- operators. The comparison allowance is deliberately conservative.
 boolean :: Bool -> [Regex] -> Build Regex
 boolean intersection rs = do
   flat <- flatten children rs
-  charge ((1 + toInteger (length flat)) * (1 + sum (map nodeCount flat)))
+  charge (comparisonDepth (length flat) * (1 + sum (map nodeCount flat)))
   let absorbing = if intersection then emptyRegex else allRegex
       identity  = if intersection then allRegex else emptyRegex
       members   = Set.fromList (filter (/= identity) flat)
@@ -282,7 +284,7 @@ explore stop accepts size step classes initial = go (Map.singleton initial 0) (S
 
        transition r (known, pending, indices) (c, _) = do
          next <- step c r
-         charge ((1 + toInteger (Map.size known)) * size next)
+         charge (comparisonDepth (Map.size known) * size next)
          case Map.lookup next known of
            Just index -> pure (known, pending, index : indices)
            Nothing -> do
@@ -291,6 +293,12 @@ explore stop accepts size step classes initial = go (Map.singleton initial 0) (S
                  limit = cgRegexMaxStates (configuration budget)
              when (toInteger index >= limit) $ exceeded "state" limit
              pure (Map.insert next index known, pending Seq.|> next, index : indices)
+
+-- | Conservative logarithmic comparison allowance for balanced maps and sets.
+comparisonDepth :: Int -> Integer
+comparisonDepth count
+  | count <= 1 = 1
+  | True       = 1 + comparisonDepth (count `quot` 2)
 
 -- | Compile exact membership into function-local static tables and a guarded
 -- loop. Locally scoped names work unchanged in definitions, callbacks, and

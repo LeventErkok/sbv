@@ -3,159 +3,67 @@
 
 ### Version 14.8, Not yet released
 
-  * Support representation-aware `CgLongDouble` numeric conversion bridges in the
-    current C backend. Preserve the target's full significand without a binary64
-    intermediate, using LibBF for requested rounding modes and exponent limits.
-    Support binary64, x87 extended, and binary128 long double; reject other target
-    formats explicitly when a bridge is needed. Add standalone and library tests
-    for precision, overflow, subnormals, special values, and all rounding modes.
+  * A new default C compiler supports standalone programs and static libraries using
+    arbitrary-width bit-vectors, native and arbitrary-format floating point, exact
+    integers and rational-valued reals, strings, lists, sets, tuples, ADTs, arrays,
+    and recursive function definitions. It also supports closed array lambdas and
+    SBV's firstified higher-order functions. Unsupported constructs, including
+    solver-only features and captured array lambdas, produce explicit errors.
 
-  * Document the current C backend's supported features, configurable resource
-    limits, and deliberately unsupported cases. Add diagnostic regressions for
-    standalone and library generation, including rejection before file output.
-    Optimization requests now identify their solver requirement rather than an
-    internal tracker variable. Algebraic, interval, and inexact real literals
-    receive explicit diagnostics instead of an internal error or silent rounding.
-    Retained defined functions with implicit captures now identify the unsupported
-    closure and suggest explicit arguments or `Closure`, instead of reporting a
-    missing internal assignment. Supported explicit closures are unchanged.
+  * [BACKWARDS COMPATIBILITY] Existing imports of `Data.SBV.Tools.CodeGen` select
+    the new compiler. Import `Data.SBV.Tools.CodeGen.Legacy` instead to keep using
+    the original compiler, including its low-level compilation functions.
 
-  * Fix fixed-size input groups in the current C backend. Symbolic-array groups
-    now use public callback descriptors, matching individual array inputs.
-    Generated drivers initialize and release managed group elements individually,
-    including exact-valued collections and aggregates containing arrays.
+    Unmapped `SInteger` and rational-valued `SReal` now use GMP instead of being
+    rejected. Keep `cgIntegerSize` or `cgSRealType` settings if native,
+    precision-losing representations are intentional. Arbitrary-format floats
+    and rounding-sensitive floating operations require LibBF; native bit-vector
+    programs require neither library.
 
-  * Recreate generated C library archives from exactly the selected components,
-    removing retired members when a library is regenerated. Build replacements
-    in a temporary archive so an archiver failure preserves the last good archive.
-    Library drivers now depend on the archive, fixing direct and parallel driver
-    builds and ensuring component changes cause the driver to be relinked.
+    Regenerate C sources and headers together. See `Data.SBV.Tools.CodeGen` for
+    the supported features, dependencies, and ownership rules for composite values.
+    Detected runtime failures terminate the calling process; there is no
+    recoverable error-return API.
 
-  * Make standalone generated C driver objects depend on their generated headers.
-    Incremental builds now recompile the driver when a header changes instead of
-    potentially linking a stale caller against the updated implementation.
+  * Generated floating-point code supports all five SBV rounding modes, including
+    conversions and fused operations. Ordinary `SFloat` and `SDouble` arithmetic
+    retains native C types. Callers and callbacks must preserve `FE_TONEAREST`;
+    builds must disable implicit contraction and fast-math. Generated Makefiles
+    supply the contraction flag. These restrictions do not apply to integer-only
+    programs. `CgLongDouble` conversions support binary64, x87 extended, and
+    binary128 target formats.
 
-  * Fix C generation of diagnostic labels and assertion messages. Comment delimiters,
-    control characters, and preprocessing sequences cannot alter generated code, and
-    assertion text is passed as data rather than interpreted as a printf format string.
+  * The new C compiler supports regex matching without an additional dependency.
+    `cgSetRegexLimits` (named settings) and `cgRegexLimits` control generation
+    budgets without limiting runtime string length. Direct array equality is
+    supported for finite key domains, with a configurable `cgArrayEqualityLimit`.
+    Exceeding these limits produces a generation error, not an approximation.
 
-  * Fix native-mapped real-to-integer flooring in generated C. Negative fractions now
-    floor instead of truncating toward zero. Finite results retain the low bits selected
-    by `cgIntegerSize` without out-of-range C casts, including with `CgLongDouble`.
-    Non-finite mapped reals terminate with an explicit diagnostic when floored.
+  * Generated C libraries rebuild correctly after component or header changes.
+    Required libraries and `cgAddLDFlags` settings are kept in `SBV_LIBS`, so
+    caller-supplied `LDFLAGS` no longer discard them. Use `SBV_LIBS` to override
+    dependency discovery when integrating a custom installation.
 
-  * Escape labels on tuples, ADTs, and arrays in the current C backend. Diagnostic
-    comments cannot inject C statements through comment delimiters; nested-comment
-    markers and control characters are also escaped consistently with scalar labels.
-    Also retain C type declarations for ADTs used only inside private function or
-    array-lambda bodies, even when their inputs and results are scalar.
+  * Fix incorrect C results for pseudo-Boolean comparisons with large totals and
+    native-mapped real-to-integer flooring. Generated diagnostic labels and
+    assertion messages safely handle special characters.
 
-  * Fix signed overflow in C generation of pseudo-Boolean comparisons (`pbLe`,
-    `pbGe`, and `pbEq`). Generated reductions use unsigned arithmetic and stop
-    accumulating after exceeding the bound when the full sum might overflow.
-    Large coefficients and totals now preserve the mathematical comparison
-    without requiring an additional runtime dependency.
+  * ADTs containing other ADTs inside tuples, lists, sets, or arrays no longer
+    need unrelated uses or explicit type registration to work reliably.
+    This also applies to named and unnamed query-mode fresh variables.
 
-  * C array-equality limits now report intentional unsupported/disabled comparisons
-    as user-facing generation errors rather than internal compiler failures.
-    Regressions cover atomic rejection of both standalone programs and libraries.
-
-  * The current C backend explicitly rejects array lambdas capturing outer symbolic
-    values before emitting files, including captures embedded in nested lambdas,
-    lookup tables, and rounding modes. Closed array lambdas remain supported;
-    support for captured environments is deferred.
-
-  * The current C backend supports dependency-free regex membership and generation-time
-    language equality/inequality, including Boolean regex operations and nullable repetition.
-    Generated matchers use static automaton tables and accept arbitrary-length canonical SBV
-    strings, including embedded NULs and numeric surrogate characters. `cgRegexLimits` bounds
-    automaton states, expression size, and generation work; exceeding a limit fails during
-    generation without approximating semantics. Non-regex programs gain no regex code or dependencies.
-
-  * Replace the default SBV-to-C compiler with a comprehensive backend. Generated programs and
-    static libraries now support arbitrary-width signed and unsigned bit-vectors, native and
-    arbitrary-format floating point with explicit rounding modes, exact GMP-backed integers and
-    rational reals, strings, lists, sets, tuples, algebraic datatypes, persistent arrays, lookup
-    tables, recursive `smtFunction` definitions, closed nested array lambdas, and SBV's firstified
-    higher-order functions. Solver-only constructs continue to receive focused diagnostics.
-
-    Existing code importing `Data.SBV.Tools.CodeGen` selects the new backend. The original compiler
-    remains available as an escape hatch by importing `Data.SBV.Tools.CodeGen.Legacy` instead.
-
-    The new backend also corrects native IEEE remainder semantics, safely escapes assertion text,
-    and preserves external prototypes and runtime dependencies when combining library components.
-    Finite/cofinite set comparisons account for finite ADTs with fields. Unsupported comparisons
-    involving array-valued aggregates are rejected during generation instead of aborting at runtime.
-    Generated programs and libraries have a documented fail-fast runtime contract: detected
-    runtime failures terminate the calling process; no recoverable error-return API is provided.
-    Empty libraries and conflicting component files or driver entry points are rejected before rendering.
-    Native-mapped integers use modular arithmetic without signed C overflow, retaining Euclidean
-    division internally and the public truncating and floor-division semantics.
-    Public C names are validated before rendering. Private parameter and driver bindings prevent
-    collisions with accepted user names, which remain unchanged in headers and driver labels.
-    Library file-name conflicts are checked case-insensitively for portable bundles.
-    ADT tags and structural declaration guards preserve case, so distinct types such as `Tree`
-    and `TREE` can coexist, including through collections and repeated library components.
-    Array type/helper names now length-prefix their key and value tags; regenerate headers
-    and update callers using the previous generated array names.
-    The C ownership contract distinguishes initialized scalar GMP outputs from fresh aggregate
-    outputs, and documents borrowed array reads, callback lifetimes, and non-overlapping output storage.
-    Exact-to-native integer conversions preserve low bits, including one-bit results, and exact-real
-    flooring supports explicitly mapped integers without intermediate native overflow.
-    Floating conversions honor mapped integer widths and float/double real mappings, including
-    explicit rounding and flooring back to integers. Unsupported long-double GMP/LibBF bridges
-    fail during generation; native long-double arithmetic and native casts remain available.
-    Casts between mapped integers and native/arbitrary-width bit-vectors preserve low bits
-    and source signedness, including one-bit destinations and sign extension into wide values.
-    Native floating casts use the rounding-aware LibBF bridge even for round-to-nearest,
-    independently of the caller's rounding mode, without changing the native C ABI;
-    provably exact native conversions retain direct C casts.
-    Generated C requires callers and callbacks to preserve FE_TONEAREST hardware rounding.
-    This documented, unchecked precondition keeps ordinary native RNE arithmetic free of
-    rounding-mode guards and LibBF fallbacks; explicit SBV rounding modes remain supported.
-    Generated builds disable implicit floating-point contraction, including during LTO,
-    while preserving explicit FMA. Headers reject detectable fast-math and finite-math-only
-    compiler modes instead of silently changing IEEE semantics.
-    Entry points, array lambdas, and defined functions share demand-driven branch scheduling,
-    so inactive conditional and short-circuit branches do not evaluate partial ADT selectors.
-    Runtime checks remain evaluation roots, including in functions without outputs. Managed
-    constants have function-wide backing storage; total bit-vector operations and mandatory
-    common dependencies retain DAG sharing instead of expanding into duplicated branch trees.
-    Finite table selection now protects unselected entries and unused defaults too. Already
-    available entries retain direct C-array lookup; guarded entries use selective control flow,
-    with checked wide and exact indices validated before machine-index narrowing.
-    Direct array equality now enumerates supported finite key domains exactly, including
-    callback-backed arrays and comparisons inside defined functions and array lambdas.
-    `cgArrayEqualityLimit` controls the allowed domain size (256 keys by default); excessive,
-    infinite, and unsupported domains fail during generation instead of approximating equality.
-    Floating-point keys and values use SMT object semantics, including NaNs and signed zeros.
-
-  * Fix `mkSymbolic` dependency registration for ADTs with other ADTs nested inside
-    tuple, list, set, or array fields, including type synonyms and transitive dependencies.
-    Previously these could fail with an unregistered-subkind error unless an unrelated
-    use happened to register the missing type. Recursive dependency traversal terminates
-    without requiring explicit `registerType` calls. Query-mode `freshVar` and `freshVar_`
-    now perform the same initialization, with tuple declarations preceding dependent ADTs.
-
-  * Functions defined with `smtFunction` and its variants can now be first encountered after entering
-    query mode. SBV sends their definitions and dependencies incrementally, while retaining termination
-    and productivity checks. Calling `registerFunction` before the query is no longer required for this case.
+  * Functions defined with `smtFunction` and its variants can now be first used
+    in query mode without calling `registerFunction` beforehand.
     Thanks to David Van Balen for reporting [issue #815](https://github.com/LeventErkok/sbv/issues/815).
 
-  * Fix constant folding of integral literals converted with `toSFloatingPoint`: all five
-    rounding modes are now honored during folding, including directed overflow. Previously these
-    conversions always used round-nearest-ties-to-even, regardless of the requested mode.
-    Integral conversions with `toSFloat` and `toSDouble` now also fold in all five modes;
-    previously non-RNE modes were correctly deferred to the solver.
+  * Fix constant folding of integral literals converted with `toSFloatingPoint`
+    under non-default rounding modes, including overflow. Integral conversions
+    with `toSFloat` and `toSDouble` now also fold in all five rounding modes.
 
-  * Fix literal regular-expression matching with universal, complement, difference, and
-    intersection expressions inside concatenations and repetitions. Constant folding now
-    checks the remaining suffix and applies Boolean operations to the same matched prefix,
-    agreeing with solver-side membership semantics.
-
-  * Serialize empty regex concatenations (`Conc []`) as the empty-string language.
-    Reject invalid `Loop` and `Power` bounds consistently in literal matching and
-    serialization, even in branches skipped by the matcher.
+  * Fix literal regex matching involving universal, complement, difference, and
+    intersection expressions inside concatenations and repetitions. Empty
+    concatenations (`Conc []`) now serialize correctly; invalid `Loop` and
+    `Power` bounds are rejected consistently.
 
 ### Version 14.7, 2026-08-31
 

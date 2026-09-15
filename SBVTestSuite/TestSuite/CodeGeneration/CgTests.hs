@@ -178,6 +178,9 @@ tests = testGroup "CodeGeneration.CgTests"
   , testCase "guard inactive branches in array lambdas" (guardedProgramEvaluation True)
   , testCase "retain checks as demand-driven evaluation roots" guardedRuntimeChecks
   , testCase "preserve sharing across guarded evaluation diamonds" guardedEvaluationSharing
+  , testCase "evaluate shared external calls at most once on each path" guardedExternalSharing
+  , testCase "honor linker overrides, ignored assertions, and nonreserved macro prefixes" reviewedBuildOptions
+  , testCase "remove all matching elements from borrowed duplicate sets" borrowedDuplicateRemoval
   , testCase "guard unselected finite-table entries and defaults" guardedTableEvaluation
   , testCase "check wide and exact indices before guarded table selection" guardedTableIndices
   , testCase "compile structural defined SBV functions" structuralDefinedSBVFunctions
@@ -682,6 +685,83 @@ arrayCollectionComparisons = testGroup "reject comparisons of array-valued colle
            Right _ -> assertFailure (testName ++ ": expected generation to reject array-element comparison")
          assertEqual (testName ++ ": rejected comparisons must not create any files") [] =<< listDirectory dir
 
+-- | An external C provider may return a borrowed set containing duplicates.
+-- Removing an element must count every retained slot before exporting it.
+borrowedDuplicateRemoval :: Assertion
+borrowedDuplicateRemoval = withSystemTempDirectory "sbv-duplicate-set" $ \dir -> do
+  compileToC (Just dir) "removeDuplicates" $ do
+    cgOverwriteFiles True
+    cgGenerateDriver False
+    cgAddPrototype ["SBVSet_u8 duplicates(SWord8);"]
+    cgAddDecl [ "SBVSet_u8 duplicates(SWord8 unused) { (void) unused; static const SWord8 values[] = {7, 7, 9};"
+              , "return (SBVSet_u8) {values, 3, false}; }"
+              , "int main(void) { SBVSet_u8 result = removeDuplicates(0);"
+              , "int failed = result.length != 1 || result.data[0] != 9;"
+              , "sbv_set_release_u8(&result); return failed; }"
+              ]
+    input <- cgInput "input" :: SBVCodeGen SWord8
+    cgReturn (SS.delete 7 (uninterpret "duplicates" input :: SSet Word8))
+  runEmbeddedCaller dir "removeDuplicates"
+
+-- | Instrument an external function: a branch-local demand followed by an
+-- unconditional demand must not repeat the call, and a dead arm must not call it.
+guardedExternalSharing :: Assertion
+guardedExternalSharing = withSystemTempDirectory "sbv-shared-external" $ \dir -> do
+  compileToC (Just dir) "sharedExternal" $ do
+    cgOverwriteFiles True
+    cgGenerateDriver False
+    cgAddPrototype ["SWord8 counted(SWord8);"]
+    cgAddDecl [ "static unsigned calls;"
+              , "SWord8 counted(SWord8 x) { ++calls; return x; }"
+              , "int main(void) { SWord8 first, second;"
+              , "sharedExternal(true, 7, &first, &second); if (calls != 1 || first != 7 || second != 7) return 1;"
+              , "calls = 0; sharedExternal(false, 8, &first, &second); return calls != 1 || first != 0 || second != 8; }"
+              ]
+    condition <- cgInput "condition" :: SBVCodeGen SBool
+    value <- cgInput "value" :: SBVCodeGen SWord8
+    let shared = uninterpret "counted" value :: SWord8
+    cgOutput "first" (ite condition shared 0)
+    cgOutput "second" shared
+  runEmbeddedCaller dir "sharedExternal"
+
+-- | Build a translation unit containing its own test main, preserving the
+-- same compilation, sanitizer, and dependency flags at the final link step.
+runEmbeddedCaller :: FilePath -> String -> Assertion
+runEmbeddedCaller dir entry = do
+  writeFile (dir </> "caller.mk") $ unlines
+    [entry ++ ": " ++ entry ++ ".o"
+    , "\t${CC} ${CCFLAGS} $^ -o $@ ${LDFLAGS} ${SBV_LIBS}"
+    ]
+  makeOptions <- generatedMakeOptions dir
+  (buildExit, _, buildError) <- readProcessWithExitCode "make" (["-C", dir, entry] ++ makeOptions) ""
+  assertEqual buildError ExitSuccess buildExit
+  (runExit, _, runError) <- readProcessWithExitCode (dir </> entry) [] ""
+  assertEqual runError ExitSuccess runExit
+
+-- | Linker settings must survive a caller's LDFLAGS, and disabling assertions
+-- must remove executable checks without imposing floating rules on integer C.
+reviewedBuildOptions :: Assertion
+reviewedBuildOptions = withSystemTempDirectory "sbv-reviewed-options" $ \dir -> do
+  compileToC (Just dir) "INTERVAL" $ do
+    cgOverwriteFiles True
+    cgIgnoreSAssert True
+    cgAddLDFlags ["-lm"]
+    cgSetDriverValues [7]
+    value <- cgInput "PRIMARY" :: SBVCodeGen SInteger
+    cgReturn (sAssert Nothing "deliberately disabled" (value .< 0) (value + 1))
+  makefile <- readFile (dir </> "Makefile")
+  header <- readFile (dir </> "INTERVAL.h")
+  assertBool makefile (not ("-ffp-contract" `isInfixOf` makefile))
+  assertBool "cgAddLDFlags must contribute to separately retained link dependencies"
+             ("SBV_LIBS?=" `isInfixOf` makefile && "-lm" `isInfixOf` makefile)
+  assertBool header (not ("__FAST_MATH__" `isInfixOf` header))
+  makeOptions <- generatedMakeOptions dir
+  (buildExit, _, buildError) <- readProcessWithExitCode "make" (["-C", dir, "LDFLAGS="] ++ makeOptions) ""
+  assertEqual buildError ExitSuccess buildExit
+  (runExit, outputText, runError) <- readProcessWithExitCode (dir </> "INTERVAL_driver") [] ""
+  assertEqual runError ExitSuccess runExit
+  assertBool outputText ("=8" `isInfixOf` outputText)
+
 -- | A library header must retain user prototypes needed by its translation
 -- units, even when the external implementation is supplied at final linking.
 libraryExternalPrototypes :: Assertion
@@ -928,7 +1008,7 @@ compileAndRunCaller dir libraryName source = do
   writeFile (dir </> "caller.c") source
   writeFile (dir </> "caller.mk") $ unlines
     ["caller: caller.c " ++ libraryName ++ ".h " ++ libraryName ++ ".a"
-    , "\t${CC} ${CCFLAGS} ${GMP_CFLAGS} caller.c " ++ libraryName ++ ".a ${LDFLAGS} -o $@"
+    , "\t${CC} ${CCFLAGS} ${GMP_CFLAGS} caller.c " ++ libraryName ++ ".a ${LDFLAGS} ${SBV_LIBS} -o $@"
     ]
   makeOptions <- generatedMakeOptions dir
   (makeExit, _, makeError) <- readProcessWithExitCode "make" (["-C", dir, "caller"] ++ makeOptions) ""
@@ -1006,6 +1086,10 @@ legacyPublicFacade = withSystemTempDirectory "sbv-legacy-c-backend" $ \dir -> do
   libraryOutput <- compileAndRunGenerated libraryDir "legacyLibrary"
   let expectedLibrary = ["0x0000002aUL", "0x00000052UL"]
   mapM_ (\expected -> assertBool ("Expected legacy library output to contain " ++ expected ++ ", received:\n" ++ libraryOutput) (expected `isInfixOf` libraryOutput)) expectedLibrary
+  (_, _, lowLevelProgram) <- PublicLegacy.compileToC' "legacyLowLevel" (component (+ 1))
+  (_, _, lowLevelLibrary) <- PublicLegacy.compileToCLib' "legacyLowLevelLibrary" [("increment", component (+ 1))]
+  assertBool "Public Legacy low-level entry points must generate bundles"
+             ("legacyLowLevel.c" `isInfixOf` show lowLevelProgram && "legacyLowLevelLibrary.a" `isInfixOf` show lowLevelLibrary)
 
 -- | Build and execute a generated C program or library driver with strict
 -- warnings so representation and ownership qualifier errors cannot pass silently.
@@ -1649,7 +1733,7 @@ exactSymbolicRationals = withSystemTempDirectory "sbv-exact-symbolic-rationals" 
   assertBool "Expected a public exact-rational input type"
              ("typedef mpq_srcptr SRational;" `isInfixOf` headerText)
   assertBool "Expected caller-owned exact-rational output and return parameters"
-             ("mpq_ptr constructed" `isInfixOf` headerText && "mpq_ptr __result" `isInfixOf` headerText)
+             ("mpq_ptr constructed" `isInfixOf` headerText && "mpq_ptr sbv_result" `isInfixOf` headerText)
 
 -- | Exercise exact rationals when their symbolic numerator and denominator
 -- operations use an explicitly selected bounded SInteger representation.
@@ -1949,9 +2033,9 @@ nestedPersistentArrays = withSystemTempDirectory "sbv-nested-persistent-arrays" 
     , "selected = 0x0000001dUL"
     ]
   assertBool ("Expected nested array values to use retained temporary descriptors, received:\n" ++ sourceText)
-             (    "sbv_array_stored_export_2_u8_3_u32(&__sbv_array_ctx" `isInfixOf` sourceText
-              && "sbv_array_ctx_end(&__sbv_array_ctx)" `isInfixOf` sourceText
-              && "__sbv_array_descriptor_" `isInfixOf` sourceText
+             (    "sbv_array_stored_export_2_u8_3_u32(&sbv_local_array_ctx" `isInfixOf` sourceText
+              && "sbv_array_ctx_end(&sbv_local_array_ctx)" `isInfixOf` sourceText
+              && "sbv_local_array_descriptor_" `isInfixOf` sourceText
              )
 
 -- | Exercise retained array descriptors in tuple construction and projection.
@@ -1978,8 +2062,8 @@ tupleStoredArrays = withSystemTempDirectory "sbv-tuple-stored-arrays" $ \dir -> 
     , "pair =([0] =0x00000005UL, 1)"
     ]
   assertBool ("Expected tuple construction and projection to bridge retained arrays, received:\n" ++ sourceText)
-             (    ".field1 = sbv_array_stored_export_2_u8_3_u32(&__sbv_array_ctx" `isInfixOf` sourceText
-              && "__sbv_array_descriptor_" `isInfixOf` sourceText
+             (    ".field1 = sbv_array_stored_export_2_u8_3_u32(&sbv_local_array_ctx" `isInfixOf` sourceText
+              && "sbv_local_array_descriptor_" `isInfixOf` sourceText
              )
 
 -- | Exercise retained array descriptors in ADT construction and projection.
@@ -2005,8 +2089,8 @@ adtStoredArrays = withSystemTempDirectory "sbv-adt-stored-arrays" $ \dir -> do
     , "boxed =CGArrayBox([0] =0x00000005UL, 1)"
     ]
   assertBool ("Expected ADT construction and projection to bridge retained arrays, received:\n" ++ sourceText)
-             (    ".field1 = sbv_array_stored_export_2_u8_3_u32(&__sbv_array_ctx" `isInfixOf` sourceText
-              && "__sbv_array_descriptor_" `isInfixOf` sourceText
+             (    ".field1 = sbv_array_stored_export_2_u8_3_u32(&sbv_local_array_ctx" `isInfixOf` sourceText
+              && "sbv_local_array_descriptor_" `isInfixOf` sourceText
              )
 
 -- | Exercise retained array descriptors in list construction, indexing, and
@@ -2033,8 +2117,8 @@ listStoredArrays = withSystemTempDirectory "sbv-list-stored-arrays" $ \dir -> do
     ]
   assertBool ("Expected list construction and indexing to bridge retained arrays, received:\n" ++ sourceText)
              (    "sbv_list_array_" `isInfixOf` sourceText
-              && "sbv_array_stored_export_2_u8_3_u32(&__sbv_array_ctx" `isInfixOf` sourceText
-              && "__sbv_array_descriptor_" `isInfixOf` sourceText
+              && "sbv_array_stored_export_2_u8_3_u32(&sbv_local_array_ctx" `isInfixOf` sourceText
+              && "sbv_local_array_descriptor_" `isInfixOf` sourceText
              )
 
 -- | Exercise generated-driver initialization and cleanup for array fields in
@@ -2295,7 +2379,7 @@ definedFunctionsInsideArrayLambdas = withSystemTempDirectory "sbv-defined-functi
     ]
   assertBool ("Expected array callbacks to forward the function ownership context, received:\n" ++ sourceText)
              ("/* Uninterpreted function */ sbv_function_" `isInfixOf` sourceText
-           && "sbv_function_ctx __sbv_function_ctx" `isInfixOf` sourceText)
+           && "sbv_function_ctx sbv_local_function_ctx" `isInfixOf` sourceText)
 
 -- | Exercise retained arrays that call managed 'smtFunction' definitions in
 -- separate translation units of one generated static library.
@@ -2369,7 +2453,7 @@ arrayValuedLambdaResults = withSystemTempDirectory "sbv-array-valued-lambda-resu
     , "marker = 0x000fU"
     ]
   assertBool ("Expected array callback results to cross through retained descriptors, received:\n" ++ sourceText)
-             ("sbv_array_stored_export_2_u8_3_u32(&__sbv_array_ctx" `isInfixOf` sourceText
+             ("sbv_array_stored_export_2_u8_3_u32(&sbv_local_array_ctx" `isInfixOf` sourceText
            && "SBVArrayOutput_2_u8_3_u32 * sbv_array_lambda_" `isInfixOf` sourceText)
 
 -- | Exercise array-valued callback results in independent translation units
@@ -2613,8 +2697,8 @@ managedScalarDefinedSBVFunctions = withSystemTempDirectory "sbv-managed-scalar-d
     , "decorated =<sbv4!>"
     ]
   assertBool "Expected private defined-function calls to thread the shared ownership context"
-             ("sbv_function_ctx *const __sbv_parent_function_ctx" `isInfixOf` sourceText
-           && "(&__sbv_function_ctx," `isInfixOf` sourceText)
+             ("sbv_function_ctx *const sbv_local_parent_function_ctx" `isInfixOf` sourceText
+           && "(&sbv_local_function_ctx," `isInfixOf` sourceText)
 
 -- | Private bodies must request the shared floor helper and math linkage even
 -- when their entry point contains only a function call or array lookup.
@@ -2778,7 +2862,7 @@ ownedADTDefinedSBVFunctions = withSystemTempDirectory "sbv-owned-adt-defined-fun
            ++ unlines (filter ("sbv_function" `isInfixOf`) (lines sourceText)))
              ("sbv_function_result_clone_" `isInfixOf` sourceText)
   assertBool "Expected private owned ADT result storage to be released"
-             ("sbv_function_result_ctx_end(&__sbv_function_result_ctx);" `isInfixOf` sourceText)
+             ("sbv_function_result_ctx_end(&sbv_local_function_result_ctx);" `isInfixOf` sourceText)
 
 -- | An inactive branch must not dereference the null child returned by a
 -- mismatched recursive-ADT selector. Exercise Ite, Boolean short-circuiting,
@@ -3094,8 +3178,8 @@ recursivePersistentArrayFunctions = withSystemTempDirectory "sbv-recursive-persi
     , "fallback = 7"
     ]
   assertBool ("Expected recursive array nodes to be declared outside guarded branches, received:\n" ++ sourceText)
-             ("sbv_array_node_2_u8_2_u8 __sbv_array_s" `isInfixOf` sourceText
-           && "sbv_array_stored_export_2_u8_2_u8(&__sbv_array_ctx" `isInfixOf` sourceText)
+             ("sbv_array_node_2_u8_2_u8 sbv_local_array_s" `isInfixOf` sourceText
+           && "sbv_array_stored_export_2_u8_2_u8(&sbv_local_array_ctx" `isInfixOf` sourceText)
 
 -- | Construct, traverse, and return a recursive ADT through private recursive
 -- functions after every child-producing C stack frame has unwound.
@@ -3149,7 +3233,7 @@ recursiveADTDefinedSBVFunctions = withSystemTempDirectory "sbv-recursive-adt-def
     , "mutual =CGEvenStep(CGOddStep(CGEvenStep(CGOddStep(CGEvenStep(CGOddStep(CGEvenEnd(0)))))))"
     ]
   assertBool ("Expected recursive ADT fields to use function-scoped backing values, received:\n" ++ sourceText)
-             ("SBVADT_CodeGenTree __sbv_adt_recursive_" `isInfixOf` sourceText
+             ("SBVADT_CodeGenTree sbv_local_adt_recursive_" `isInfixOf` sourceText
            && "sbv_function_result_clone_adt_" `isInfixOf` sourceText
            && any (\line -> "const SBVADT_CodeGenTree l1_s" `isInfixOf` line
                           && "= (SBVADT_CodeGenTree)" `isInfixOf` line)
@@ -3637,8 +3721,8 @@ managedAggregateArrays = withSystemTempDirectory "sbv-managed-aggregate-arrays" 
            && "sbv_adt_owned_release_SBVADT_CodeGenNativeCollections" `isInfixOf` sourceText)
   assertBool "Expected managed callback defaults to use deep retain and release helpers"
              ("sbv_adt_owned_clone_SBVADT_CodeGenNativeCollections" `isInfixOf` headerText
-           && "__sbv_array_retain_" `isInfixOf` driverText
-           && "__sbv_array_release_" `isInfixOf` driverText
+           && "sbv_local_array_retain_" `isInfixOf` driverText
+           && "sbv_local_array_release_" `isInfixOf` driverText
            && "sbv_tuple_owned_clone_" `isInfixOf` driverText
            && "sbv_tuple_owned_release_" `isInfixOf` driverText)
 
@@ -3752,13 +3836,13 @@ arrayValuedTables readyEntries = withSystemTempDirectory "sbv-array-valued-table
   if readyEntries
      then assertBool ("Expected retained array-valued table storage, received:\n" ++ sourceText)
                      (    "SBVArrayOutput_2_u8_3_u32 * const table" `isInfixOf` sourceText
-                      && "sbv_array_stored_export_2_u8_3_u32(&__sbv_array_ctx" `isInfixOf` sourceText
-                      && "__sbv_array_descriptor_" `isInfixOf` sourceText
+                      && "sbv_array_stored_export_2_u8_3_u32(&sbv_local_array_ctx" `isInfixOf` sourceText
+                      && "sbv_local_array_descriptor_" `isInfixOf` sourceText
                      )
      else assertBool "Expected guarded array initialization followed by an owned output export"
                      (    "switch((uint64_t)" `isInfixOf` sourceText
                       && "sbv_array_export_2_u8_3_u32(" `isInfixOf` sourceText
-                      && "__sbv_array_s" `isInfixOf` sourceText
+                      && "sbv_local_array_s" `isInfixOf` sourceText
                      )
 
 -- | Exercise managed finite-table results returned independently from

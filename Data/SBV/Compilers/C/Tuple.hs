@@ -306,10 +306,6 @@ tupleExpr op svs resultSV args
         , resultKind == fieldKinds !! (fieldIndex - 1)
         -> let field = parens renderedTuple P.<> text "." P.<> text (tupleFieldName fieldIndex)
            in if isArray resultKind then Just (arrayStoredLoad resultSV field) else lower field
-      (Ite, [_condition, left, right], [renderedCondition, renderedLeft, renderedRight])
-        | resultKind == kindOf left
-        , resultKind == kindOf right
-        -> lower $ renderedCondition <+> text "?" <+> renderedLeft <+> text ":" <+> renderedRight
       (Label label, [_], [renderedTuple])
         -> lower $ renderedTuple <+> text "/*" <+> cCommentText label <+> text "*/"
       _ -> Nothing

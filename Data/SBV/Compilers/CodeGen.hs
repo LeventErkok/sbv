@@ -29,11 +29,12 @@ module Data.SBV.Compilers.CodeGen (
 
         -- * Settings
         , cgPerformRTCs, cgSetDriverValues, cgArrayEqualityLimit, cgRegexLimits
+        , CgRegexLimits(..), defaultCgRegexLimits, cgSetRegexLimits
         , cgAddPrototype, cgAddDecl, cgAddLDFlags, cgIgnoreSAssert, cgOverwriteFiles, cgShowU8UsingHex
         , cgIntegerSize, cgSRealType, CgSRealType(..)
 
         -- * Infrastructure
-        , CgTarget(..), CgConfig(..), CgState(..), CgPgmBundle(..), CgPgmKind(..), CgVal(..)
+        , CgTarget(..), CgConfig(..), CgState(..), CgPgmBundle(..), CgPgmKind(..), CgCHeader(..), CgVal(..)
         , defaultCgConfig, initCgState, isCgDriver, isCgMakefile
 
         -- * Generating collateral
@@ -95,7 +96,7 @@ defaultCgConfig = CgConfig { cgRTC                  = False
                           , cgArrayEqualityMaxKeys = 256
                           , cgRegexMaxStates       = 1024
                           , cgRegexMaxNodes        = 4096
-                          , cgRegexMaxWork         = 1000000
+                          , cgRegexMaxWork         = 16000000
                           }
 
 -- | Abstraction of target language values
@@ -158,7 +159,8 @@ cgSym = SBVCodeGen . lift
 -- select the supplied default. With checks disabled (the default), callers
 -- must guarantee in-range indices. This setting does not disable assertions,
 -- executable constraints, ownership checks, or exact bit-vector shift
--- semantics in the current C backend.
+-- semantics in the current C backend. Wide bit-vector and GMP indices always
+-- retain their bounds check before conversion to a machine index.
 cgPerformRTCs :: Bool -> SBVCodeGen ()
 cgPerformRTCs b = modify' (\s -> s { cgFinalConfig = (cgFinalConfig s) { cgRTC = b } })
 
@@ -190,12 +192,12 @@ cgArrayEqualityLimit limit
 
 -- | Bound dependency-free C regex compilation: maximum explored states,
 -- expression nodes, and generation work, respectively. Defaults are 1024,
--- 4096, and 1000000. Exceeding a budget fails during generation, never by
+-- 4096, and 16000000. Exceeding a budget fails during generation, never by
 -- approximating the language or limiting runtime input length. Zero disables
 -- regex compilation; negative limits are invalid. Limits apply independently
 -- to each operation, also inside defined functions and library components.
 --
--- For example, @cgRegexLimits 4096 8192 4000000@ permits larger automata and
+-- For example, @cgRegexLimits 4096 8192 64000000@ permits larger automata and
 -- intermediate expressions, at the cost of more generation time and memory.
 -- See "Data.SBV.Tools.CodeGen" for an executable generation example.
 cgRegexLimits :: Integer -> Integer -> Integer -> SBVCodeGen ()
@@ -206,11 +208,35 @@ cgRegexLimits states nodes work
                                                               , cgRegexMaxWork   = work
                                                               } })
 
+-- | Named limits for dependency-free regex compilation. Work is a conservative
+-- generation allowance, not a promise that every smaller automaton will fit.
+data CgRegexLimits = CgRegexLimits
+  { regexMaxStates :: Integer -- ^ Maximum explored automaton states.
+  , regexMaxNodes  :: Integer -- ^ Maximum nodes per intermediate expression.
+  , regexMaxWork   :: Integer -- ^ Maximum charged construction work.
+  } deriving (Eq, Show)
+
+-- | The default regex budgets, suitable for record updates.
+defaultCgRegexLimits :: CgRegexLimits
+defaultCgRegexLimits = CgRegexLimits (cgRegexMaxStates defaultCgConfig)
+                                    (cgRegexMaxNodes defaultCgConfig)
+                                    (cgRegexMaxWork defaultCgConfig)
+
+-- | Configure regex budgets using named fields. The positional 'cgRegexLimits'
+-- remains available for compatibility.
+--
+-- >>> let larger = defaultCgRegexLimits { regexMaxStates = 4096, regexMaxWork = 64000000 }
+-- >>> regexMaxNodes larger == regexMaxNodes defaultCgRegexLimits
+-- True
+cgSetRegexLimits :: CgRegexLimits -> SBVCodeGen ()
+cgSetRegexLimits limits = cgRegexLimits (regexMaxStates limits) (regexMaxNodes limits) (regexMaxWork limits)
+
 -- | Sets number of bits to be used for representing the 'SInteger' type in the generated C code.
 -- The argument must be one of @8@, @16@, @32@, or @64@. Note that this is essentially unsafe as
 -- the semantics of unbounded Haskell integers becomes reduced to the corresponding bit size, as
 -- typical in most C implementations. Without this setting, generated C uses
--- exact GMP integers.
+-- exact GMP integers in the current backend. The Legacy backend instead rejects
+-- SInteger programs unless this mapping is specified.
 cgIntegerSize :: Int -> SBVCodeGen ()
 cgIntegerSize i
   | i `notElem` [8, 16, 32, 64]
@@ -238,7 +264,8 @@ instance Show CgSRealType where
 -- on the precision needed. Note that this is essentially unsafe as the semantics of
 -- infinite precision SReal values becomes reduced to the corresponding floating point type in
 -- C, and hence it is subject to rounding errors. Without this setting,
--- generated C uses exact GMP rationals for rational-valued computations.
+-- generated C uses exact GMP rationals for rational-valued computations in the
+-- current backend. The Legacy backend requires an explicit mapping instead.
 cgSRealType :: CgSRealType -> SBVCodeGen ()
 cgSRealType rt = modify' (\s -> s {cgFinalConfig = (cgFinalConfig s) { cgReal = Just rt }})
 
@@ -277,6 +304,9 @@ cgShowU8UsingHex b = modify' (\s -> s { cgFinalConfig = (cgFinalConfig s) { cgSh
 
 
 -- | Adds the given lines to the program file generated, useful for generating programs with uninterpreted functions.
+-- External implementations must represent pure mathematical functions: their
+-- results must depend only on their arguments, with no observable side effects.
+-- The compiler may eliminate unused calls or share equal applications.
 cgAddDecl :: [String] -> SBVCodeGen ()
 cgAddDecl ss = modify' (\s -> s { cgDecls = cgDecls s ++ ss })
 
@@ -382,8 +412,18 @@ data CgPgmBundle = CgPgmBundle (Maybe Int, Maybe CgSRealType) [(FilePath, (CgPgm
 -- | Different kinds of "files" we can produce. Currently this is quite "C" specific.
 data CgPgmKind = CgMakefile [String]  -- list of flags to pass to linker
                | CgHeader [Doc]
+               | CgCHeader CgCHeader
                | CgSource
                | CgDriver
+
+-- | Structured C header metadata used when combining current-backend bundles.
+-- The older 'CgHeader' constructor is retained for compatibility backends.
+data CgCHeader = CgCHeaderInfo
+  { cgHeaderFloating   :: Bool  -- ^ Requires IEEE floating-point compilation.
+  , cgHeaderTypes      :: Doc   -- ^ Runtime type declarations.
+  , cgHeaderSignatures :: [Doc] -- ^ Public entry points.
+  , cgHeaderPrototypes :: Doc   -- ^ User-supplied prototypes.
+  }
 
 -- | Is this a driver program?
 isCgDriver :: CgPgmKind -> Bool

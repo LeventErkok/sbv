@@ -42,11 +42,28 @@ tests = testGroup "CodeGeneration.RegExp"
   , testCase "regex language equality and inequality" languageAgreement
   , testCase "regex definitions and escaping array lambdas in a library" regexLibrary
   , testCase "regex generation limits fail before writing" regexLimits
+  , testCase "default regex budgets accommodate ordinary bounded repetitions" calibratedRegexLimits
   , testCase "regex limits apply to comparisons, definitions, and library components" regexLimitScopes
   , testCase "regex character matching and dynamic tables" regexCharacterTable
   , testCase "regex state limits do not bound input length" longRegexInput
   , testCase "non-regex and dead-regex code require no regex support" noRegexOverhead
   ]
+
+-- | Shared syntax and balanced-map lookup must not be charged as repeated
+-- whole-tree copies and linear scans of the entire state set.
+calibratedRegexLimits :: Assertion
+calibratedRegexLimits = do
+  mapM_ generate [R.Loop 0 30 "a", R.Power 510 "a"]
+  result <- try (generate (R.Power 1023 "a")) :: IO (Either ErrorCall ())
+  case result of
+    Left err -> assertBool (displayException err) ("state limit (1024)" `isInfixOf` displayException err)
+    Right () -> assertFailure "Expected the default state cap to reject 1025 states"
+ where generate regex = do
+         (_, _, bundle) <- compileToC' "calibratedRegex" $ do
+           cgGenerateDriver False
+           input <- cgInput "input" :: SBVCodeGen SString
+           cgReturn (input `R.match` regex)
+         void $ evaluate (length (show bundle))
 
 -- | Ordinary and Boolean operators, empty languages/concatenations, and
 -- nullable repetitions; include boundaries of every supported encoding width.
@@ -286,7 +303,7 @@ regexCharacterTable = withSystemTempDirectory "sbv-c-regex-character-table" $ \d
   void $ runC dir ["regexCharacterTable"]
 
 -- | Disabled regex compilation leaves non-regex generation unchanged and
--- never examines a dead regex operation, even one exceeding every budget.
+-- never examines a dead regex operation, including when regex compilation is disabled.
 noRegexOverhead :: Assertion
 noRegexOverhead = do
   baseline <- generated (pure ()) False

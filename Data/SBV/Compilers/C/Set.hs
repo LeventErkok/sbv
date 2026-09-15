@@ -36,6 +36,7 @@ module Data.SBV.Compilers.C.Set
   , setContextEnd
   ) where
 
+import Data.SBV.Compilers.C.Syntax (cUnusedAttribute)
 import Data.List                       (nub, stripPrefix, tails)
 import qualified Data.Set as Set
 
@@ -45,7 +46,7 @@ import qualified Text.PrettyPrint.HughesPJ as P ((<>))
 import Data.SBV.Compilers.C.Finite     (finiteDomainSize)
 import Data.SBV.Compilers.C.GMP        (isExactGMPKind)
 import Data.SBV.Compilers.C.Lowering   (CLowering, CRequirement(..), expressionLowering)
-import Data.SBV.Compilers.C.Types      (elementCType, kindTag)
+import Data.SBV.Compilers.C.Types      (isConcreteADT, elementCType, kindTag)
 import Data.SBV.Compilers.C.Value      ( byValueEqual
                                        , managedValueClone
                                        , managedValueRelease
@@ -122,13 +123,7 @@ setTypeDecls cfg kinds
   | null kinds = empty
   | True       = setForwardTypeDecls kinds $$ text (unlines $
       ["/* Finite/cofinite symbolic sets. Inputs borrow elements; outputs and returns own them. */"
-      , "#ifndef SBV_CGEN_UNUSED"
-      , "#if defined(__GNUC__) || defined(__clang__)"
-      , "#define SBV_CGEN_UNUSED __attribute__((unused))"
-      , "#else"
-      , "#define SBV_CGEN_UNUSED"
-      , "#endif"
-      , "#endif"
+      , cUnusedAttribute
       ]
       ++ concatMap declaration kinds
       )
@@ -295,7 +290,6 @@ setExpr cfg op svs resultKind args
       (TupleAccess{}                 , _        ) -> Nothing
       (Uninterpreted{}               , _        ) -> Nothing
       (Label _                       , [a]      ) -> lower a
-      (Ite                           , [c, a, b]) -> lower $ c <+> text "?" <+> a <+> text ":" <+> b
       (Equal _                       , [a, b]   ) -> lower $ call (helper "equal") [a, b]
       (NotEqual                      , as       ) -> lower $ distinctSets as
       (SetOp SetEqual                , [a, b]   ) -> lower $ call (helper "equal") [a, b]
@@ -322,7 +316,7 @@ setExpr cfg op svs resultKind args
 
        helper = helperName setKind
 
-       arenaCall suffix rendered = call (helper suffix) (text "&__sbv_set_ctx" : rendered)
+       arenaCall suffix rendered = call (helper suffix) (text "&sbv_local_set_ctx" : rendered)
 
        distinctSets rendered = fsep $ punctuate (text " &&")
                                      [parens (text "!" P.<> call (helper "equal") [left, right])
@@ -338,7 +332,7 @@ setEqual kind left right = call (helperName kind "equal") [left, right]
 
 -- | Normalize a borrowed set descriptor into the generated function's arena.
 setNormalize :: Kind -> Doc -> Doc
-setNormalize kind value = call (helperName kind "normalize") [text "&__sbv_set_ctx", value]
+setNormalize kind value = call (helperName kind "normalize") [text "&sbv_local_set_ctx", value]
 
 -- | Deep-copy a set across the generated function's ownership boundary.
 setClone :: Kind -> Doc -> Doc
@@ -389,16 +383,16 @@ setPrint printElement (KSet elementKind) value
             $$ text "printf(\"}\");"
            )
  $$ text "}"
- where index = text ("__sbv_set_print_index_" ++ kindTag elementKind)
+ where index = text ("sbv_local_set_print_index_" ++ kindTag elementKind)
 setPrint _ kind _ = error $ "SBV->C: Expected a set kind, received " ++ show kind
 
 -- | Initialize the arena used by set temporaries in a generated function.
 setContextStart :: Doc
-setContextStart = text "sbv_set_ctx __sbv_set_ctx = {NULL};"
+setContextStart = text "sbv_set_ctx sbv_local_set_ctx = {NULL};"
 
 -- | Release all set temporaries allocated by a generated function.
 setContextEnd :: Doc
-setContextEnd = call "sbv_set_ctx_end" [text "&__sbv_set_ctx"] P.<> semi
+setContextEnd = call "sbv_set_ctx_end" [text "&sbv_local_set_ctx"] P.<> semi
 
 -- | Test whether an operation belongs to the symbolic-set family.
 isSetOp :: Op -> Bool
@@ -596,7 +590,8 @@ setKindRuntime cfg constructorsOf kind@(KSet elementKind) =
          , "}"
          , "static " ++ setType ++ " " ++ helper "stored_remove" ++ "(sbv_set_ctx *ctx, " ++ setType ++ " value, " ++ elementType ++ " element, bool is_complement)"
          , "{"
-         , "  const size_t length = value.length - 1;"
+         , "  size_t length = 0;"
+         , "  for (size_t i = 0; i < value.length; ++i) if (!" ++ equalElement ++ "(value.data[i], element)) ++length;"
          , "  " ++ elementType ++ " *data = (" ++ elementType ++ " *) sbv_set_alloc(ctx, length, sizeof(*data));"
          , "  size_t output = 0;"
          , "  for (size_t i = 0; i < value.length; ++i) if (!" ++ equalElement ++ "(value.data[i], element)) data[output++] = value.data[i];"
@@ -628,10 +623,6 @@ setKindRuntime cfg constructorsOf kind@(KSet elementKind) =
          ]
 setKindRuntime _ _ kind = error $ "SBV->C: Expected a set kind, received " ++ show kind
 
--- | Test whether a kind is a concrete user ADT supported as a collection
--- element.
-isConcreteADT :: Kind -> Bool
-isConcreteADT kind = isADT kind && not (isRoundingMode kind) && not (isUninterpreted kind)
 
 -- | Return the number of distinct SMT objects when the domain cardinality fits
 -- in a C @uint64_t@. The callback supplies resolved ADT constructor fields,

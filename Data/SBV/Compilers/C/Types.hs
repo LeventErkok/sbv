@@ -23,6 +23,8 @@ module Data.SBV.Compilers.C.Types
   , elementCType
   , constElementCType
   , kindTag
+  , isConcreteADT
+  , isConcreteADTReference
   ) where
 
 import Data.Char                   (isAlphaNum, isAscii, ord)
@@ -30,6 +32,16 @@ import Numeric                     (showHex)
 
 import Data.SBV.Compilers.C.FP         (arbitraryFPCType)
 import Data.SBV.Core.Data
+
+-- | A resolved user ADT, excluding built-in rounding modes and opaque sorts.
+isConcreteADT :: Kind -> Bool
+isConcreteADT kind = isADT kind && not (isRoundingMode kind) && not (isUninterpreted kind)
+
+-- | A user ADT or a retained application awaiting ADT-reference resolution.
+-- Keep this distinct from 'isConcreteADT' for dependency and ownership walks.
+isConcreteADTReference :: Kind -> Bool
+isConcreteADTReference KApp{} = True
+isConcreteADTReference kind   = isConcreteADT kind
 
 -- | Return the public C structure type used for a tuple kind.
 tupleCType :: Kind -> String

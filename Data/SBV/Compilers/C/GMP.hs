@@ -29,6 +29,7 @@ module Data.SBV.Compilers.C.GMP
   , gmpContextEnd
   ) where
 
+import Data.SBV.Compilers.C.Syntax (cUnusedAttribute)
 import Data.Bits                       (shiftL)
 import Data.List                       (nub, stripPrefix, tails)
 import Data.Ratio                      (denominator, numerator)
@@ -75,13 +76,7 @@ gmpTypeDecls cfg kinds
       , "/* Initialize each scalar/group output with mpz_init or mpq_init; clear it after its last use. */"
       , "/* Aggregate outputs instead receive fresh owned values, including any embedded GMP fields. */"
       , "#include <gmp.h>"
-      , "#ifndef SBV_CGEN_UNUSED"
-      , "#if defined(__GNUC__) || defined(__clang__)"
-      , "#define SBV_CGEN_UNUSED __attribute__((unused))"
-      , "#else"
-      , "#define SBV_CGEN_UNUSED"
-      , "#endif"
-      , "#endif"]
+      , cUnusedAttribute]
    ++ integerDecls
    ++ realDecls
    ++ rationalDecls
@@ -145,16 +140,16 @@ gmpRuntime cfg kinds assignments
 gmpConst :: CgConfig -> CV -> Maybe Doc
 gmpConst cfg (CV KUnbounded (CInteger i))
   | isExactGMPKind cfg KUnbounded
-  = Just $ namedCall "sbv_gmp_integer_const" [text "&__sbv_gmp_ctx", doubleQuotes (integer i)]
+  = Just $ namedCall "sbv_gmp_integer_const" [text "&sbv_local_gmp_ctx", doubleQuotes (integer i)]
 gmpConst cfg (CV KReal (CAlgReal (AlgRational _ r)))
   | isExactGMPKind cfg KReal
-  = Just $ namedCall "sbv_gmp_real_const" [text "&__sbv_gmp_ctx", doubleQuotes (text value)]
+  = Just $ namedCall "sbv_gmp_real_const" [text "&sbv_local_gmp_ctx", doubleQuotes (text value)]
   where value = show (numerator r) ++ "/" ++ show (denominator r)
 gmpConst cfg (CV KReal (CAlgReal r))
   | isExactGMPKind cfg KReal
   = error $ "SBV->C: GMP-backed SReal constants must be rational, received " ++ show r
 gmpConst _ (CV KRational (CRational r))
-  = Just $ namedCall "sbv_gmp_real_const" [text "&__sbv_gmp_ctx", doubleQuotes (text value)]
+  = Just $ namedCall "sbv_gmp_real_const" [text "&sbv_local_gmp_ctx", doubleQuotes (text value)]
   where value = show (numerator r) ++ "/" ++ show (denominator r)
 gmpConst _ _ = Nothing
 
@@ -179,7 +174,6 @@ gmpExpr cfg op svs resultKind args
   | True
   = case (op, args, svs) of
       (Label _              , [a]      , _)   -> lower a
-      (Ite                  , [c, a, b], _)   -> lower $ c <+> text "?" <+> a <+> text ":" <+> b
       (Plus                 , [a, b]   , x:_) -> lower $ valueCall x "add" [a, b]
       (Minus                , [a, b]   , x:_) -> lower $ valueCall x "sub" [a, b]
       (Times                , [a, b]   , x:_) -> lower $ valueCall x "mul" [a, b]
@@ -187,7 +181,7 @@ gmpExpr cfg op svs resultKind args
       (UNeg                 , [a]      , x:_) -> lower $ valueCall x "neg" [a]
       (Abs                  , [a]      , x:_) -> lower $ valueCall x "abs" [a]
       (Quot                 , [a, b]   , x:_) -> lower $ valueCall x "quot" [a, b]
-      (RationalConstructor  , [n, d]   , _)   -> lower $ namedCall "sbv_gmp_rational_construct" [text "&__sbv_gmp_ctx", n, d]
+      (RationalConstructor  , [n, d]   , _)   -> lower $ namedCall "sbv_gmp_rational_construct" [text "&sbv_local_gmp_ctx", n, d]
       (Uninterpreted funName, [a]      , _)
         | T.unpack funName == "sbv.rat.numerator"   -> lower $ namedCall "sbv_gmp_rational_numerator" [a]
         | T.unpack funName == "sbv.rat.denominator" -> lower $ namedCall "sbv_gmp_rational_denominator" [a]
@@ -217,18 +211,18 @@ gmpExpr cfg op svs resultKind args
       (GreaterEq            , [a, b]   , x:_) -> lower $ comparison x ">=" a b
       (Divides n            , [a]      , x:_)
         | kindOf x == KUnbounded                   -> lower $ namedCall "sbv_gmp_integer_divides"
-                                                               [namedCall "sbv_gmp_integer_const" [text "&__sbv_gmp_ctx", doubleQuotes (integer n)], a]
+                                                               [namedCall "sbv_gmp_integer_const" [text "&sbv_local_gmp_ctx", doubleQuotes (integer n)], a]
       (KindCast fr to       , [a]      , _)   -> gmpCast fr to a
       _ -> unsupported
  where lower = lowerWith [CRequiresGMP]
 
        lowerWith requirements = Just . expressionLowering requirements
 
-       valueCall sv suffix = namedCall (kindPrefix (kindOf sv) ++ suffix) . (text "&__sbv_gmp_ctx" :)
+       valueCall sv suffix = namedCall (kindPrefix (kindOf sv) ++ suffix) . (text "&sbv_local_gmp_ctx" :)
 
        comparison sv relation a b = parens $ namedCall (kindPrefix (kindOf sv) ++ "cmp") [a, b] <+> text relation <+> text "0"
 
-       integerValue value = namedCall "sbv_gmp_integer_const" [text "&__sbv_gmp_ctx", doubleQuotes (integer (fromIntegral value))]
+       integerValue value = namedCall "sbv_gmp_integer_const" [text "&sbv_local_gmp_ctx", doubleQuotes (integer (fromIntegral value))]
 
        distinctExpr sv as = fsep $ punctuate (text " &&")
                                   [parens (namedCall (kindPrefix (kindOf sv) ++ "cmp") [a, b] <+> text "!= 0")
@@ -238,27 +232,27 @@ gmpExpr cfg op svs resultKind args
          | fr == to = lower a
          | fr == KUnbounded && to `elem` [KReal, KRational]
          = if isExactGMPKind cfg KUnbounded
-           then lower $ namedCall "sbv_gmp_real_from_integer" [text "&__sbv_gmp_ctx", a]
+           then lower $ namedCall "sbv_gmp_real_from_integer" [text "&sbv_local_gmp_ctx", a]
            else lower $ namedCall "sbv_gmp_real_from_s64"
-                                  [text "&__sbv_gmp_ctx", parens (text "int64_t") <+> a]
+                                  [text "&sbv_local_gmp_ctx", parens (text "int64_t") <+> a]
          | fr == KReal && to == KUnbounded
          = if isExactGMPKind cfg to
-           then lower $ namedCall "sbv_gmp_integer_from_real" [text "&__sbv_gmp_ctx", a]
+           then lower $ namedCall "sbv_gmp_integer_from_real" [text "&sbv_local_gmp_ctx", a]
            else lower $ nativeResult to (namedCall "sbv_gmp_real_low_u64" [a])
          | isWideBV fr && to `elem` [KReal, KRational]
-         = lowerWith [CRequiresGMP, CRequiresWideBV] $ namedCall (quotientFromWideName fr) [text "&__sbv_gmp_ctx", a]
+         = lowerWith [CRequiresGMP, CRequiresWideBV] $ namedCall (quotientFromWideName fr) [text "&sbv_local_gmp_ctx", a]
          | isWideBV fr && to == KUnbounded
-         = lowerWith [CRequiresGMP, CRequiresWideBV] $ namedCall (integerFromWideName fr) [text "&__sbv_gmp_ctx", a]
+         = lowerWith [CRequiresGMP, CRequiresWideBV] $ namedCall (integerFromWideName fr) [text "&sbv_local_gmp_ctx", a]
          | fr == KUnbounded && isWideBV to
          = lowerWith [CRequiresGMP, CRequiresWideBV] $ namedCall (integerToWideName to) [a]
          | isBounded fr && intSizeOf fr <= 64 && to == KUnbounded
          = lower $ namedCall (if hasSign fr then "sbv_gmp_integer_from_s64" else "sbv_gmp_integer_from_u64")
-                             [text "&__sbv_gmp_ctx", parens (text (if hasSign fr then "int64_t" else "uint64_t")) <+> a]
+                             [text "&sbv_local_gmp_ctx", parens (text (if hasSign fr then "int64_t" else "uint64_t")) <+> a]
          | fr == KUnbounded && isBounded to && not (isWideBV to)
          = lower $ nativeResult to (namedCall "sbv_gmp_integer_low_u64" [a])
          | isBounded fr && intSizeOf fr <= 64 && to `elem` [KReal, KRational]
          = lower $ namedCall (if hasSign fr then "sbv_gmp_real_from_s64" else "sbv_gmp_real_from_u64")
-                             [text "&__sbv_gmp_ctx", parens (text (if hasSign fr then "int64_t" else "uint64_t")) <+> a]
+                             [text "&sbv_local_gmp_ctx", parens (text (if hasSign fr then "int64_t" else "uint64_t")) <+> a]
          | fr == KReal && isBounded to && not (isWideBV to)
          = lower $ nativeResult to (namedCall "sbv_gmp_real_low_u64" [a])
          | otherwise
@@ -488,11 +482,11 @@ gmpDriverClear k          _       = error $ "SBV->C: Expected an exact GMP kind,
 
 -- | Initialize the arena used by exact temporaries in a generated function.
 gmpContextStart :: Doc
-gmpContextStart = text "sbv_gmp_ctx __sbv_gmp_ctx = {NULL};"
+gmpContextStart = text "sbv_gmp_ctx sbv_local_gmp_ctx = {NULL};"
 
 -- | Release all exact temporaries allocated by a generated function.
 gmpContextEnd :: Doc
-gmpContextEnd = namedCall "sbv_gmp_ctx_end" [text "&__sbv_gmp_ctx"] P.<> semi
+gmpContextEnd = namedCall "sbv_gmp_ctx_end" [text "&sbv_local_gmp_ctx"] P.<> semi
 
 -- | Return the generated helper namespace for an exact numeric kind.
 kindPrefix :: Kind -> String

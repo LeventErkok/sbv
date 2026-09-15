@@ -29,6 +29,7 @@ import Test.Tasty.HUnit          (assertBool, assertEqual)
 
 import Data.SBV.Internals
 import Data.SBV.Tuple (tuple, untuple)
+import qualified Data.SBV.List as SL
 
 import Utils.SBVTestFramework
 import Utils.CCodeGen (generatedMakeOptions)
@@ -53,6 +54,8 @@ tests :: TestTree
 tests = testGroup "CodeGeneration.ExactNumbers"
   [ testCase "compile and execute unbounded arithmetic" exactIntegerArithmetic
   , testCase "compile and execute Euclidean division" exactIntegerDivision
+  , testCase "preserve zero-divisor semantics across integer representations" integerZeroDivision
+  , testCase "count exact decimal text without its terminator" exactDecimalText
   , testCase "compile and execute exact divisibility" exactIntegerDivisibility
   , testCase "compile and execute exact integer exponentiation" exactIntegerExponentiation
   , testCase "compile and execute native conversions" exactNativeConversions
@@ -62,6 +65,7 @@ tests = testGroup "CodeGeneration.ExactNumbers"
   , testCase "compile and execute wide real conversions" exactWideRealConversions
   , testCase "compile and execute rational arithmetic" exactRealArithmetic
   , testCase "compile and execute exact table lookup" exactTableLookup
+  , testCase "do not alias narrowed unchecked exact table indices" uncheckedExactTableIndices
   , testCase "compile and execute exact array keys and values" exactArray
   , testCase "compile and execute an exact callback-backed array" exactArrayInput
   , testCase "compile and execute fixed exact input arrays" exactFixedInputArrays
@@ -96,6 +100,19 @@ exactIntegerArithmetic = withSystemTempDirectory "sbv-exact-integer" $ \dir -> d
       expectedBit = ((x + y) `xor` x) .&. complement y
   compileAndRunGMP dir "exactIntegerArithmetic" program [show expected, show (x + y), show expectedBit]
 
+-- | Huge and negative integers cannot alias valid entries during conversion
+-- to a machine index, even with optional runtime checks disabled.
+uncheckedExactTableIndices :: Assertion
+uncheckedExactTableIndices = mapM_ check [-1, 2 ^ (128 :: Int) + 1]
+ where check index = withSystemTempDirectory "sbv-unchecked-exact-index" $ \dir -> do
+         let program = do
+               cgOverwriteFiles True
+               cgPerformRTCs False
+               cgSetDriverValues [index]
+               input <- cgInput "input" :: SBVCodeGen SInteger
+               cgReturn (select [10, 11, 12] 99 input :: SWord8)
+         compileAndRunGMP dir "uncheckedExactIndex" program ["= 99"]
+
 -- | Exercise SMT-Lib Euclidean quotient and nonnegative remainder semantics.
 exactIntegerDivision :: Assertion
 exactIntegerDivision = withSystemTempDirectory "sbv-exact-integer-division" $ \dir -> do
@@ -110,6 +127,39 @@ exactIntegerDivision = withSystemTempDirectory "sbv-exact-integer-division" $ \d
         cgOutput "remainder" remainder
         cgReturn (quotient .== 4 .&& remainder .== 4)
   compileAndRunGMP dir "exactIntegerDivision" program ["= 1", "quotient =4", "remainder =4"]
+
+-- | Raw Euclidean division uses SBV's concrete zero-divisor choice, whereas
+-- public truncated quotient explicitly totalizes the same input to zero.
+integerZeroDivision :: Assertion
+integerZeroDivision = mapM_ check [Nothing, Just 8, Just 16, Just 32, Just 64]
+ where check mapping = withSystemTempDirectory "sbv-integer-zero-division" $ \dir -> do
+         let program = do
+               cgOverwriteFiles True
+               maybe (pure ()) cgIntegerSize mapping
+               cgSetDriverValues [7, 0]
+               a <- cgInput "a" :: SBVCodeGen SInteger
+               b <- cgInput "b" :: SBVCodeGen SInteger
+               cgReturn $ a `sEDiv` b .== a .&& a `sEMod` b .== a .&& a `sQuot` b .== 0
+         (_, generatedConfig, bundle) <- compileToC' "integerZeroDivision" program
+         renderCgPgmBundle (Just dir) (generatedConfig, bundle)
+         makeOptions <- generatedMakeOptions dir
+         (buildExit, _, buildError) <- readProcessWithExitCode "make" (["-C", dir] ++ makeOptions) ""
+         assertEqual buildError ExitSuccess buildExit
+         (runExit, outputText, runError) <- readProcessWithExitCode (dir </> "integerZeroDivision_driver") [] ""
+         assertEqual runError ExitSuccess runExit
+         assertBool outputText ("= 1" `isInfixOf` outputText)
+
+-- | GMP's decimal allocation bound can exceed the actual digit count by one.
+exactDecimalText :: Assertion
+exactDecimalText = mapM_ check [0, 1, 7, 8, 9, 10, 99, 100, 999, 1000, 2 ^ (257 :: Int)]
+ where check value = withSystemTempDirectory "sbv-exact-decimal-text" $ \dir -> do
+         let program = do
+               cgOverwriteFiles True
+               cgSetDriverValues [value]
+               input <- cgInput "input" :: SBVCodeGen SInteger
+               let rendered = SL.natToStr input
+               cgReturn $ rendered .== literal (show value) .&& SL.length rendered .== literal (toInteger (length (show value)))
+         compileAndRunGMP dir "exactDecimalText" program ["= 1"]
 
 -- | Exercise exact divisibility with a divisor too large for any native C
 -- integer, positive and negative multiples, and a neighboring non-multiple.

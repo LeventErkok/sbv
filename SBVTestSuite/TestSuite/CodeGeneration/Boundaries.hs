@@ -28,6 +28,7 @@ import System.IO.Temp (withSystemTempDirectory)
 import Test.Tasty.HUnit (assertBool, assertEqual)
 
 import Data.SBV.Internals (AlgRealPoly(..))
+import Data.SBV.Control (SMTOption(..))
 import qualified Data.SBV.List as SL
 import Data.SBV.Tools.CodeGen
 import Utils.SBVTestFramework
@@ -35,7 +36,10 @@ import Utils.SBVTestFramework
 -- | An abstract solver sort deliberately lacking a C representation.
 data Opaque
 
-mkSymbolic [''Opaque]
+-- | Recursive references hidden inside a by-value tuple cannot have a finite C layout.
+data NestedRecursion = EndRecursion | NestedRecursion (Word8, NestedRecursion)
+
+mkSymbolic [''Opaque, ''NestedRecursion]
 
 -- | Every rejected feature is checked through both public entry points;
 -- library failures must not leave even an earlier, valid component behind.
@@ -44,6 +48,15 @@ tests = testGroup "CodeGeneration.Boundaries"
   [ rejects "uninterpreted sort" "uninterpreted sorts" $ do
       value <- cgInput "value" :: SBVCodeGen (SBV Opaque)
       cgReturn value
+  , rejects "nested recursive ADT" "Recursive ADT references nested inside composite fields" $ do
+      value <- cgInput "value" :: SBVCodeGen (SBV NestedRecursion)
+      cgReturn value
+  , rejects "solver option" "SMT solver options have no executable C semantics" $ do
+      setOption (ProduceAssertions True)
+      cgReturn sTrue
+  , rejects "solver option through cgSym" "SMT solver options have no executable C semantics" $ do
+      cgSym $ setOption (ProduceAssertions True)
+      cgReturn sTrue
   , rejects "nested uninterpreted sort" "uninterpreted sorts" $ do
       value <- cgInput "value" :: SBVCodeGen (SList (Maybe Opaque))
       cgReturn value

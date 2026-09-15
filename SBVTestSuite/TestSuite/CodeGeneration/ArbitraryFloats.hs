@@ -41,6 +41,7 @@ import Utils.CCodeGen (locateLibBF, generatedMakeOptions)
 tests :: TestTree
 tests = testGroup "CodeGeneration.ArbitraryFloats"
   [ testCase "compile and execute arithmetic" arbitraryFloatArithmetic
+  , testCase "preserve division, signed zero, and extreme-exponent FMA" reviewedFloatArithmetic
   , testCase "compile and execute a nonstandard wide format" arbitraryFloatWideFormat
   , testCase "compile and execute classification" arbitraryFloatClassification
   , testCase "compile and execute rounding modes" arbitraryFloatRoundingModes
@@ -70,6 +71,34 @@ tests = testGroup "CodeGeneration.ArbitraryFloats"
   , testCase "compile a wide arbitrary-float tuple" wideFloatingTuple
   , testCase "preserve dependencies with optional library files" optionalLibraryFiles
   ]
+
+-- | Exercise the ordinary fractional operator, both same-sign zero arguments,
+-- and cancellation after a product beyond the target format's exponent range.
+reviewedFloatArithmetic :: Assertion
+reviewedFloatArithmetic = withSystemTempDirectory "sbv-reviewed-floats" $ \dir -> do
+  let bias = 2 ^ (28 :: Int) - 1
+      aBits = (bias + 2 ^ (27 :: Int)) * 4
+      cBits = 2 ^ (31 :: Int) + (2 ^ (29 :: Int) - 2) * 4 + 3
+      program = do
+        cgOverwriteFiles True
+        cgSetDriverValues [6, 2, 0x8000, 0x8000, aBits, cBits]
+        dividendValue <- cgInput "numerator" :: SBVCodeGen SFPQuad
+        divisorValue <- cgInput "denominator" :: SBVCodeGen SFPQuad
+        negativeZeroBits <- cgInput "zeroBits" :: SBVCodeGen (SWord 16)
+        otherZeroBits <- cgInput "otherZeroBits" :: SBVCodeGen (SWord 16)
+        aRaw <- cgInput "aBits" :: SBVCodeGen (SWord 32)
+        cRaw <- cgInput "cBits" :: SBVCodeGen (SWord 32)
+        let negativeZero = sWordAsSFloatingPoint negativeZeroBits :: SFPHalf
+            otherNegativeZero = sWordAsSFloatingPoint otherZeroBits :: SFPHalf
+            a = sWordAsSFloatingPoint aRaw :: SFloatingPoint 29 3
+            c = sWordAsSFloatingPoint cRaw :: SFloatingPoint 29 3
+            result = fpFMA sRNE a a c
+            expected = literal (fromInteger ((bias + 2 ^ (28 :: Int) - 3) * 4)) :: SWord 32
+        cgReturn $ dividendValue / divisorValue .== 3
+               .&& fpIsEqualObject (fpMin negativeZero otherNegativeZero) negativeZero
+               .&& fpIsEqualObject (fpMax negativeZero otherNegativeZero) negativeZero
+               .&& sFloatingPointAsSWord result .== expected
+  compileAndRunLibBF dir "reviewedFloatArithmetic" program ") = 1"
 
 -- | Keep LibBF requirements when its component disables Makefile generation,
 -- and associate an enabled driver with its own component after a disabled one.
@@ -695,7 +724,7 @@ longDoubleNumericBoundaries = withSystemTempDirectory "sbv-long-double-bridges" 
     ]
   writeFile (dir </> "caller.mk") $ unlines
     [ "caller: caller.c longBridges.h longBridges.a"
-    , "\t${CC} ${CCFLAGS} ${GMP_CFLAGS} caller.c longBridges.a ${LDFLAGS} -o $@"
+    , "\t${CC} ${CCFLAGS} ${GMP_CFLAGS} caller.c longBridges.a ${LDFLAGS} ${SBV_LIBS} -o $@"
     ]
   makeOptions <- generatedMakeOptions dir
   (buildExit, _, buildError) <- readProcessWithExitCode "make" (["-C", dir, "caller"] ++ makeOptions) ""

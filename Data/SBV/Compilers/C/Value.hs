@@ -27,7 +27,7 @@ import qualified Text.PrettyPrint.HughesPJ as P ((<>))
 import Data.SBV.Compilers.C.BV         (isWideBV, wideBVEqual)
 import Data.SBV.Compilers.C.FP         (arbitraryFPEqual, arbitraryFPObjectEqual, nativeFPObjectEqual)
 import Data.SBV.Compilers.C.GMP        (gmpDriverClear, gmpDriverInit, gmpEqual, isExactGMPKind)
-import Data.SBV.Compilers.C.Types      (adtCType, arrayStoredCloneName, arrayStoredReleaseName, constElementCType, elementCType, kindTag, tupleCType, tupleFieldName)
+import Data.SBV.Compilers.C.Types      (isConcreteADTReference, adtCType, arrayStoredCloneName, arrayStoredReleaseName, constElementCType, elementCType, kindTag, tupleCType, tupleFieldName)
 import Data.SBV.Compilers.CodeGen      (CgConfig)
 import Data.SBV.Core.Data
 
@@ -42,7 +42,7 @@ valueNeedsOwnership _   KList{}        = True
 valueNeedsOwnership _   KSet{}         = True
 valueNeedsOwnership _   KArray{}       = True
 valueNeedsOwnership cfg (KTuple kinds) = any (valueNeedsOwnership cfg) kinds
-valueNeedsOwnership _   kind@KADT{}    = isConcreteADT kind
+valueNeedsOwnership _   kind@KADT{}    = isConcreteADTReference kind
 valueNeedsOwnership _   KApp{}         = True
 valueNeedsOwnership _   _              = False
 
@@ -55,7 +55,7 @@ valueDriverNeedsInitialization cfg (KTuple fields)      = any (valueNeedsOwnersh
 valueDriverNeedsInitialization cfg (KList elementKind)  = valueDriverNeedsInitialization cfg elementKind
 valueDriverNeedsInitialization cfg (KSet elementKind)   = valueDriverNeedsInitialization cfg elementKind
 valueDriverNeedsInitialization _   KArray{}             = True
-valueDriverNeedsInitialization _   kind@KADT{}          = isConcreteADT kind
+valueDriverNeedsInitialization _   kind@KADT{}          = isConcreteADTReference kind
 valueDriverNeedsInitialization _   KApp{}               = True
 valueDriverNeedsInitialization _   _                    = False
 
@@ -75,7 +75,7 @@ byValueEqual cfg strong kind left right
   | KSet elementKind <- kind                   = call ("sbv_set_" ++ kindTag elementKind ++ "_equal") [left, right]
   | isArray kind                               = text "(abort(), false)"
   | KTuple fields <- kind                      = tupleEquality fields
-  | isConcreteADT kind                         = call (adtEqualityName strong kind) [left, right]
+  | isConcreteADTReference kind                         = call (adtEqualityName strong kind) [left, right]
   | True                                       = left <+> text "==" <+> right
  where tupleEquality []     = parens . fsep . punctuate comma $ [text "(void)" <+> parens left, text "(void)" <+> parens right, text "true"]
        tupleEquality fields = parens . fsep . punctuate (text " &&") $
@@ -97,7 +97,7 @@ managedValueClone (KSet elementKind) value  = call ("sbv_set_clone_" ++ kindTag 
 managedValueClone kind@KArray{} value       = call (arrayStoredCloneName kind) [value]
 managedValueClone kind@KTuple{} value       = call ("sbv_tuple_owned_clone_" ++ kindTag kind) [value]
 managedValueClone kind value
-  | isConcreteADT kind                       = call ("sbv_adt_owned_clone_" ++ adtCType kind) [value]
+  | isConcreteADTReference kind                       = call ("sbv_adt_owned_clone_" ++ adtCType kind) [value]
 managedValueClone kind _                    = error $ "SBV->C: Expected a non-GMP managed kind, received " ++ show kind
 
 -- | Release one non-GMP managed value through a pointer to its owned storage.
@@ -108,7 +108,7 @@ managedValueRelease (KSet elementKind) address  = call ("sbv_set_release_" ++ ki
 managedValueRelease kind@KArray{} address       = call (arrayStoredReleaseName kind) [address] P.<> semi
 managedValueRelease kind@KTuple{} address       = call ("sbv_tuple_owned_release_" ++ kindTag kind) [address] P.<> semi
 managedValueRelease kind address
-  | isConcreteADT kind                          = call ("sbv_adt_owned_release_" ++ adtCType kind) [address] P.<> semi
+  | isConcreteADTReference kind                          = call ("sbv_adt_owned_release_" ++ adtCType kind) [address] P.<> semi
 managedValueRelease kind _                      = error $ "SBV->C: Expected a non-GMP managed kind, received " ++ show kind
 
 -- | Declare and initialize one deterministic example-driver value. Managed
@@ -135,7 +135,7 @@ valueDriverInit cfg renderValue initializeValue kind@(KTuple fields)       exter
          | isArray fieldKind            = [ initializeValue fieldKind fieldName fieldSeed
                                           , access <+> text "=" <+> text fieldName P.<> semi
                                           ]
-         | isConcreteADT fieldKind      = [ initializeValue fieldKind fieldName fieldSeed
+         | isConcreteADTReference fieldKind      = [ initializeValue fieldKind fieldName fieldSeed
                                           , access <+> text "=" <+> text fieldName P.<> semi
                                           ]
          | KList{}         <- fieldKind = collectionAssignment fieldKind access fieldName fieldSeed
@@ -172,7 +172,7 @@ valueDriverInit cfg renderValue initializeValue kind@(KSet elementKind)    exter
 valueDriverInit _   _           initializeValue kind@KArray{}              externalName seed
   = initializeValue kind externalName seed
 valueDriverInit _   _           initializeValue kind                       externalName seed
-  | isConcreteADT kind
+  | isConcreteADTReference kind
   = initializeValue kind externalName seed
 valueDriverInit _   renderValue _               kind                       externalName seed
   = text "const" <+> text (elementCType kind) <+> text externalName <+> text "=" <+> renderValue kind seed P.<> semi
@@ -187,7 +187,7 @@ valueDriverClear cfg kind@KTuple{} externalName
   | valueNeedsOwnership cfg kind
   = managedValueRelease kind (text "&" P.<> text externalName)
 valueDriverClear _   kind                externalName
-  | isConcreteADT kind
+  | isConcreteADTReference kind
   = managedValueRelease kind (text "&" P.<> text externalName)
 valueDriverClear _   kind@KArray{}       externalName
   = managedValueRelease kind (text "&" P.<> text externalName)
@@ -230,9 +230,3 @@ tupleFields kind            = error $ "SBV->C: Expected a tuple kind, received "
 -- | Render a C helper call.
 call :: String -> [Doc] -> Doc
 call functionName arguments = text functionName P.<> parens (fsep (punctuate comma arguments))
-
--- | Test whether a kind is a concrete user ADT rather than a built-in or
--- uninterpreted sort.
-isConcreteADT :: Kind -> Bool
-isConcreteADT KApp{} = True
-isConcreteADT kind   = isADT kind && not (isRoundingMode kind) && not (isUninterpreted kind)

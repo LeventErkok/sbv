@@ -15,8 +15,10 @@ module Data.SBV.Compilers.C.Table
   ( tableExpr
   , tableIndexAndBounds
   , tableMustBeLocal
+  , tableNeedsBounds
   ) where
 
+import Data.SBV.Compilers.C.Types (isConcreteADT)
 import qualified Data.Set as Set
 
 import Text.PrettyPrint.HughesPJ
@@ -32,8 +34,9 @@ import Data.SBV.Core.Data
 import Data.SBV.Core.Kind             (expandKinds)
 
 -- | Lower a finite SBV table lookup. Bounds are checked when requested by the
--- code-generation configuration, and the default value is returned for every
--- out-of-range index. Only the integral index kinds accepted by SBV's
+-- code-generation configuration (always before wide/exact index narrowing),
+-- and the default value is returned for every checked out-of-range index.
+-- Only the integral index kinds accepted by SBV's
 -- 'Data.SBV.select' operation can reach this function.
 tableExpr :: CgConfig -> (SV -> Doc) -> Op -> SV -> Maybe CLowering
 tableExpr cfg renderSV (LkUp (tableId, indexKind, _, tableLength) index defaultValue) resultSV
@@ -46,7 +49,7 @@ tableExpr cfg renderSV (LkUp (tableId, indexKind, _, tableLength) index defaultV
        renderedDefault = arrayStoredValue resultKind (renderSV defaultValue)
        lookupValue     = text "table" P.<> int tableId P.<> brackets nativeIndex
        selectedValue   = case outOfRange of
-                           Just check | cgRTC cfg -> check <+> text "?" <+> renderedDefault <+> text ":" <+> lookupValue
+                           Just check | tableNeedsBounds cfg indexKind -> check <+> text "?" <+> renderedDefault <+> text ":" <+> lookupValue
                            _                      -> lookupValue
 
        resultKind = kindOf resultSV
@@ -64,6 +67,11 @@ tableExpr cfg renderSV (LkUp (tableId, indexKind, _, tableLength) index defaultV
 
        (nativeIndex, outOfRange) = tableIndexAndBounds cfg indexKind tableLength renderedIndex
 tableExpr _ _ _ _ = Nothing
+
+-- | Representation-changing index conversions must preserve out-of-range
+-- values even when optional native-index checks are disabled.
+tableNeedsBounds :: CgConfig -> Kind -> Bool
+tableNeedsBounds cfg kind = cgRTC cfg || isWideBV kind || isExactGMPKind cfg kind
 
 -- | Render a machine index together with its exact out-of-range predicate.
 -- Check the original value before narrowing a wide bit-vector or GMP integer;
@@ -125,5 +133,3 @@ tableIndexAndBounds cfg indexKind tableLength renderedIndex = (nativeIndex, outO
 tableMustBeLocal :: CgConfig -> Kind -> Bool
 tableMustBeLocal cfg = any mustBeLocal . expandKinds
  where mustBeLocal kind = isExactGMPKind cfg kind || valueNeedsOwnership cfg kind || isConcreteADT kind
-
-       isConcreteADT kind = isADT kind && not (isRoundingMode kind) && not (isUninterpreted kind)

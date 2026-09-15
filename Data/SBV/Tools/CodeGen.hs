@@ -21,6 +21,7 @@ module Data.SBV.Tools.CodeGen (
 
         -- ** Setting code-generation options
         , cgPerformRTCs, cgSetDriverValues, cgArrayEqualityLimit, cgRegexLimits, cgGenerateDriver, cgGenerateMakefile, cgOverwriteFiles, cgShowU8UsingHex
+        , CgRegexLimits(..), defaultCgRegexLimits, cgSetRegexLimits
 
         -- ** Designating inputs
         , cgInput, cgInputArr
@@ -55,6 +56,12 @@ temporary storage appropriate to those representations.
 The original, native-scalar-only implementation remains available from
 "Data.SBV.Tools.CodeGen.Legacy" for compatibility during the transition to the
 new backend.
+
+Migration changes: without an explicit mapping, 'Data.SBV.SInteger' and
+rational-valued 'Data.SBV.SReal' now use exact GMP storage and require GMP at
+C build time. Legacy rejects these types without 'cgIntegerSize' or
+'cgSRealType'. Retain those settings if native, precision-losing mappings are
+intentional, or use the Legacy import to retain the original backend.
 
 == Building generated code
 
@@ -92,13 +99,14 @@ used, including those inside private functions and array lambdas:
 
 Generated Makefiles use @CCFLAGS@, not @CFLAGS@, and include local @*.mk@ files
 for overrides. Supply nonstandard include paths through @CCFLAGS@ and library
-paths through @LDFLAGS@. Replacing @LDFLAGS@ replaces the generated dependency
-flags too: retain every required library, including @GMP_LIBS@ when applicable.
+paths through @LDFLAGS@. Required dependencies and 'cgAddLDFlags' are retained
+separately in @SBV_LIBS@, so inherited @LDFLAGS@ cannot discard them. Override
+@SBV_LIBS@ only to replace dependency discovery; retain every required library.
 For example, a LibBF-only program can use:
 
 @
 make CC=clang CCFLAGS='-std=c11 -Wall -O2 -I\/path\/to\/libbf' \\
-     LDFLAGS='\/path\/to\/libbf.a -lm'
+     SBV_LIBS='\/path\/to\/libbf.a -lm'
 @
 
 An external C caller should include the generated header and link the generated
@@ -184,7 +192,8 @@ Already available entries use direct C-array lookup; entries that require guarde
 evaluation use a switch. Enable 'cgPerformRTCs' to select the default for an
 out-of-range index. With checks disabled (the default), callers must guarantee
 in-range indices; invalid unchecked indices have no defined result and may
-terminate the process. Wide and exact indices are checked before narrowing.
+terminate the process. Wide and exact indices are always checked before
+narrowing, independently of this option, to avoid aliasing an in-range entry.
 
 === Floating-point calling convention
 
@@ -341,7 +350,7 @@ generated function and work inside defined functions and closed array lambdas.
 
 'cgRegexLimits' bounds compilation independently per regex operation: maximum
 explored automaton states (default 1024), expression nodes (4096), and charged
-generation work (1000000). Language comparison counts pairs of residual states.
+generation work (16000000). Language comparison counts pairs of residual states.
 Expression limits also bound literal/list lengths and repetition expansion;
 work accounts for traversals, construction, normalization, and state comparisons.
 These are conservative implementation budgets, not time or memory guarantees.
@@ -360,7 +369,7 @@ For example, permit a larger automaton when generating a suffix matcher:
 >>> import qualified Data.SBV.RegExp as RE
 >>> :{
 let suffixMatcher = do
-      cgRegexLimits 4096 8192 4000000
+      cgRegexLimits 4096 8192 64000000
       input <- cgInput "input" :: SBVCodeGen SString
       cgReturn (input `RE.match` RE.Conc [RE.All, RE.Literal "done"])
 :}
@@ -385,11 +394,14 @@ The following distinctions apply equally to standalone functions and libraries:
 * /Unsupported types/: uninterpreted sorts, including uses nested in supported
   containers. Uninterpreted /functions/ with caller-supplied C implementations
   are a separate, supported mechanism.
+* /Unsupported recursive layouts/: recursive ADT references nested inside
+  composite constructor fields, such as tuples. Put recursive references in
+  direct constructor fields instead; those use the supported pointer layout.
 * /Unsupported equality/: nested arrays and general infinite-domain array
   equality, even for sparse constant-plus-write arrays. The same restriction
   applies to implicit element comparisons in collection operations.
 * /Unsupported solver requests/: finite or infinite quantifiers, special
-  relations, soft constraints, optimization objectives, and SMT-only constraint
+  relations, soft constraints, solver options, optimization objectives, and SMT-only constraint
   attributes. Ordinary hard constraints become executable checks, not searches
   for satisfying inputs.
 * /Unsupported closures/: array lambdas capturing outer symbolic values.

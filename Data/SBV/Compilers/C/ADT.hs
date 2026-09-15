@@ -60,7 +60,7 @@ import Data.SBV.Compilers.C.List       ( listClone
                                        , listRelease
                                        )
 import Data.SBV.Compilers.C.Lowering   (CLowering(..), expressionLowering)
-import Data.SBV.Compilers.C.Syntax     (cCommentText)
+import Data.SBV.Compilers.C.Syntax     (cUnusedAttribute, cCommentText)
 import Data.SBV.Compilers.C.Set        ( setClone
                                        , setDriverClear
                                        , setDriverInit
@@ -73,7 +73,7 @@ import Data.SBV.Compilers.C.Tuple      ( tupleOwnedInitName
                                        , tupleOwnedSetName
                                        , tupleNeedsOwnership
                                        )
-import Data.SBV.Compilers.C.Types      (adtCType, elementCType, tupleFieldName)
+import Data.SBV.Compilers.C.Types      (isConcreteADT, adtCType, elementCType, tupleFieldName)
 import Data.SBV.Compilers.C.Value      (byValueEqual, managedValueClone, managedValueRelease, valueNeedsOwnership)
 import Data.SBV.Compilers.CodeGen      (CgConfig)
 import Data.SBV.Core.Data
@@ -150,13 +150,7 @@ adtTypeDeclsFor _ _        []           = empty
 adtTypeDeclsFor _ registry declarations = text . unlines $
      [ "/* Algebraic data types. Recursive fields form finite, acyclic pointer graphs. */"
      , "/* Inputs borrow these graphs; owned outputs and returns must be released. */"
-     , "#ifndef SBV_CGEN_UNUSED"
-     , "#if defined(__GNUC__) || defined(__clang__)"
-     , "#define SBV_CGEN_UNUSED __attribute__((unused))"
-     , "#else"
-     , "#define SBV_CGEN_UNUSED"
-     , "#endif"
-     , "#endif"
+     , cUnusedAttribute
      , ""
      ]
   ++ concatMap forwardDeclaration declarations
@@ -766,10 +760,6 @@ adtExpr cfg adts op svs resultSV args
         , kindOf left == kindOf right
         , Just comparisonSymbol <- adtComparisonSymbol comparison
         -> lower $ adtTag renderedLeft <+> text comparisonSymbol <+> adtTag renderedRight
-      (Ite, [_condition, left, right], [renderedCondition, renderedLeft, renderedRight])
-        | resultKind == kindOf left
-        , resultKind == kindOf right
-        -> lower $ renderedCondition <+> text "?" <+> renderedLeft <+> text ":" <+> renderedRight
       (Label label, [_], [renderedValue])
         -> lower $ renderedValue <+> text "/*" <+> cCommentText label <+> text "*/"
       _ -> error $ "SBV->C: ADT lowering does not support " ++ adtOperationName op
@@ -800,7 +790,7 @@ adtExpr cfg adts op svs resultSV args
                                 | (fieldIndex, (ADTField fieldKind True, field)) <- zip [1 :: Int ..] (zip fieldInfo renderedFields)
                                 ]
 
-              backingName fieldIndex = "__sbv_adt_recursive_" ++ show resultSV ++ "_" ++ show fieldIndex
+              backingName fieldIndex = "sbv_local_adt_recursive_" ++ show resultSV ++ "_" ++ show fieldIndex
 
               storeField fieldIndex _ True  _     = text "&" P.<> text (backingName fieldIndex)
               storeField _          _ False field = field
@@ -937,7 +927,11 @@ adtConstructorFields adts kind@(KADT typeName parameters constructors)
               concrete    = resolveADTReferences adts substituted
               recursive   = case substituted of
                               KApp{} -> adtReachable adts concrete kind
-                              _      -> False
+                              _ | any (\application -> adtReachable adts (resolveADTReferences adts application) kind)
+                                      [application | application@KApp{} <- expandKinds substituted]
+                                -> error $ "SBV->C: Recursive ADT references nested inside composite fields are not supported: " ++ show kind
+                                         ++ ". Put the recursive reference in a direct constructor field instead."
+                                | True -> False
 adtConstructorFields _ kind = error $ "SBV->C: Expected an ADT kind, received " ++ show kind
 
 -- | Return whether the second ADT is reachable from the first through ADT
@@ -1090,10 +1084,6 @@ adtFieldCType (ADTField kind False)
   | isConcreteADT kind = adtCType kind
 adtFieldCType (ADTField kind False) = elementCType kind
 
--- | Return whether a kind is a user ADT rather than rounding mode or an
--- uninterpreted sort.
-isConcreteADT :: Kind -> Bool
-isConcreteADT kind = isADT kind && not (isRoundingMode kind) && not (isUninterpreted kind)
 
 -- | Render the tag-selection expression for an ADT value.
 adtTag :: Doc -> Doc

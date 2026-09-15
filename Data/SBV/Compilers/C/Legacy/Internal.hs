@@ -7,9 +7,10 @@
 -- Stability : experimental
 --
 -- Frozen compatibility implementation of the original SBV-to-C compiler.
--- This is the implementation as it stood before the comprehensive backend
--- work began at SBV commit @8c161542945382014976a3cb1f9c17dc6e51b270@;
--- changes here should be limited to compatibility maintenance.
+-- Based on the implementation before comprehensive backend work began,
+-- at SBV commit @8c161542945382014976a3cb1f9c17dc6e51b270@. The initial copy
+-- added Haddocks and formatting; subsequent changes are compatibility fixes,
+-- not a verbatim snapshot of today's master.
 -----------------------------------------------------------------------------
 
 {-# LANGUAGE TupleSections #-}

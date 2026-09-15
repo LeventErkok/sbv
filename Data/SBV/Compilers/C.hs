@@ -66,4 +66,4 @@ module Data.SBV.Compilers.C
   , compileToCLib'
   ) where
 
-import Data.SBV.Compilers.C.New (compileToC, compileToC', compileToCLib, compileToCLib')
+import Data.SBV.Compilers.C.Backend (compileToC, compileToC', compileToCLib, compileToCLib')
