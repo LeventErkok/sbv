@@ -3,20 +3,12 @@
 
 ### Version 14.8, Not yet released
 
-  * `getFunction` now preserves the current model and handles
-    uninterpreted argument sorts and quoted function names correctly.
-
-  * [BACKWARDS COMPATIBILITY] `getFunction` now rejects unregistered functions.
-    Use the function in a constraint or call `registerFunction` before checking
-    satisfiability. Custom `SMTFunction` instances overriding `sexprToFun` must
-    accept an additional function-name argument.
-
-  * Fix first use of rational types in query mode, including rational fields
-    nested in other types. `registerType` now works inside queries and can
-    be safely repeated.
-
-  * `registerFunction` no longer rules out NaN results for floating-point
-    functions.
+  * The biggest change in this release is a new C backend, with much broader
+    support for SBV programs, including arbitrary-width bit-vectors, recursive
+    functions, ADTs, and higher-order specializations. This was largely developed
+    with LLM assistance. The original backend remains available through
+    `Data.SBV.Tools.CodeGen.Legacy`, but we recommend the new backend and welcome
+    reports of any issues. See below for specific changes.
 
   * [BACKWARDS COMPATIBILITY] `Data.SBV.Tools.CodeGen` now selects a new C compiler.
     Import `Data.SBV.Tools.CodeGen.Legacy` to keep using the original one, including
@@ -80,6 +72,24 @@
     intersection expressions inside concatenations and repetitions. Empty
     concatenations (`Conc []`) now serialize correctly; invalid `Loop` and
     `Power` bounds are rejected consistently.
+
+  * Fix first use of rational types in query mode, including rational fields
+    nested in other types. `registerType` now works inside queries and can
+    be safely repeated.
+
+  * `registerFunction` no longer rules out NaN results for floating-point
+    functions.
+
+  * `getFunction` now preserves the current model and handles
+    uninterpreted argument sorts and quoted function names correctly.
+
+  * [BACKWARDS COMPATIBILITY] `getFunction` now rejects unregistered functions.
+    Use the function in a constraint or call `registerFunction` before checking
+    satisfiability. Custom `SMTFunction` instances overriding `sexprToFun` must
+    accept an additional function-name argument.
+
+  * New example: `Documentation.SBV.Examples.ADT.Shapes` demonstrates symbolic
+    pattern matching and enumerating datatype values with `allSat` and query mode.
 
 ### Version 14.7, 2026-08-31
 
