@@ -157,6 +157,7 @@ Library
   if flag(compile_examples)
     Exposed-modules : Documentation.SBV.Examples.ADT.Expr
                     , Documentation.SBV.Examples.ADT.Param
+                    , Documentation.SBV.Examples.ADT.Shapes
                     , Documentation.SBV.Examples.ADT.Types
                     , Documentation.SBV.Examples.BitPrecise.Adders
                     , Documentation.SBV.Examples.BitPrecise.BitTricks

@@ -1175,6 +1175,9 @@ mkSymbolic [''Expr]
 
 These types can also be parameterized, per usual Haskell usage.
 
+For a complete example of constraining and enumerating datatype values, see
+"Documentation.SBV.Examples.ADT.Shapes".
+
 We also support a symbolic case-expression quasi-quoter, allowing us to write:
 
 @
