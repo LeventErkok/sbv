@@ -1,7 +1,7 @@
 * Hackage: <http://hackage.haskell.org/package/sbv>
 * GitHub:  <http://github.com/LeventErkok/sbv>
 
-### Version 14.8, Not yet released
+### Version 14.8, 2026-09-24
 
   * The biggest change in this release is a new C backend, with much broader
     support for SBV programs, including arbitrary-width bit-vectors, recursive
