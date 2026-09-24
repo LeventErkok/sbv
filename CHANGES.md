@@ -3,14 +3,20 @@
 
 ### Version 14.8, Not yet released
 
-  * Fix first use of rational types in query mode, including rational fields
-    nested in other types. Explicit `registerType` calls inside queries now
-    synchronize declarations with the solver and can be safely repeated.
+  * `getFunction` now preserves the current model and handles
+    uninterpreted argument sorts and quoted function names correctly.
 
-  * `registerFunction` no longer adds a self-equality constraint to force
-    registration. In particular, registering floating-point functions no longer
-    rules out NaN results. It remains useful for enumerating or retrieving
-    interpretations of otherwise unused uninterpreted functions.
+  * [BACKWARDS COMPATIBILITY] `getFunction` now rejects unregistered functions.
+    Use the function in a constraint or call `registerFunction` before checking
+    satisfiability. Custom `SMTFunction` instances overriding `sexprToFun` must
+    accept an additional function-name argument.
+
+  * Fix first use of rational types in query mode, including rational fields
+    nested in other types. `registerType` now works inside queries and can
+    be safely repeated.
+
+  * `registerFunction` no longer rules out NaN results for floating-point
+    functions.
 
   * [BACKWARDS COMPATIBILITY] `Data.SBV.Tools.CodeGen` now selects a new C compiler.
     Import `Data.SBV.Tools.CodeGen.Legacy` to keep using the original one, including

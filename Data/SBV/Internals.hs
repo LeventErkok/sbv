@@ -63,6 +63,9 @@ module Data.SBV.Internals (
   -- $coordinateSolverInfo
   , sendStringToSolver, sendRequestToSolver, retrieveResponseFromSolver
 
+  -- * Parsing and formatting solver responses
+  , SExpr(..), parseSExpr, formatFunctionResponse
+
   -- * Defining new metrics
   , addSValOptGoal
   , sFloatAsComparableSWord32,  sDoubleAsComparableSWord64,  sFloatingPointAsComparableSWord
@@ -102,6 +105,7 @@ import Data.SBV.Utils.Numeric
 
 import Data.SBV.Utils.TDiff
 import Data.SBV.Utils.PrettyNum
+import Data.SBV.Utils.SExpr (SExpr(..), parseSExpr, formatFunctionResponse)
 
 import GHC.TypeLits
 

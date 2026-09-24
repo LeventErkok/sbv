@@ -14,7 +14,7 @@
 {-# OPTIONS_GHC -Wall -Werror #-}
 
 module Data.SBV.Utils.SExpr ( SExpr(..), parenDeficit, parseSExpr
-                            , parseSExprFunction, makeHaskellFunction
+                            , parseSExprFunction, makeHaskellFunction, formatFunctionResponse
                             , unQuote, simplifyECon
                             , nameSupply
                             ) where
@@ -51,30 +51,36 @@ data SExpr = ECon           String
 
 -- | Extremely simple minded tokenizer, good for our use model.
 tokenize :: String -> [String]
-tokenize inp = go inp []
+tokenize = tokenizeWith (\tok _ _ -> tok)
+
+-- The callback receives the decoded token and the original input suffixes at
+-- its start and end. Retaining these boundaries lets display code take exact
+-- source slices without changing the tokens used for parsing.
+tokenizeWith :: (String -> String -> String -> a) -> String -> [a]
+tokenizeWith retain inp = go inp []
  where go "" sofar = reverse sofar
 
        go (c:cs) sofar
           | isSpace c = go (dropWhile isSpace cs) sofar
 
-       go ('(':cs) sofar = go cs ("(" : sofar)
-       go (')':cs) sofar = go cs (")" : sofar)
+       go src@('(':cs) sofar = go cs (retain "(" src cs : sofar)
+       go src@(')':cs) sofar = go cs (retain ")" src cs : sofar)
 
-       go (':':':':cs) sofar = go cs ("::" : sofar)
+       go src@(':':':':cs) sofar = go cs (retain "::" src cs : sofar)
 
-       go (':':cs) sofar = case break (`elem` stopper) cs of
-                            (pre, rest) -> go rest ((':':pre) : sofar)
+       go src@(':':cs) sofar = case break (`elem` stopper) cs of
+                                (pre, rest) -> go rest (retain (':':pre) src rest : sofar)
 
-       go ('|':r) sofar = let wrap s = '|' : s ++ "|"
-                          in case span (/= '|') r of
-                               (pre, '|':rest) -> go rest (wrap pre : sofar)
-                               (pre, rest)     -> go rest (wrap pre : sofar)
+       go src@('|':r) sofar = let wrap s = '|' : s ++ "|"
+                              in case span (/= '|') r of
+                                   (pre, '|':rest) -> go rest (retain (wrap pre) src rest : sofar)
+                                   (pre, rest)     -> go rest (retain (wrap pre) src rest : sofar)
 
        go (';':r) sofar = go (drop 1 (dropWhile (/= '\n') r)) sofar
 
-       go ('"':r) sofar = go rest (finalStr : sofar)
+       go src@('"':r) sofar = go rest (retain finalStr src rest : sofar)
            where grabString []             acc = (reverse acc, [])         -- Strictly speaking, this is the unterminated string case; but let's ignore
-                 grabString ('"' :'"':cs)  acc = grabString cs ('"' :acc)
+                 grabString ('"' :'"':cs)  acc = grabString cs ('"' : acc)
                  grabString ('"':cs)       acc = (reverse acc, cs)
                  grabString (c:cs)         acc = grabString cs (c:acc)
 
@@ -82,7 +88,7 @@ tokenize inp = go inp []
                  finalStr    = '"' : str ++ "\""
 
        go cs sofar = case span (`notElem` stopper) cs of
-                       (pre, post) -> go post (pre : sofar)
+                            (pre, post) -> go post (retain pre cs post : sofar)
 
        -- characters that can stop the current token
        -- it is *crucial* that this list contains every character
@@ -561,8 +567,8 @@ chainAssigns chain = regroup $ partitionEithers chain
         eRank EDouble{}        = 5
         eRank EApp{}           = 6
 
--- Turn
---  "((F (lambda ((x!1 Int)) (+ 3 (* 2 x!1)))))"
+-- Turn a parsed function value
+--  "(lambda ((x!1 Int)) (+ 3 (* 2 x!1)))"
 ---  into
 --  "F x = 3 + 2 * x"
 -- if we can. We try but don't push too hard! This is only used for display purposes.
@@ -570,14 +576,12 @@ chainAssigns chain = regroup $ partitionEithers chain
 -- This isn't very fool-proof; can be confused if there are binding constructs etc.
 -- Also, the generated text isn't necessarily fully Haskell acceptable.
 -- But it seems to do an OK job for most common use cases.
-makeHaskellFunction :: String -> String -> Bool -> Maybe [String] -> Maybe String
-makeHaskellFunction resp nm isCurried mbArgs
-   = case parseSExpr resp of
-       Right (EApp [EApp [ECon o, e]]) | o == nm -> do (args, bd) <- lambda e
-                                                       let params | isCurried = unwords args
-                                                                  | True      = '(' : intercalate ", " args ++ ")"
-                                                       pure $ unBar nm ++ " " ++ params ++ " = " ++ bd
-       _                                         -> Nothing
+makeHaskellFunction :: SExpr -> String -> Bool -> Maybe [String] -> Maybe String
+makeHaskellFunction value nm isCurried mbArgs = do
+  (args, bd) <- lambda value
+  let params | isCurried = unwords args
+             | True      = '(' : intercalate ", " args ++ ")"
+  pure $ unBar nm ++ " " ++ params ++ " = " ++ bd
 
   where -- infinite supply of names; starting with the ones we're given
         preSupply = fromMaybe [] mbArgs
@@ -590,6 +594,23 @@ makeHaskellFunction resp nm isCurried mbArgs
 
         getArg (EApp [ECon argName, _]) = Just argName
         getArg _                        = Nothing
+
+-- | Format an already parsed function value. The caller validates the response
+-- name. If lambda formatting fails, slice the original SMT-Lib value at token
+-- boundaries. This preserves its exact spelling, whitespace, and comments;
+-- rebuilding it from the normalized SExpr or decoded tokens would lose details.
+formatFunctionResponse :: SExpr -> String -> String -> Bool -> Maybe [String] -> String
+formatFunctionResponse value response nm isCurried mbArgs
+  | Just formatted <- makeHaskellFunction value nm isCurried mbArgs
+  = formatted
+  | ("(", _, _) : ("(", _, _) : (actual, _, _) : rest <- tokenizeWith (,,) response
+  , unBar actual == unBar nm
+  , (")", _, _) : (")", _, _) : body@((_, _, end) : _) <- reverse rest
+  , (_, start, _) : _ <- reverse body
+  = raw $ take (length start - length end) start
+  | True
+  = raw response
+  where raw s = nm ++ " = fromSMTLib " ++ s
 
 -- | z3 prints uninterpreted values like this: T!val!4 or T_val_4. Turn that into T_4
 simplifyECon :: String -> String

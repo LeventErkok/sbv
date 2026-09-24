@@ -445,6 +445,8 @@ getValue = Trans.getValue
 -- The function must already be declared when satisfiability is checked. If it
 -- does not occur in any constraints, call 'Data.SBV.registerFunction' before
 -- entering the query, then 'ensureSat' before retrieving its interpretation.
+-- An unregistered function is an error; this call never changes solver state
+-- or reruns the satisfiability check.
 getFunction :: (SymVal a, SymVal r, Trans.SMTFunction fun a r) => fun -> Query (Either (String, (Bool, Maybe [String], SExpr)) ([(a, r)], r))
 getFunction = Trans.getFunction
 

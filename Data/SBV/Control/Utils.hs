@@ -82,7 +82,7 @@ import Data.SBV.Core.Symbolic ( IncState(..), withNewIncState, State(..), svToSV
                               , extractSymbolicSimulationState, MonadSymbolic(..)
                               , UserInputs, getSV, NamedSymVar(..), lookupInput, getUserName, getUserName'
                               , Name, CnstMap, Inputs(..), ProgInfo(..)
-                              , mustIgnoreVar, newInternalVariable, Penalty(..), smtLibPgmText, registerKind
+                              , mustIgnoreVar, newInternalVariable, Penalty(..), smtLibPgmText, registerKind, mkNewState
                               )
 
 import Data.SBV.Core.AlgReals    (mergeAlgReals, AlgReal(..), RealPoint(..))
@@ -416,7 +416,7 @@ class (HasKind r, SatModel r) => SMTFunction fun a r | fun -> a r where
   smtFunSaturate :: fun -> SBV r
   smtFunType     :: fun -> SBVType
   smtFunDefault  :: fun -> Maybe r
-  sexprToFun     :: (MonadIO m, SolverContext m, MonadQuery m, MonadSymbolic m, SymVal r) => fun -> (String, SExpr) -> m (Either String ([(a, r)], r))
+  sexprToFun     :: (MonadIO m, SolverContext m, MonadQuery m, MonadSymbolic m, SymVal r) => fun -> String -> (String, SExpr) -> m (Either String ([(a, r)], r))
 
   {-# MINIMAL sexprToArg, smtFunSaturate, smtFunType  #-}
 
@@ -427,17 +427,30 @@ class (HasKind r, SatModel r) => SMTFunction fun a r | fun -> a r where
     | True
     = Nothing
 
-  -- Given the function, determine what its name is and do some sanity checks
-  smtFunName f = do st@State{rUIMap} <- contextState
+  -- Discover the name in an isolated state. Inspecting a model must not add
+  -- declarations to the live solver, which can invalidate its current model.
+  smtFunName f = do State{rUIMap, stCfg} <- contextState
                     uiMap <- liftIO $ readIORef rUIMap
-                    nm    <- findName st uiMap
-
-                    -- Read the uiMap again here. Why? Because the act of finding the name might've
-                    -- introduced it as an uninterpreted name!
-                    newUIMap <- liftIO $ readIORef rUIMap
-                    case nm `Map.lookup` newUIMap of
-                      Nothing                     -> cantFind newUIMap
-                      Just (isCurried, mbArgs, _) -> pure ((nm, mbArgs), isCurried)
+                    probe <- mkNewState stCfg{verbose = False} (LambdaGen (Just 0))
+                    nm    <- findName probe uiMap
+                    case nm `Map.lookup` uiMap of
+                      Nothing -> error $ unlines
+                        [ ""
+                        , "*** Data.SBV.getFunction: Uninterpreted function " ++ show nm ++ " is not registered in this context."
+                        , "*** Use it in a constraint, or call registerFunction before entering the query."
+                        , "*** Then check satisfiability before calling getFunction."
+                        , "*** getFunction only inspects the current model; it does not register functions or rerun checkSat."
+                        ]
+                      -- SMT signatures do not distinguish curried and uncurried
+                      -- Haskell functions. Keep the registered display convention.
+                      Just (isCurried, mbArgs, ty)
+                        | ty == smtFunType f -> pure ((nm, mbArgs), isCurried)
+                        | True -> error $ unlines
+                            [ ""
+                            , "*** Data.SBV.getFunction: Uninterpreted function " ++ show nm ++ " used at incompatible SMT signatures."
+                            , "***    Requested argument/result sorts: " ++ show (smtFunType f)
+                            , "***    Declared argument/result sorts:  " ++ show ty
+                            ]
     where cantFind uiMap = error $ unlines $    [ ""
                                                 , "*** Data.SBV.getFunction: Must be called on an uninterpreted function!"
                                                 , "***"
@@ -467,25 +480,25 @@ class (HasKind r, SatModel r) => SMTFunction fun a r | fun -> a r where
                             (sv, SBVApp (Uninterpreted nm) _) | r == sv -> pure (T.unpack nm)
                             _                                           -> cantFind uiMap
 
-  sexprToFun f (s, e) = do nm    <- fst . fst <$> smtFunName f
-                           si    <- contextState >>= getSInfo
-                           mbRes <- case parseSExprFunction e of
-                                      Just (Left nm') -> case (nm == nm', smtFunDefault f) of
-                                                           (True, Just v)  -> pure $ Just ([], v)
-                                                           _               -> bailOut nm
-                                      Just (Right v)  -> convert si v
-                                      Nothing         -> do mbPVS <- pointWiseExtract nm (smtFunType f)
-                                                            case mbPVS of
-                                                              Nothing  -> pure Nothing
-                                                              Just pts -> convert si pts
-                           pure $ maybe (Left s) Right mbRes
+  sexprToFun f nm (s, e) = do
+    si    <- contextState >>= getSInfo
+    mbRes <- case parseSExprFunction e of
+               Just (Left nm') -> case (unBar nm == unBar nm', smtFunDefault f) of
+                                    (True, Just v) -> pure $ Just ([], v)
+                                    _              -> bailOut
+               Just (Right v)  -> convert si v
+               Nothing         -> do mbPVS <- pointWiseExtract nm (smtFunType f)
+                                     case mbPVS of
+                                       Nothing  -> pure Nothing
+                                       Just pts -> convert si pts
+    pure $ maybe (Left s) Right mbRes
     where convert st (vs, d) = do ps <- mapM (sexprPoint st) vs
                                   pure $ (,) <$> sequenceA ps <*> sexprToVal st d
 
           sexprPoint st (as, v) = do mbA <- sexprToArg f as
                                      pure $ (,) <$> mbA <*> sexprToVal st v
 
-          bailOut nm = error $ unlines [ ""
+          bailOut = error $ unlines [ ""
                                        , "*** Data.SBV.getFunction: Unable to extract an interpretation for function " ++ show nm
                                        , "***"
                                        , "*** Failed while trying to extract a pointwise interpretation."
@@ -540,11 +553,11 @@ pointWiseExtract nm typ = tryPointWise
                                then (trues,  falseSExpr)
                                else (falses, trueSExpr)
 
--- | For saturation purposes, get a proper argument. The forall quantification
--- is safe here since we only use in smtFunSaturate calls, which looks at the
--- kind stored inside only.
+-- | Use symbolic arguments for discovery: uninterpreted sorts need not have
+-- a concrete default value. These variables belong only to the probe state.
+-- The forall is safe since smtFunSaturate supplies the argument's actual kind.
 mkSaturatingArg :: forall a. Kind -> SBV a
-mkSaturatingArg k = SBV $ SVal k (Left (defaultKindedValue k))
+mkSaturatingArg k = SBV $ SVal k $ Right $ cache $ \st -> newInternalVariable st k
 
 -- | Functions of arity 1
 instance ( SymVal a, HasKind a
@@ -845,21 +858,6 @@ instance ( SymVal a,  HasKind a
                        , mkSaturatingArg (kindOf (Proxy @h))
                        )
 
--- Turn "((F (lambda ((x!1 Int)) (+ 3 (* 2 x!1)))))"
--- into something more palatable.
--- If we can't do that, we simply return the input unchanged
-trimFunctionResponse :: String -> String -> Bool -> Maybe [String] -> String
-trimFunctionResponse resp nm isCurried mbArgs
-  | Just parsed <- makeHaskellFunction resp nm isCurried mbArgs
-  = parsed
-  | True
-  = def $ case trim resp of
-            '(':'(':rest | nm `isPrefixOf` rest -> butLast2 $ trim (drop (length nm) rest)
-            _                                   -> resp
-  where trim     = dropWhile isSpace
-        butLast2 = reverse . drop 2 . reverse
-        def x = nm ++ " = fromSMTLib " ++ x
-
 -- | Generalization of 'Data.SBV.Control.getFunction'
 getFunction :: (MonadIO m, MonadQuery m, SolverContext m, MonadSymbolic m, SymVal a, SymVal r, SMTFunction fun a r)
             => fun -> m (Either (String, (Bool, Maybe [String], SExpr))  ([(a, r)], r))
@@ -872,8 +870,8 @@ getFunction f = do ((nm, args), isCurried) <- smtFunName f
 
                    si <- contextState >>= getSInfo
 
-                   parse r bad $ \case EApp [EApp [ECon o, e]] | o == nm -> do
-                                          mbAssocs <- sexprToFun f (trimFunctionResponse r nm isCurried args, e)
+                   parse r bad $ \case EApp [EApp [ECon o, e]] | unBar o == unBar nm -> do
+                                          mbAssocs <- sexprToFun f nm (formatFunctionResponse e r nm isCurried args, e)
                                           case mbAssocs of
                                             Right assocs -> pure $ Right assocs
                                             Left  raw    -> do
@@ -1258,25 +1256,25 @@ getUIFunCVAssoc mbi (nm, (isCurried, mbArgs, typ)) = do
       toRes = recoverKindedValue si rt
 
       -- if we fail to parse, we'll return this answer as the string
-      fallBack = trimFunctionResponse r nm isCurried mbArgs
+      fallBack e = formatFunctionResponse e r nm isCurried mbArgs
 
       -- In case we end up in the pointwise scenario, boolify the result
       -- as that's the only type we support here.
-      tryPointWise = do mbSExprs <- pointWiseExtract nm typ
-                        case mbSExprs of
-                          Nothing     -> pure $ Left fallBack
-                          Just sExprs -> pure $ maybe (Left fallBack) Right (convert sExprs)
+      tryPointWise e = do mbSExprs <- pointWiseExtract nm typ
+                          case mbSExprs of
+                            Nothing     -> pure $ Left $ fallBack e
+                            Just sExprs -> pure $ maybe (Left $ fallBack e) Right (convert sExprs)
 
-  parse r bad $ \case EApp [EApp [ECon o, e]] | o == nm -> case parseSExprFunction e of
-                                                             Just (Right assocs) | Just res <- convert assocs                 -> pure (Right res)
-                                                                                 | True                                       -> tryPointWise
-
-                                                             Just (Left nm')     | nm == nm', let res = defaultKindedValue rt -> pure (Right ([], res))
-                                                                                 | True                                       -> bad r Nothing
-
-                                                             Nothing                                                          -> tryPointWise
-
-                      _                                 -> bad r Nothing
+  parse r bad $ \case
+    EApp [EApp [ECon o, e]] | unBar o == unBar nm -> case parseSExprFunction e of
+      Just (Right assocs)
+        | Just res <- convert assocs -> pure (Right res)
+        | True                       -> tryPointWise e
+      Just (Left nm')
+        | unBar nm == unBar nm'       -> pure (Right ([], defaultKindedValue rt))
+        | True                       -> bad r Nothing
+      Nothing                        -> tryPointWise e
+    _ -> bad r Nothing
 
 -- | Generalization of 'Data.SBV.Control.checkSat'
 checkSat :: (MonadIO m, MonadQuery m) => m CheckSatResult
