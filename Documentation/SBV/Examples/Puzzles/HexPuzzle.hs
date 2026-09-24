@@ -47,8 +47,6 @@ module Documentation.SBV.Examples.Puzzles.HexPuzzle where
 import Data.SBV
 import Data.SBV.Control
 
-import Data.Proxy
-
 -- | Colors we're allowed
 data Color = Black | Blue | Green | Red
 
@@ -83,8 +81,7 @@ next b g = ite (readArray g b .== sBlack) g
 -- | Iteratively search at increasing depths of button-presses to see if we can
 -- transform from the initial board position to a final board position.
 search :: [Color] -> [Color] -> IO ()
-search initial final = runSMT $ do registerType (Proxy @SColor)
-                                   let emptyGrid = constArray sBlack
+search initial final = runSMT $ do let emptyGrid = constArray sBlack
                                        initGrid  = foldr (\(i, c) a -> writeArray a (literal i) (literal c)) emptyGrid (zip [1..] initial)
                                    query $ loop (0 :: Int) initGrid []
 

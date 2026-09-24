@@ -508,6 +508,7 @@ Test-Suite SBVTest
                   , TestSuite.Queries.Int_Z3
                   , TestSuite.Queries.Interpolants
                   , TestSuite.Queries.Lists
+                  , TestSuite.Queries.Registration
                   , TestSuite.Queries.Strings
                   , TestSuite.Queries.Sums
                   , TestSuite.Queries.Tables

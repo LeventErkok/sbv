@@ -59,7 +59,6 @@ thingMerge = uninterpret "thingMerge"
 p1 :: Symbolic SBool
 p1 = do constrain $ \(Forall x) -> thingCompare x x
         constrain $ \(Forall k1) (Forall k2) -> k1 ./= thingMerge k1 k2
-        registerFunction thingMerge
         k1 <- free_
         k2 <- free_
         return $ k1 .== k2 .=> thingCompare k1 k2

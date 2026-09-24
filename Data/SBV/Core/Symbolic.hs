@@ -1545,6 +1545,7 @@ registerKind st k
        --     *    If it's an uninterpreted sort that's not already in the general state
        --     * OR If it's a tuple-sort whose cardinality isn't already in the general state
        --     * OR If it's a list that's not already in the general state (so we can send the flatten commands)
+       --     * OR If rationals are first used, so we can declare their datatype and equality helpers
 
        let rootState = getRootState st
 
@@ -1566,6 +1567,7 @@ registerKind st k
               let needsAdding = case k of
                                   KADT s _ _  -> not (adtNameExists s)
                                   KList{}     -> k `Set.notMember` existingKinds
+                                  KRational   -> k `Set.notMember` existingKinds
                                   KTuple nks  -> not $ any (\case KTuple oks -> length nks == length oks; _ -> False) existingKinds
                                   _           -> False
 

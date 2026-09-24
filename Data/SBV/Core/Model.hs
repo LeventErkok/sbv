@@ -4124,39 +4124,17 @@ class SMTDefinable a where
   smtFunctionDef :: (Typeable a, Lambda Symbolic a) => String -> Measure a -> a -> a
 
   -- | Register a function eagerly. This function is typically not needed, since SBV registers functions
-  -- automatically upon first use, including uses first encountered in query mode. It remains useful when
-  -- you want definition validation and any termination or productivity checks to happen before the function
-  -- is otherwise needed.
+  -- automatically upon first use, including uses first encountered in query mode. Use it to include an
+  -- otherwise unused uninterpreted function in 'Data.SBV.allSat' enumeration, or to declare one before
+  -- checking satisfiability and retrieving its interpretation with 'Data.SBV.Control.getFunction'.
+  -- It also lets you request definition validation and any termination or productivity checks before
+  -- the function is otherwise needed. Registration does not constrain the function's result.
+  -- Internally, it applies the function to fresh internal arguments to discover its definition;
+  -- these argument declarations and the application can appear in SMT transcripts.
   registerFunction :: a -> Symbolic ()
 
   -- | Uninterpret a value, i.e., add this value as a completely undefined value/function that
   -- the solver is free to instantiate to satisfy other constraints.
-  --
-  -- __Known issues__
-  --
-  -- Usually using an uninterpret function will register itself to the solver, but sometimes the laziness
-  -- of the evaluation might render this unreliable.
-  --
-  -- For example, when working with quantifiers and uninterpreted functions with the following code:
-  --
-  -- > runSMTWith z3 $ do
-  -- >   let f = uninterpret "f" :: SInteger -> SInteger
-  -- >   query $ do
-  -- >     constrain $ \(Forall (b :: SInteger)) -> f b .== f b
-  -- >     checkSat
-  --
-  -- The solver will complain about the unknown constant @f (Int)@.
-  --
-  -- A workaround of this is to explicit register them with 'Data.SBV.Control.registerUISMTFunction':
-  --
-  -- > runSMTWith z3 $ do
-  -- >   let f = uninterpret "f" :: SInteger -> SInteger
-  -- >   registerUISMTFunction f
-  -- >   query $ do
-  -- >     constrain $ \(Forall (b :: SInteger)) -> f b .== f b
-  -- >     checkSat
-  --
-  -- See https://github.com/LeventErkok/sbv/issues/711 for more info.
   uninterpret :: String -> a
 
   -- | Uninterpret a value, with named arguments in case of functions. SBV will use these
@@ -4431,7 +4409,8 @@ instance SymVal a => SMTDefinable (SBV a) where
                                           mapM_ forceSVArg svs
                                           newExpr st ka $ SBVApp op svs
 
-  registerFunction x = constrain $ x .== x
+  registerFunction x = do st <- symbolicEnv
+                          liftIO $ sbvToSV st x >>= forceSVArg
 
   symWithKind nm = sym (nm ++ "_" ++ show (kindOf (Proxy @a)))
 

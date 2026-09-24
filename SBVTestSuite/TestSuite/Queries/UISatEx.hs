@@ -76,7 +76,6 @@ core = do x <- sInteger_
           constrain $ q1 (-3) .== 9
           constrain $ q1 x    .== x+1
 
-          registerFunction q2 -- Not really necessary, but testing it doesn't break anything
           constrain $ q2 sTrue 3   .== 5
           constrain $ q2 sFalse 7  .== 6
           constrain $ q2 sFalse 12 .== 3

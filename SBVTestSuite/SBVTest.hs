@@ -126,6 +126,7 @@ import qualified TestSuite.Queries.Int_Yices
 import qualified TestSuite.Queries.Int_Z3
 import qualified TestSuite.Queries.Interpolants
 import qualified TestSuite.Queries.Lists
+import qualified TestSuite.Queries.Registration
 import qualified TestSuite.Queries.Strings
 import qualified TestSuite.Queries.Sums
 import qualified TestSuite.Queries.Tables
@@ -261,6 +262,7 @@ main = do sCaseTests <- TestSuite.CompileTests.SCase.tests
                       , TestSuite.Queries.Int_Mathsat.tests
                       , TestSuite.Queries.Int_Yices.tests
                       , TestSuite.Queries.Lists.tests
+                      , TestSuite.Queries.Registration.tests
                       , TestSuite.Queries.Strings.tests
                       , TestSuite.Queries.Sums.tests
                       , TestSuite.Queries.Tables.tests

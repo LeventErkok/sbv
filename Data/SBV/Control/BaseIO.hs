@@ -441,6 +441,10 @@ getValue = Trans.getValue
 -- of the domain of the first list. If the result is not a value-association, then we get a string
 -- representation and the triple of whether it's curried, the argument list given by the user, and the s-expression as parsed
 -- by SBV from the SMT solver.
+--
+-- The function must already be declared when satisfiability is checked. If it
+-- does not occur in any constraints, call 'Data.SBV.registerFunction' before
+-- entering the query, then 'ensureSat' before retrieving its interpretation.
 getFunction :: (SymVal a, SymVal r, Trans.SMTFunction fun a r) => fun -> Query (Either (String, (Bool, Maybe [String], SExpr)) ([(a, r)], r))
 getFunction = Trans.getFunction
 

@@ -574,6 +574,13 @@ class SolverContext m where
    -- | Get the state associated with this context
    contextState :: m State
 
+   -- | Register a kind, synchronizing declarations when already in query mode.
+   -- Implementation hook for 'registerType'; callers should use that public API.
+   registerKindInContext :: Kind -> m ()
+   default registerKindInContext :: MonadIO m => Kind -> m ()
+   registerKindInContext k = do st <- contextState
+                                liftIO $ registerKind st k
+
    -- | Get an internal-variable
    internalVariable :: Kind -> m (SBV a)
 
@@ -584,12 +591,12 @@ class SolverContext m where
    setLogic     = setOption . SetLogic
    setInfo    k = setOption . SetInfo k
 
--- | Register a type with the solver. Like 'Data.SBV.Core.Model.registerFunction', This is typically not necessary
--- since SBV will register types as it encounters them automatically. But there are cases
--- where doing this can explicitly can come handy, typically in query contexts.
+-- | Register a type eagerly, either before or inside a query. SBV automatically
+-- registers types on first use, so ordinary symbolic computations do not need
+-- this call. It can be useful before sending custom SMT-Lib commands that refer
+-- to a type without first creating a symbolic value of that type.
 registerType :: forall a m. (MonadIO m, SolverContext m, HasKind a) => Proxy a -> m ()
-registerType _ = do st <- contextState
-                    liftIO $ registerKind st (kindOf (Proxy @a))
+registerType _ = registerKindInContext (kindOf (Proxy @a))
 
 -- | Various info we use in recoverKinded value
 newtype SInfo = SInfo { sInfoKinds :: [Kind] }

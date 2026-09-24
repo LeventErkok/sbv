@@ -450,6 +450,8 @@ cvtInc curProgInfo inps newKs (_, consts) tbls uis defs (SBVPgm asgnsSeq) cstrs 
             -- Tuples precede ADTs that may use them, as in non-incremental output.
             -- Only declare the new sizes; old sizes persist.
             <> concatMap declTuple (findTupleArities newKs)
+            -- Rationals precede ADTs that may contain rational fields.
+            <> (if containsRationals newKs then declRationals else [])
             -- sorts
             <> declADT [(s, pks, cs) | k@(KADT s pks cs) <- newKinds, not (isRoundingMode k)]
             -- constants

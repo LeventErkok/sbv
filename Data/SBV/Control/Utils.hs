@@ -82,7 +82,7 @@ import Data.SBV.Core.Symbolic ( IncState(..), withNewIncState, State(..), svToSV
                               , extractSymbolicSimulationState, MonadSymbolic(..)
                               , UserInputs, getSV, NamedSymVar(..), lookupInput, getUserName, getUserName'
                               , Name, CnstMap, Inputs(..), ProgInfo(..)
-                              , mustIgnoreVar, newInternalVariable, Penalty(..), smtLibPgmText
+                              , mustIgnoreVar, newInternalVariable, Penalty(..), smtLibPgmText, registerKind
                               )
 
 import Data.SBV.Core.AlgReals    (mergeAlgReals, AlgReal(..), RealPoint(..))
@@ -116,6 +116,8 @@ instance MonadIO m => SolverContext (QueryT m) where
    constrainWithAttribute attr = addQueryConstraint False attr              . quantifiedBool
 
    contextState = queryState
+
+   registerKindInContext k = inNewContext (`registerKind` k)
 
    internalVariable :: forall a. Kind -> QueryT m (SBV a)
    internalVariable k = contextState >>= \st -> liftIO $ do

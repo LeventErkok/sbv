@@ -3,6 +3,15 @@
 
 ### Version 14.8, Not yet released
 
+  * Fix first use of rational types in query mode, including rational fields
+    nested in other types. Explicit `registerType` calls inside queries now
+    synchronize declarations with the solver and can be safely repeated.
+
+  * `registerFunction` no longer adds a self-equality constraint to force
+    registration. In particular, registering floating-point functions no longer
+    rules out NaN results. It remains useful for enumerating or retrieving
+    interpretations of otherwise unused uninterpreted functions.
+
   * [BACKWARDS COMPATIBILITY] `Data.SBV.Tools.CodeGen` now selects a new C compiler.
     Import `Data.SBV.Tools.CodeGen.Legacy` to keep using the original one, including
     its low-level compilation functions.
