@@ -3,7 +3,7 @@
 
 ### Version 14.8, 2026-09-24
 
-  * The biggest change in this release is a new C backend, with much broader
+  * The main change in this release is a new C backend, with much broader
     support for SBV programs, including arbitrary-width bit-vectors, recursive
     functions, ADTs, and higher-order specializations. This was largely developed
     with LLM assistance. The original backend remains available through
