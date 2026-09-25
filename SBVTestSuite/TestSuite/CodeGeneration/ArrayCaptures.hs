@@ -112,6 +112,7 @@ checkRejection diagnostic result = case result of
 closedArrays :: Assertion
 closedArrays = withSystemTempDirectory "sbv-c-closed-array-lambdas" $ \dir -> do
   compileToC (Just dir) "closedArrays" $ do
+    cgOverwriteFiles True
     cgGenerateDriver False
     let offset = literal (3 :: Word32)
     cgReturn (lambdaArray (\_ -> lambdaArray (+ offset)) :: SArray Word8 (ArrayModel Word32 Word32))

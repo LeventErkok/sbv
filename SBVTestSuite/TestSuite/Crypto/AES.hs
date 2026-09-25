@@ -23,7 +23,7 @@ import System.Process (readProcessWithExitCode)
 import Test.Tasty.HUnit (assertEqual)
 
 import Data.SBV.Internals
-import Data.SBV.Tools.CodeGen (compileToC)
+import Data.SBV.Tools.CodeGen (compileToC, compileToCLib)
 import Documentation.SBV.Examples.Crypto.AES
 
 import Utils.CCodeGen (generatedMakeOptions)
@@ -54,7 +54,7 @@ tests = testGroup "Crypto.AES" [
 -- | Exercise the exact code-generation action shown in the documentation.
 standaloneEncryption :: Assertion
 standaloneEncryption = withSystemTempDirectory "sbv-aes-block" $ \dir -> do
-  compileToC (Just dir) "aes128BlockEncrypt" aes128BlockEncrypt
+  compileToC (Just dir) "aes128BlockEncrypt" (aes128BlockEncrypt >> cgOverwriteFiles True)
   runCaller dir "aes128BlockEncrypt" "aes128BlockEncrypt.o"
     [ cArray "pt" commonPT
     , cArray "key" aes128Key
@@ -70,7 +70,9 @@ standaloneEncryption = withSystemTempDirectory "sbv-aes-block" $ \dir -> do
 -- by generated C, rather than supplied as precomputed Haskell driver values.
 libraryVector :: Int -> Key -> [SWord 32] -> Assertion
 libraryVector size key ciphertext = withSystemTempDirectory "sbv-aes-library" $ \dir -> do
-  cgAESLibrary size (Just dir)
+  _ <- compileToCLib (Just dir) libraryName
+         [(functionName, cgSetDriverValues values >> program >> cgOverwriteFiles True)
+         | (functionName, values, program) <- aesLibComponents size]
   runCaller dir libraryName (libraryName ++ ".a")
     [ cArray "pt" commonPT
     , cArray "key" key

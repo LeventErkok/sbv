@@ -103,6 +103,7 @@ membershipAgreement = withSystemTempDirectory "sbv-c-regex-agreement" $ \dir -> 
     assertEqual ("Literal regex agreement: " ++ show sample) (map Just values)
                 [unliteral (literal sample `R.match` r) | r <- regexes]
   let program = do
+        cgOverwriteFiles True
         cgGenerateDriver False
         cgAddDecl (membershipHarness "regexMembership" samples (length regexes))
         input <- cgInput "input" :: SBVCodeGen SString
@@ -146,6 +147,7 @@ languageAgreement = withSystemTempDirectory "sbv-c-regex-languages" $ \dir -> do
       Sat -> mapM (\(a, b) -> getValue (a .== b)) pairs
       _   -> error $ "Unexpected regex reference status: " ++ show status
   let program = do
+        cgOverwriteFiles True
         cgGenerateDriver False
         cgAddDecl ["int main(void) { SBool values[" ++ show (2 * length pairs) ++ "]; regexLanguages(values);"
                   , "for (size_t i = 0; i < " ++ show (2 * length pairs) ++ "; ++i) putchar(values[i] ? '1' : '0'); return 0; }"]
@@ -177,14 +179,17 @@ regexLibrary :: Assertion
 regexLibrary = withSystemTempDirectory "sbv-c-regex-library" $ \dir -> do
   let matcher = smtFunction "regex in a defined function" (\value -> value `R.match` R.Conc [R.All, "b"])
       component = do
+        cgOverwriteFiles True
         cgGenerateDriver False
         let array = lambdaArray matcher :: SArray String Bool
         cgReturn array
       direct = do
+        cgOverwriteFiles True
         cgGenerateDriver False
         input <- cgInput "input" :: SBVCodeGen SString
         cgReturn (matcher input)
       plain = do
+        cgOverwriteFiles True
         cgGenerateDriver False
         cgRegexLimits 0 0 0
         cgAddDecl ["int main(void) {"
@@ -215,6 +220,7 @@ regexLimits = do
   withSystemTempDirectory "sbv-c-regex-raised-limit" $ \dir -> do
     (_, cfg, bundle) <- compileToC' "raisedRegex" $ do
       cgRegexLimits 3 100 10000
+      cgOverwriteFiles True
       cgGenerateDriver False
       cgAddDecl ["int main(void) { return raisedRegex(sbv_string_borrow_utf8(\"a\")) ? 0 : 1; }"]
       input <- cgInput "input" :: SBVCodeGen SString
@@ -238,6 +244,7 @@ longRegexInput :: Assertion
 longRegexInput = withSystemTempDirectory "sbv-c-regex-long-input" $ \dir -> do
   (_, cfg, bundle) <- compileToC' "longRegex" $ do
     cgRegexLimits 2 16 1000
+    cgOverwriteFiles True
     cgGenerateDriver False
     cgAddDecl ["int main(void) { uint8_t bytes[100000]; memset(bytes, 'a', sizeof bytes);"
               , "return longRegex(sbv_string_borrow(bytes, sizeof bytes, sizeof bytes)) ? 0 : 1; }"]
@@ -290,6 +297,7 @@ regexLimitScopes = do
 regexCharacterTable :: Assertion
 regexCharacterTable = withSystemTempDirectory "sbv-c-regex-character-table" $ \dir -> do
   (_, cfg, bundle) <- compileToC' "regexCharacterTable" $ do
+    cgOverwriteFiles True
     cgGenerateDriver False
     cgPerformRTCs True
     cgAddDecl ["int main(void) {"

@@ -876,6 +876,7 @@ excessFloatingPrecision :: Assertion
 excessFloatingPrecision = mapM_ check [-1, 1, 2 :: Int]
  where check evaluationMethod = withSystemTempDirectory "sbv-excess-precision" $ \dir -> do
          compileToC (Just dir) "floatingPrecision" $ do
+           cgOverwriteFiles True
            cgGenerateDriver False
            value <- cgInput "value" :: SBVCodeGen SDouble
            cgReturn (value + 1)
@@ -1037,6 +1038,7 @@ ownershipArenaChecks = withSystemTempDirectory "sbv-ownership-arenas" $ \dir -> 
 emptyConcatenation :: Assertion
 emptyConcatenation = withSystemTempDirectory "sbv-empty-concat" $ \dir -> do
   compileToC (Just dir) "emptyConcat" $ do
+    cgOverwriteFiles True
     cgGenerateDriver False
     textLeft   <- cgInput "textLeft"   :: SBVCodeGen SString
     textRight  <- cgInput "textRight"  :: SBVCodeGen SString
@@ -5066,10 +5068,11 @@ uninhabitedRecursiveADT = do
                                  ("has no finite constructor" `isInfixOf` displayException exception)
     Right _        -> assertBool "Expected driver generation to reject an uninhabited recursive ADT" False
 
--- | Generate, compile, and execute one standalone C program.
+-- | Generate, compile, and execute one standalone C program quietly in its
+-- temporary directory.
 compileProgramAndRunGenerated :: FilePath -> String -> SBVCodeGen () -> IO String
 compileProgramAndRunGenerated dir executableName program = do
-  (_, cfg, bundle) <- compileToC' executableName program
+  (_, cfg, bundle) <- compileToC' executableName (program >> cgOverwriteFiles True)
   renderCgPgmBundle (Just dir) (cfg, bundle)
   compileAndRunGenerated dir executableName
 
