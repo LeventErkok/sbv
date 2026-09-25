@@ -108,17 +108,16 @@ revPreservesLen = sInductWith cvc5 "revPreservesLen"
 --     Step: 1.3.2                         Q.E.D.
 --     Step: 1.3.3                         Q.E.D.
 --     Step: 1.3.4                         Q.E.D.
---     Step: 1.3.5                         Q.E.D.
---     Step: 1.3.6 (simplify head)         Q.E.D.
---     Step: 1.3.7                         Q.E.D.
---     Step: 1.3.8 (simplify tail)         Q.E.D.
+--     Step: 1.3.5 (simplify head)         Q.E.D.
+--     Step: 1.3.6                         Q.E.D.
+--     Step: 1.3.7 (simplify tail)         Q.E.D.
+--     Step: 1.3.8                         Q.E.D.
 --     Step: 1.3.9                         Q.E.D.
 --     Step: 1.3.10                        Q.E.D.
---     Step: 1.3.11                        Q.E.D.
---     Step: 1.3.12 (substitute)           Q.E.D.
+--     Step: 1.3.11 (substitute)           Q.E.D.
+--     Step: 1.3.12                        Q.E.D.
 --     Step: 1.3.13                        Q.E.D.
 --     Step: 1.3.14                        Q.E.D.
---     Step: 1.3.15                        Q.E.D.
 --     Step: 1.Completeness                Q.E.D.
 --   Result:                               Q.E.D.
 -- Functions proven terminating: rev, sbv.reverse
@@ -140,8 +139,7 @@ correctness = do
                       []     -> trivial
                       [_]    -> trivial
                       a : as -> head (rev as) .: rev (a .: rev (tail (rev as)))
-                             ?? ih `at` Inst @"xs" as
-                             =: head (reverse as) .: rev (a .: rev (tail (rev as)))
+                             -- Replace both occurrences of rev as together.
                              ?? ih `at` Inst @"xs" as
                              =: head (reverse as) .: rev (a .: rev (tail (reverse as)))
                              ?? ih `at` Inst @"xs" (tail (rev as))
