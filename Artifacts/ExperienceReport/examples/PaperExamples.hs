@@ -48,7 +48,7 @@ roots = runSMT $ do
 -- END roots
 
 -- BEGIN datatype
-data Box a = Box a deriving (Eq, Ord, Show)
+newtype Box a = Box a deriving (Eq, Ord, Show)
 mkSymbolic [''Box]
 
 lateDatatype :: IO CheckSatResult
