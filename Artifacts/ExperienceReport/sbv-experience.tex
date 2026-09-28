@@ -62,16 +62,17 @@ An appealing way to introduce verification to a Haskell programmer is to start
 with a function and ask whether a property holds for every input. The notation
 can be almost familiar:
 \begin{lstlisting}
-prove $ \x -> x + 1 .> (x :: SInteger)
+prove $ \x -> abs (x :: SInteger) .>= 0
 -- Q.E.D.
 
-prove $ \x -> x + 1 .> (x :: SInt8)
--- Counterexample: x = 127
+prove $ \x -> abs (x :: SInt8) .>= 0
+-- Counterexample: x = -128
 \end{lstlisting}
 The first claim concerns unbounded mathematical integers. The second concerns
-eight-bit signed arithmetic, where the successor of 127 is -128. The change of
-type changes the theorem. Neither a pleasant interface nor a powerful solver
-removes the need to choose the right semantics.
+eight-bit signed arithmetic, where \code{abs (-128)} is -128: the positive value
+128 is not representable. The change of type changes the theorem. Neither a
+pleasant interface nor a powerful solver removes the need to choose the right
+semantics.
 
 \sbv{}~\citep{sbv} provides symbolic counterparts of Haskell types and operations
 for expressing such problems. A program over symbolic values constructs a
@@ -507,10 +508,12 @@ than maintained as separate copies.
 \subsection{Small, explicit validation tasks}
 
 Table~\ref{tab:checks} defines the companion's tasks and the evidence each
-supplies. All nine tasks completed successfully on 26 September 2026 using
+supplies. The original nine tasks completed successfully on 26 September 2026 using
 GHC 9.14.1, Z3 5.1.0, and CVC5 1.4.0 on an ARM64 macOS host. The generated C
 was compiled with Apple Clang 21.0.0, optimization enabled, strict warnings,
-and undefined-behavior sanitization. The checks cover distinct paths through
+and undefined-behavior sanitization. The introductory examples were subsequently
+changed to absolute value; all seven small Haskell checks passed again on
+27 September 2026. The checks cover distinct paths through
 the library. Their
 small scale is deliberate: they make the claims in the text reproducible
 without turning an experience report into a broad solver benchmark.
@@ -523,8 +526,8 @@ benchmarks; the execution record accompanies the draft.}
 \toprule
 Task & Required outcome\\
 \midrule
-Integer successor & Theorem holds over unbounded integers\\
-Signed-byte successor & Counterexample is the value 127\\
+Integer absolute value & Theorem holds over unbounded integers\\
+Signed-byte absolute value & Counterexample is the value $-128$\\
 Floating-point reflexivity & A NaN is returned as a counterexample\\
 Saturating addition & Implementation satisfies the integer specification\\
 Incremental roots & Exactly $-3$ and $3$, followed by unsatisfiability\\

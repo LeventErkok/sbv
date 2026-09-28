@@ -105,13 +105,13 @@ main = do
       runTPWith cvc5 CF.cfoldCorrect >> pure True
     ["--generate", dir] -> generateAdder dir
     [] -> do
-      check "integer successor" $
-        isTheorem $ \x -> x + 1 .> (x :: SInteger)
-      check "Int8 counterexample is 127" $ do
+      check "integer absolute value is nonnegative" $
+        isTheorem $ \x -> abs (x :: SInteger) .>= 0
+      check "Int8 absolute value counterexample is -128" $ do
         r <- prove $ do x <- sInt8 "x"
-                        pure $ x + 1 .> x
+                        pure $ abs x .>= 0
         print r
-        pure $ getModelValue "x" r == Just (127 :: Int8)
+        pure $ getModelValue "x" r == Just (-128 :: Int8)
       check "float reflexivity counterexample is NaN" $ do
         r <- prove $ do x <- sFloat "x"
                         pure $ x .== x

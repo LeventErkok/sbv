@@ -185,3 +185,29 @@ Exit status: 0; elapsed: 0.28s
 VALIDATION PASSED: seven small Haskell checks, the existing constant-folding
 proof, and exhaustive generated-C checking. Timings are single-run diagnostics,
 not benchmark measurements. No full-suite or cross-solver claim is made.
+
+Introduction absolute-value revision: seven small Haskell checks rerun
+UTC: 2026-09-28T01:22:35.615848+00:00
+Repository HEAD: c61238508f1256e1d44e41e7b35b322a4bf49976
+Compiled with GHC -O0 -Wall -Werror before this run.
+$ Artifacts/ExperienceReport/build/paper-examples
+PASS integer absolute value is nonnegative
+Falsifiable. Counter-example:
+  x = -128 :: Int8
+PASS Int8 absolute value counterexample is -128
+Falsifiable. Counter-example:
+  x = NaN :: Float
+PASS float reflexivity counterexample is NaN
+PASS saturating addition theorem
+PASS incremental enumeration
+PASS datatype first introduced during query
+Inductive lemma: revAccCorrect
+  Step: Base                      Q.E.D.
+  Step: 1                         Q.E.D.
+  Step: 2                         Q.E.D.
+  Step: 3                         Q.E.D.
+  Step: 4                         Q.E.D.
+  Result:                         Q.E.D.
+Functions proven terminating: paper.revAcc, sbv.reverse
+PASS accumulator reversal induction
+Exit status: 0
