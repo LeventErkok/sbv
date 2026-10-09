@@ -18,6 +18,10 @@ module TestSuite.Basics.ModelValidate (testsABC, tests)  where
 import qualified Control.Exception as C
 import Data.List (isPrefixOf)
 
+import qualified Data.SBV.List as L
+
+import Test.Tasty.HUnit (assertBool)
+
 import Utils.SBVTestFramework
 
 -- Test suite, this needs ABC
@@ -37,6 +41,7 @@ tests = testGroup "Basics.ModelValidate" [
            , goldenCapturedIO "validate_5" $ t  satWith    t4
            , goldenCapturedIO "validate_6" $ t  proveWith  t4
            , goldenCapturedIO "validate_7" $ tE satWith    t5
+           , testCase         "validate_8" t6
            ]
     where t f test goldFile = do r <- f defaultSMTCfg{verbose=True, redirectVerbose = Just goldFile, validateModel = True} test
                                  appendFile goldFile ("\nFINAL OUTPUT:\n" ++ show r ++ "\n")
@@ -65,3 +70,13 @@ tests = testGroup "Basics.ModelValidate" [
           t5 :: Predicate
           t5 = do x <- free "x"
                   pure $ quantifiedBool $ \(Forall y) -> fpIsPoint y .=> x .<= (y::SFloat)
+
+          -- z3 returns an invalid model for this: the recursive concat over (Seq String) gets a
+          -- fresh-value placeholder that ignores the derived length bound. This test is expected to
+          -- fail until z3 fixes it. See: https://github.com/Z3Prover/z3/issues/7664
+          t6 :: Assertion
+          t6 = do r <- satWith z3 $ do xs <- free "xs"
+                                       pure $ L.length (L.concat (xs :: SList String)) .>= 5
+                  case getModelValue "xs" r of
+                    Just (xs :: [String]) -> assertBool ("Model is too short: " ++ show xs) (length (concat xs) >= 5)
+                    Nothing               -> assertFailure $ "No model for xs:\n" ++ show r
