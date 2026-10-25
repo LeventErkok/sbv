@@ -71,9 +71,8 @@ tests = testGroup "Basics.ModelValidate" [
           t5 = do x <- free "x"
                   pure $ quantifiedBool $ \(Forall y) -> fpIsPoint y .=> x .<= (y::SFloat)
 
-          -- z3 returns an invalid model for this: the recursive concat over (Seq String) gets a
-          -- fresh-value placeholder that ignores the derived length bound. This test is expected to
-          -- fail until z3 fixes it. See: https://github.com/Z3Prover/z3/issues/7664
+          -- Regression test for a z3 bug that returned an invalid model here.
+          -- See: https://github.com/Z3Prover/z3/issues/7664
           t6 :: Assertion
           t6 = do r <- satWith z3 $ do xs <- free "xs"
                                        pure $ L.length (L.concat (xs :: SList String)) .>= 5
