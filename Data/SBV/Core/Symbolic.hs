@@ -1212,10 +1212,10 @@ instance Show SMTDef where
                                                       , T.unpack (body 2)
                                                       ]
 
--- | NFData instance for SMTDef
+-- | NFData instance for SMTDef. The body is a function, so we can only force it to WHNF.
 instance NFData SMTDef where
   rnf (SMTDefValue fk frees params body lambdaInfo)
-    = rnf fk `seq` rnf frees `seq` rnf params `seq` rnf body `seq` rnf lambdaInfo
+    = rnf fk `seq` rnf frees `seq` rnf params `seq` body `seq` rnf lambdaInfo
 
 -- | Compare two SMTDef values for semantic equality.
 -- The body is @(Int -> Text)@ where @Int@ is indentation; we compare rendered output at indent 0.
@@ -2235,10 +2235,13 @@ instance NFData NamedSymVar where
 
 instance NFData Result where
   rnf (Result hasQuants kindInfo qcInfo obs cgs inps consts tbls uis axs pgm cstr asserts outs)
-        = rnf hasQuants `seq` rnf kindInfo `seq` rnf qcInfo  `seq` rnf obs    `seq` rnf cgs
+        = rnf hasQuants `seq` rnf kindInfo `seq` rnf qcInfo  `seq` rnfObs     `seq` rnf cgs
                         `seq` rnf inps     `seq` rnf consts  `seq` rnf tbls
                         `seq` rnf uis      `seq` rnf axs     `seq` rnf pgm
                         `seq` rnf cstr     `seq` rnf asserts `seq` rnf outs
+    where -- Observables carry a function, which we can only force to WHNF
+          rnfObs = rnf [(n, sv) | (n, f, sv) <- obs, f `seq` True]
+
 instance NFData SV           where rnf a          = seq a ()
 instance NFData SBVExpr      where rnf a          = seq a ()
 instance NFData Quantifier   where rnf a          = seq a ()
