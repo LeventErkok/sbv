@@ -56,10 +56,8 @@ data ADT  = AEmpty
           | KChar     Char
           | KRational Rational
           | KArray    (ArrayModel Integer Bool)
-          -- NB. KADT is covered by the APair constructor above. KSet is deliberately
-          -- absent: t05 has to run on cvc5 (z3 is buggy on it), and cvc5 doesn't
-          -- support sets; a single set field here would make every test over this
-          -- type require set support. Sets in ADT fields are covered by t08 instead.
+          -- NB. KADT is covered by the APair constructor above. Sets in ADT fields
+          -- are covered by t08.
           deriving Show
 
 mkSymbolic [''ADT]
@@ -120,9 +118,8 @@ t04 rf = do AllSatResult _ _ _ ms <- allSatWith z3{verbose=True, redirectVerbose
                constrain $ getAInteger_1 a .>= 0
                constrain $ getAInteger_1 a .<= 5
 
--- z3 is buggy on this. So we use cvc5. See: https://github.com/Z3Prover/z3/issues/7842
 t05 :: FilePath -> IO ()
-t05 rf = do AllSatResult _ _ _ ms <- allSatWith cvc5{verbose=True, redirectVerbose = Just rf, allSatMaxModelCount=Just 10} t
+t05 rf = do AllSatResult _ _ _ ms <- allSatWith z3{verbose=True, redirectVerbose = Just rf, allSatMaxModelCount=Just 10} t
             let sh m = appendFile rf $ "\nMODEL:" ++ show (SatResult m)
             mapM_ sh ms
   where t = do a :: SADT <- free "a"
