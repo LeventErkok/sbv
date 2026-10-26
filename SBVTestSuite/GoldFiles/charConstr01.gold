@@ -35,6 +35,6 @@
 [SEND] (get-value (cf))
 [RECV] ((cf ((as const (Array Int String)) "B")))
 
-MODEL: SMTModel {modelObjectives = [], modelBindings = Nothing, modelAssocs = [], modelUIFuns = [("cf",(True,SInteger -> SChar,Right ([],'B' :: Char)))]}
+MODEL: SMTModel {modelObjectives = [], modelBindings = Nothing, modelAssocs = [], modelUIFuns = [("cf",(True,SInteger -> SChar,Right ([],'B' :: Char)))], modelUIBindings = Nothing}
 DONE.*** Solver   : Z3
 *** Exit code: ExitSuccess

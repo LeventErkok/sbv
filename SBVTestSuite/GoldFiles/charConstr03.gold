@@ -38,6 +38,6 @@
 [SEND] (get-value (s0))
 [RECV] ((s0 (Left "B")))
 
-MODEL: SMTModel {modelObjectives = [], modelBindings = Nothing, modelAssocs = [("x",Left 'B' :: Either Char Char)], modelUIFuns = []}
+MODEL: SMTModel {modelObjectives = [], modelBindings = Nothing, modelAssocs = [("x",Left 'B' :: Either Char Char)], modelUIFuns = [], modelUIBindings = Nothing}
 DONE.*** Solver   : Z3
 *** Exit code: ExitSuccess

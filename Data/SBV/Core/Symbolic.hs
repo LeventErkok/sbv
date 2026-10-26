@@ -2259,7 +2259,7 @@ instance NFData SMTResult where
   rnf (ProofError    _   m mr) = rnf m `seq` rnf mr
 
 instance NFData SMTModel where
-  rnf (SMTModel objs bndgs assocs uifuns) = rnf objs `seq` rnf bndgs `seq` rnf assocs `seq` rnf uifuns
+  rnf (SMTModel objs bndgs assocs uifuns uibndgs) = rnf objs `seq` rnf bndgs `seq` rnf assocs `seq` rnf uifuns `seq` rnf uibndgs
 
 instance NFData SMTScript where
   rnf (SMTScript b m) = rnf b `seq` rnf m
@@ -2320,7 +2320,7 @@ data SMTConfig = SMTConfig {
        , allSatPrintAlong            :: Bool                -- ^ In a 'Data.SBV.allSat' call, print models as they are found.
        , allSatTrackUFs              :: Bool                -- ^ In a 'Data.SBV.allSat' call, should we try to extract values of uninterpreted functions?
        , isNonModelVar               :: String -> Bool      -- ^ When constructing a model, ignore variables whose name satisfy this predicate. (Default: (const False), i.e., don't ignore anything)
-       , validateModel               :: Bool                -- ^ If set, SBV will attempt to validate the model it gets back from the solver.
+       , validateModel               :: Bool                -- ^ If set, SBV will attempt to validate the model it gets back from the solver. (Models obtained in custom queries are not validated.)
        , optimizeValidateConstraints :: Bool                -- ^ Validate optimization results. NB: Does NOT make sure the model is optimal, just checks they satisfy the constraints.
        , transcript                  :: Maybe FilePath      -- ^ If Just, the entire interaction will be recorded as a playable file (for debugging purposes mostly)
        , smtLibVersion               :: SMTLibVersion       -- ^ What version of SMT-lib we use for the tool
@@ -2371,6 +2371,9 @@ data SMTModel = SMTModel {
                                                                                         -- Note that an uninterpreted constant (function of arity 0) will be stored
                                                                                         -- in the 'modelAssocs' field. Left is used when the function returned is too
                                                                                         -- difficult for SBV to figure out what it means
+     , modelUIBindings :: Maybe [(String, Either String ([([CV], CV)], CV))]           -- ^ Values of all uninterpreted constants and functions, used for model validation.
+                                                                                        -- Only collected if model validation is requested. Constants are stored as functions
+                                                                                        -- with no arguments, i.e., an empty table and the value as the default.
      }
      deriving Show
 

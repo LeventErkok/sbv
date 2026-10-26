@@ -57,8 +57,8 @@ import Data.SBV.Core.Operations
 
 -- | A class of floating-point (IEEE754) operations, some of
 -- which behave differently based on rounding modes. Note that unless
--- the rounding mode is concretely RoundNearestTiesToEven, we will
--- not concretely evaluate these, but rather pass down to the SMT solver.
+-- the rounding mode is concrete, we will not concretely evaluate these,
+-- but rather pass down to the SMT solver.
 class (SymVal a, RealFloat a) => IEEEFloating a where
   -- | Compute the floating point absolute value.
   fpAbs             ::                  SBV a -> SBV a
@@ -134,17 +134,18 @@ class (SymVal a, RealFloat a) => IEEEFloating a where
   fpIsPoint :: SBV a -> SBool
 
   -- Default definitions. Minimal complete definition: None! All should be taken care by defaults
-  -- Note that we never evaluate FMA concretely, as there's no fma operator in Haskell
+  -- Note that operations taking a rounding mode go through the SVal level operations, which
+  -- can concretely evaluate with all rounding modes, including FMA.
   fpAbs              = lift1  FP_Abs             (Just abs)                Nothing
   fpNeg              = lift1  FP_Neg             (Just negate)             Nothing
-  fpAdd              = lift2  FP_Add             (Just (+))                . Just
-  fpSub              = lift2  FP_Sub             (Just (-))                . Just
-  fpMul              = lift2  FP_Mul             (Just (*))                . Just
-  fpDiv              = lift2  FP_Div             (Just (/))                . Just
-  fpFMA              = lift3  FP_FMA             Nothing                   . Just
-  fpSqrt             = lift1  FP_Sqrt            (Just sqrt)               . Just
+  fpAdd              = liftSVRM2 svFPAdd
+  fpSub              = liftSVRM2 svFPSub
+  fpMul              = liftSVRM2 svFPMul
+  fpDiv              = liftSVRM2 svFPDiv
+  fpFMA rm a b c     = SBV $ svFPFMA (unSBV rm) (unSBV a) (unSBV b) (unSBV c)
+  fpSqrt             = liftSVRM1 svFPSqrt
   fpRem              = lift2  FP_Rem             (Just fpRemH)             Nothing
-  fpRoundToIntegral  = lift1  FP_RoundToIntegral (Just fpRoundToIntegralH) . Just
+  fpRoundToIntegral  = liftSVRM1 svFPRoundToIntegral
   fpMin              = liftMM FP_Min             (Just fpMinH)             Nothing
   fpMax              = liftMM FP_Max             (Just fpMaxH)             Nothing
   fpIsEqualObject    = lift2B FP_ObjEqual        (Just fpIsEqualObjectH)   Nothing
@@ -373,6 +374,14 @@ instance ValidFloat eb sb => IEEEFloatConvertible (FloatingPoint eb sb) where
 
   -- From and To are the same when the source is an arbitrary float!
   fromSFloatingPoint = toSFloatingPoint
+
+-- | Lift an SVal level unary floating-point operation taking a rounding mode
+liftSVRM1 :: (SVal -> SVal -> SVal) -> SRoundingMode -> SBV a -> SBV a
+liftSVRM1 f rm a = SBV $ f (unSBV rm) (unSBV a)
+
+-- | Lift an SVal level binary floating-point operation taking a rounding mode
+liftSVRM2 :: (SVal -> SVal -> SVal -> SVal) -> SRoundingMode -> SBV a -> SBV a -> SBV a
+liftSVRM2 f rm a b = SBV $ f (unSBV rm) (unSBV a) (unSBV b)
 
 -- | Is this RM safe to concretely calculate with? OK if there's no RM for this op, or if it is RNE
 safeRM :: Maybe SRoundingMode -> Bool

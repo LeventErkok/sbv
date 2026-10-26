@@ -32,20 +32,8 @@
 [VALIDATE]       x = -0.0 :: Float
 [VALIDATE] There are no constraints to check.
 [VALIDATE] Validating outputs.
+[VALIDATE] All outputs are satisfied. Validation complete.
 
 FINAL OUTPUT:
-*** Data.SBV: Cannot validate the model, since s4 is not concretely computable.
-*** 
-*** Assignment:
-*** 
-***       x = -0.0 :: Float
-*** 
-*** Not all floating point operations are supported concretely.
-*** 
-*** SBV's model validator is incomplete, and cannot handle this particular case.
-*** Please report this as a feature request or possibly a bug!
-***
-*** Alleged model:
-***
-*** Satisfiable. Model:
-***   x = -0.0 :: Float
+Satisfiable. Model:
+  x = -0.0 :: Float

@@ -65,7 +65,7 @@ import Prelude hiding (Foldable(..))
 import Data.Bits (Bits(..))
 import Data.List (genericIndex, genericLength, genericTake, foldr, length, foldl', elem, nub, sort, null, elemIndex)
 
-import Data.Maybe (isNothing)
+import Data.Maybe (isNothing, fromMaybe)
 
 import Data.SBV.Core.AlgReals
 import Data.SBV.Core.Kind
@@ -590,6 +590,12 @@ cCompare k op x y =
       -- ADTs. Only equal/inequal on full ADTs. Compares on enumerations.
       (CADT (s, fks), CADT (s', fks'))
          -> case k of
+              -- Uninterpreted sorts. Distinct names in the model denote distinct elements. Only allow equality/inequality.
+              KADT _ [] [] | op `elem` [Equal True, Equal False, NotEqual]
+                           -> Just $ if s == s' then EQ else GT  -- Pick GT if different; so equality test will fail, inequality will pass
+                           | True
+                           -> error $ "cCompare: Received unexpected uninterpreted sort comparison: " ++ show (op, k)
+
               -- Enumerations. We do a straight comparison on the constructor index
               KADT _ _ cstrs | all (null . snd) cstrs
                              -> let cnms = map fst cstrs
@@ -650,19 +656,30 @@ cCompare k op x y =
         -- a means of checking this sort of equality
         svSetEqual :: Kind -> RCSet CVal -> RCSet CVal -> Maybe Bool
         svSetEqual ek sa sb
-          | eqCheckIsObjectEq ek, RegularSet a    <- sa, RegularSet b    <- sb = Just $ a == b
-          | eqCheckIsObjectEq ek, ComplementSet a <- sa, ComplementSet b <- sb = Just $ a == b
-          | True                                                               = Nothing
+          | structural ek, RegularSet a    <- sa, RegularSet b    <- sb = Just $ a == b
+          | structural ek, ComplementSet a <- sa, ComplementSet b <- sb = Just $ a == b
+          | True                                                        = Nothing
 
         -- | Array equality. See above comments.
         svArrEqual :: Kind -> Kind -> ArrayModel CVal CVal -> ArrayModel CVal CVal -> Maybe Bool
         svArrEqual k1 k2 (ArrayModel asc1 def1) (ArrayModel asc2 def2)
-         | not (all eqCheckIsObjectEq [k1, k2])
+         | not (structural k1 && eqCheckIsObjectEq k2)
          = Nothing
          | True
-         = let -- Use of lookup is safe here, because we already made sure equality is *not* problematic above
-               keysMatch = and [key `lookup` asc1 == key `lookup` asc2 | key <- nub (sort (map fst (asc1 ++ asc2)))]
-               defsMatch = def1 == def2
+         = let -- Use of lookup is safe here, because we already made sure equality on keys is structural above
+               -- Note that a key missing from one table maps to that table's default.
+               valueAt asc def key = fromMaybe def (key `lookup` asc)
+
+               -- Values can contain arrays themselves, so we compare them recursively, not structurally
+               same v1 v2 = (== EQ) <$> cCompare k2 (Equal True) v1 v2
+
+               allSame cmps
+                 | Just False `elem` cmps = Just False
+                 | all (== Just True) cmps = Just True
+                 | True                    = Nothing
+
+               keysMatch = allSame [same (valueAt asc1 def1 key) (valueAt asc2 def2 key) | key <- nub (sort (map fst (asc1 ++ asc2)))]
+               defsMatch = same def1 def2
 
                -- Check if keys cover everything. Clearly, we can't do this for all kinds; but only finite ones
                -- For the time being, we're restricting ourselves to bool only. Might want to extend this later.
@@ -672,11 +689,30 @@ cCompare k op x y =
                                       in covered asc1 && covered asc2
                              _     -> False
 
+               -- If the index type is infinite, there are indexes not mentioned in either table, mapping to the defaults
+               infinite  = case k1 of
+                             KUnbounded -> True
+                             KRational  -> True
+                             KString    -> True
+                             KList{}    -> True
+                             _          -> False
+
            in case (keysMatch, defsMatch, complete) of
-                (False, _   ,  _)    -> Just False -- keys mismatch. Nothing else matters.
-                (True,  True,  _)    -> Just True  -- keys match, def matches; so all is good. Complete doesn't matter.
-                (True,  False, True) -> Just True  -- keys match, but defs don't. But we keys are complete, so def mismatch is OK
-                _                    -> Nothing    -- otherwise, we don't really know. So, remain symbolic.
+                (Just False, _         , _   ) -> Just False -- keys mismatch. Nothing else matters.
+                (Just True,  Just True , _   ) -> Just True  -- keys match, def matches; so all is good. Complete doesn't matter.
+                (Just True,  _         , True) -> Just True  -- keys match, and keys are complete, so defaults don't matter
+                (_,          Just False, _   ) | infinite
+                                               -> Just False -- defaults differ, and some index maps to the defaults
+                _                              -> Nothing    -- otherwise, we don't really know. So, remain symbolic.
+
+        -- | Can we use the Eq instance of CVal for object equality on values of this kind? Not if there
+        -- are floats (see 'eqCheckIsObjectEq'), and not if there are arrays or sets, since the same array or set
+        -- can have different representations.
+        structural :: Kind -> Bool
+        structural ek = eqCheckIsObjectEq ek && not (any nested (expandKinds ek))
+          where nested KArray{} = True
+                nested KSet{}   = True
+                nested _        = False
 
 -- | Equality. This is SMT object equality.
 svEqual :: SVal -> SVal -> SVal
@@ -1183,15 +1219,11 @@ svFPMax = liftFPSym2 "max" (mkSymOp (IEEEFP FP_Max)) fpMaxH fpMaxH fpMax
 -- Note that this operation is defined somewhat unusually because Haskell lacks
 -- a native FMA operation to use for concrete evaluation of 'Float's and
 -- 'Double's. See https://github.com/LeventErkok/sbv/issues/777 for more
--- discussion. As such, concrete FMA evaluation is only supported for t'FP'
--- values.
+-- discussion. As such, concrete FMA evaluation is done via t'FP' values.
 svFPFMA :: SVal -- ^ Rounding mode
         -> SVal -> SVal -> SVal -> SVal
-svFPFMA (svAsRoundingMode -> Just rm)
-        (SVal k (Left (cvVal -> CFP a)))
-        (SVal _ (Left (cvVal -> CFP b)))
-        (SVal _ (Left (cvVal -> CFP c))) =
-  SVal k $ Left $ CV k $ CFP $ fpFMA rm a b c
+svFPFMA (svAsRoundingMode -> Just rm) (SVal k (Left a)) (SVal _ (Left b)) (SVal _ (Left c)) =
+  SVal k $ Left $ viaFP k $ fpFMA rm (cvToFP a) (cvToFP b) (cvToFP c)
 svFPFMA rm a@(SVal k _) b c = SVal k $ Right $ cache ca
    where ca st = do svrm <- svToSV st rm
                     sva <- svToSV st a
@@ -1237,6 +1269,18 @@ cvCastFromRational kindTo r =
     (fromRational r)
     (fromRational r)
     (\eb sb -> fpFromRational eb sb r)
+
+-- | Convert a floating-point t'CV' to an t'FP' value of the same precision. This will error
+-- if the t'CV' is not a floating-point value.
+cvToFP :: CV -> FP
+cvToFP = cvalToFP . cvVal
+
+-- | Convert the result of an t'FP' computation back to a t'CV' of the given floating-point 'Kind'.
+-- This is used for concrete evaluation of 'Float' and 'Double' operations that Haskell does not support
+-- natively, by doing the computation over t'FP' values of the same precision. Since the result is
+-- exactly representable, the rounding mode used in the conversion is irrelevant.
+viaFP :: Kind -> FP -> CV
+viaFP k = cvCastFromFP k RoundNearestTiesToEven
 
 -- | Convert a 'CVal' to an t'FP' value of the appropriate size. This will error
 -- if the 'CVal' is not a floating-point value.
@@ -1594,15 +1638,43 @@ svRotate unboundedShifter opRot curRot x i
 --------------------------------------------------------------------------------
 -- | Overflow detection.
 svMkOverflow1 :: OvOp -> SVal -> SVal
+svMkOverflow1 o (SVal k (Left x)) | Just r <- cvOverflow o k [x] = svBool r
 svMkOverflow1 o x = SVal KBool (Right (cache r))
     where r st = do sx <- svToSV st x
                     newExpr st KBool $ SBVApp (OverflowOp o) [sx]
 
 svMkOverflow2 :: OvOp -> SVal -> SVal -> SVal
+svMkOverflow2 o (SVal k (Left x)) (SVal _ (Left y)) | Just r <- cvOverflow o k [x, y] = svBool r
 svMkOverflow2 o x y = SVal KBool (Right (cache r))
     where r st = do sx <- svToSV st x
                     sy <- svToSV st y
                     newExpr st KBool $ SBVApp (OverflowOp o) [sx, sy]
+
+-- | Concretely determine if an overflow occurs, by computing the result over unbounded
+-- integers and checking that it's within the bounds of the given bit-vector kind.
+cvOverflow :: OvOp -> Kind -> [CV] -> Maybe Bool
+cvOverflow o k args = case (k, map cvVal args) of
+                        (KBounded _ n, [CInteger a])             | n > 0 -> Just $ unary n a
+                        (KBounded _ n, [CInteger a, CInteger b]) | n > 0 -> Just $ binary n a b
+                        _                                                -> Nothing
+  where signed = hasSign k
+
+        minB, maxB :: Int -> Integer
+        minB n = if signed then -(2 ^ (n-1))   else 0
+        maxB n = if signed then 2 ^ (n-1) - 1 else 2 ^ n - 1
+
+        outside n v = v < minB n || v > maxB n
+
+        unary n a = case o of
+                      NegOv -> signed && a == minB n
+                      _     -> False
+
+        binary n a b = case o of
+                         PlusOv _ -> outside n (a + b)
+                         SubOv  _ -> outside n (a - b)
+                         MulOv  _ -> outside n (a * b)
+                         DivOv    -> signed && a == minB n && b == -1
+                         NegOv    -> False
 
 --------------------------------------------------------------------------------
 -- Utility functions
@@ -1697,10 +1769,10 @@ liftFPSym1 _ opS _ _ _ a@(SVal k _) = SVal k $ Right $ cache c
    where c st = do sva <- svToSV st a
                    opS st k sva
 
--- | Like 'liftFPSym1', but with an explicit rounding mode. Note that concrete
--- evaluation of 'Float's or 'Double's is only supported when the
+-- | Like 'liftFPSym1', but with an explicit rounding mode. Note that the native
+-- Haskell operations on 'Float's or 'Double's are only used when the
 -- 'RoundNearestTiesToEven' rounding mode is used (see the Haddocks for
--- 'floatDoubleRneCheck').
+-- 'floatDoubleRneCheck'). Otherwise, we compute via t'FP' values.
 liftFPSymRM1 :: String
              -> (State -> Kind -> SV -> SV -> IO SV)
              -> (Float -> Float)
@@ -1708,9 +1780,10 @@ liftFPSymRM1 :: String
              -> (RoundingMode -> FP -> FP)
              -> SVal -> SVal -> SVal
 liftFPSymRM1 o _ opCF opCD opFP rm (SVal k (Left a))
-  | Just rm'@RoundNearestTiesToEven <- svAsRoundingMode rm
-  , floatDoubleRneCheck rm' a
-  = SVal k . Left $! mapCV (noRealUnary o) (noIntUnary o) opCF opCD (opFP rm') (noRatUnary o) a
+  | Just rm' <- svAsRoundingMode rm
+  = SVal k . Left $! if floatDoubleRneCheck rm' a
+                     then mapCV (noRealUnary o) (noIntUnary o) opCF opCD (opFP rm') (noRatUnary o) a
+                     else viaFP k (opFP rm' (cvToFP a))
 liftFPSymRM1 _ opS _ _ _ rm a@(SVal k _) = SVal k $ Right $ cache c
    where c st = do svrm <- svToSV st rm
                    sva <- svToSV st a
@@ -1731,10 +1804,10 @@ liftFPSym2 _ opS _ _ _ a@(SVal k _) b = SVal k $ Right $ cache c
                    svb <- svToSV st b
                    opS st k sva svb
 
--- | Like 'liftFPSym2', but with an explicit rounding mode. Note that concrete
--- evaluation of 'Float's or 'Double's is only supported when the
+-- | Like 'liftFPSym2', but with an explicit rounding mode. Note that the native
+-- Haskell operations on 'Float's or 'Double's are only used when the
 -- 'RoundNearestTiesToEven' rounding mode is used (see the Haddocks for
--- 'floatDoubleRneCheck').
+-- 'floatDoubleRneCheck'). Otherwise, we compute via t'FP' values.
 liftFPSymRM2 :: String
              -> (State -> Kind -> SV -> SV -> SV -> IO SV)
              -> (Float -> Float -> Float)
@@ -1742,9 +1815,10 @@ liftFPSymRM2 :: String
              -> (RoundingMode -> FP -> FP -> FP)
              -> SVal -> SVal -> SVal -> SVal
 liftFPSymRM2 o _ opCF opCD opFP rm (SVal k (Left a)) (SVal _ (Left b))
-  | Just rm'@RoundNearestTiesToEven <- svAsRoundingMode rm
-  , floatDoubleRneCheck rm' a
-  = SVal k . Left $! mapCV2 (noReal o) (noInt o) opCF opCD (opFP rm') (noRat o) a b
+  | Just rm' <- svAsRoundingMode rm
+  = SVal k . Left $! if floatDoubleRneCheck rm' a
+                     then mapCV2 (noReal o) (noInt o) opCF opCD (opFP rm') (noRat o) a b
+                     else viaFP k (opFP rm' (cvToFP a) (cvToFP b))
 liftFPSymRM2 _ opS _ _ _ rm a@(SVal k _) b = SVal k $ Right $ cache c
    where c st = do svrm <- svToSV st rm
                    sva <- svToSV st a
@@ -1859,9 +1933,9 @@ rationalSBVCheck (SVal KReal (Left a)) (SVal KReal (Left b)) = rationalCheck a b
 rationalSBVCheck _                     _                     = True
 
 -- | Predicate to check if a concrete 'Float' or 'Double' value uses the
--- 'RoundNearestTiesToEven' rounding mode. This is necessary because we assume
--- this rounding mode when concretely evaluating 'Float's and 'Double's, so
--- concrete evaluation is not supported for other rounding modes.
+-- 'RoundNearestTiesToEven' rounding mode. This is necessary because the native
+-- Haskell operations on 'Float's and 'Double's assume this rounding mode, so
+-- for other rounding modes we concretely evaluate via t'FP' values instead.
 --
 -- Note that this check skips concrete t'FP' values, which support concrete
 -- evaluation with any rounding mode.

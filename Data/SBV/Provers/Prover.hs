@@ -48,21 +48,26 @@ import System.IO.Unsafe (unsafeInterleaveIO)             -- only used safely!
 
 import System.Directory  (getCurrentDirectory)
 import Data.Time (getZonedTime, NominalDiffTime, UTCTime, getCurrentTime, diffUTCTime)
-import Data.List (intercalate, isPrefixOf)
+import Data.List (intercalate, isPrefixOf, stripPrefix, genericIndex, genericLength)
 
-import Data.Maybe (mapMaybe, listToMaybe)
+import Data.Maybe (mapMaybe, listToMaybe, fromMaybe)
 
+import Text.Read (readMaybe)
+
+import qualified Data.Map.Strict as Map
 import qualified Data.Set as Set (empty)
 
-import qualified Data.Foldable   as S (toList)
+import qualified Data.Foldable   as S (toList, foldl')
 import qualified Data.Text       as T
 
+import Data.SBV.Core.AlgReals (isExactRational)
 import Data.SBV.Core.Data
 import Data.SBV.Core.Symbolic
+import Data.SBV.Core.Operations
 import Data.SBV.SMT.SMT
 import Data.SBV.SMT.Utils (debug, alignPlain)
 import Data.SBV.Utils.ExtractIO
-import Data.SBV.Utils.Lib    (showText)
+import Data.SBV.Utils.Lib    (showText, unBar)
 import Data.SBV.Utils.TDiff
 
 import Data.SBV.Lambda () -- instances only
@@ -429,6 +434,11 @@ validate reducer isSAT cfg p res =
                                                    , "Unable to validate the produced model."
                                                    ]) (Just res)
 
+        -- Values of uninterpreted constants/functions in the model
+        uiEnv = case res of
+                  Satisfiable _ m -> fromMaybe [] (modelUIBindings m)
+                  _               -> []
+
         check env = do let envShown = showModelDictionary True True cfg modelBinds
                               where modelBinds = [(T.unpack n, RegularCV v) | (NamedSymVar _ n, v) <- env]
 
@@ -441,7 +451,17 @@ validate reducer isSAT cfg p res =
 
                        result <- snd <$> runSymbolic cfg (Concrete (Just (isSAT, env))) (reducer p >>= output)
 
-                       let explain  = [ ""
+                       let -- Values that remained symbolic in the concrete run, but can be computed using
+                           -- the model values of uninterpreted constants and functions
+                           residual = evalResidual uiEnv result
+
+                           -- Boolean value of an SV, if we can compute it
+                           valueOf sv
+                             | sv == trueSV  = Just True
+                             | sv == falseSV = Just False
+                             | True          = cvToBool <$> sv `Map.lookup` residual
+
+                           explain  = [ ""
                                       , "Assignment:"  ++ if null env then " <none>" else ""
                                       ]
                                    ++ [ ""          | not (null env)]
@@ -461,7 +481,7 @@ validate reducer isSAT cfg p res =
                                                  ]
 
                            notConcrete sv = wrap ("Data.SBV: Cannot validate the model, since " ++ show sv ++ " is not concretely computable.")
-                                                 (  perhaps (why sv)
+                                                 (  perhaps (explainResidual uiEnv result residual sv)
                                                  )
                                 where perhaps Nothing  = case resObservables result of
                                                            [] -> []
@@ -476,19 +496,6 @@ validate reducer isSAT cfg p res =
                                                          , "Please report this as a feature request or possibly a bug!"
                                                          ]
 
-                                      -- This is incomplete, but should capture the most common cases
-                                      why s = case s `lookup` S.toList (pgmAssignments (resAsgns result)) of
-                                                Nothing            -> Nothing
-                                                Just (SBVApp o as) -> case o of
-                                                                        QuantifiedBool{} -> Just "The value depends on a quantified variable."
-                                                                        IEEEFP FP_FMA    -> Just "Floating point FMA operation is not supported concretely."
-                                                                        IEEEFP _         -> Just "Not all floating point operations are supported concretely."
-                                                                        OverflowOp _     -> Just "Overflow-checking is not done concretely."
-                                                                        Uninterpreted v
-                                                                          | any isADT as -> Just "Models containing ADTs are currently only partially supported."
-                                                                          | True         -> Just $ "The value depends on the uninterpreted constant " ++ T.unpack v ++ "."
-                                                                        _                -> listToMaybe $ mapMaybe why as
-
                            cstrs = S.toList $ resConstraints result
 
                            walkConstraints [] cont = do
@@ -497,9 +504,9 @@ validate reducer isSAT cfg p res =
                            walkConstraints ((isSoft, attrs, sv) : rest) cont
                               | kindOf sv /= KBool
                               = giveUp $ "Constraint tied to " ++ show sv ++ " is non-boolean."
-                              | isSoft || sv == trueSV
+                              | isSoft || valueOf sv == Just True
                               = walkConstraints rest cont
-                              | sv == falseSV
+                              | valueOf sv == Just False
                               = case mbName of
                                   Just nm -> badModel $ "Named constraint " ++ show nm ++ " evaluated to False."
                                   Nothing -> badModel "A constraint was violated."
@@ -514,9 +521,9 @@ validate reducer isSAT cfg p res =
                            satLoop (sv:svs)
                              | kindOf sv /= KBool
                              = giveUp $ "Output tied to " ++ show sv ++ " is non-boolean."
-                             | sv == trueSV
+                             | valueOf sv == Just True
                              = satLoop svs
-                             | sv == falseSV
+                             | valueOf sv == Just False
                              = badModel "Final output evaluated to False."
                              | True
                              = notConcrete sv
@@ -530,9 +537,9 @@ validate reducer isSAT cfg p res =
                            proveLoop (sv:svs) somethingFailed
                              | kindOf sv /= KBool
                              = giveUp $ "Output tied to " ++ show sv ++ " is non-boolean."
-                             | sv == trueSV
+                             | valueOf sv == Just True
                              = proveLoop svs somethingFailed
-                             | sv == falseSV
+                             | valueOf sv == Just False
                              = proveLoop svs True
                              | True
                              = notConcrete sv
@@ -551,6 +558,205 @@ validate reducer isSAT cfg p res =
                                 else "Validating " ++ show (length cstrs) ++ " constraint(s)."
 
                        walkConstraints cstrs (checkOutputs (resOutputs result))
+
+-- | Values of uninterpreted constants and functions in a model, as used during validation.
+type UIEnv = [(String, Either String ([([CV], CV)], CV))]
+
+-- | Find the model value of an uninterpreted constant/function.
+lookupUI :: UIEnv -> T.Text -> Maybe (Either String ([([CV], CV)], CV))
+lookupUI uis f = unBar (T.unpack f) `lookup` [(unBar n, v) | (n, v) <- uis]
+
+-- | After the concrete run of model validation, some values remain symbolic if they depend on
+-- uninterpreted constants or functions. Evaluate them using the values of the uninterpreted
+-- values in the model. We return all the values we can compute.
+evalResidual :: UIEnv -> Result -> Map.Map SV CV
+evalResidual uis result = S.foldl' step initial (pgmAssignments (resAsgns result))
+  where initial = Map.fromList $ (trueSV, trueCV) : (falseSV, falseCV) : snd (resConsts result)
+
+        step known (sv, SBVApp op args) = maybe known (\cv -> Map.insert sv cv known) (evalNode known (kindOf sv) op args)
+
+        evalNode known k op args
+          -- For ite, we only need the value of the branch taken
+          | Ite <- op, [c, t, e] <- args
+          = do b <- cvToBool <$> c `Map.lookup` known
+               (if b then t else e) `Map.lookup` known
+          -- Short-cut and/or. Note that these are also used for bit-vectors, where we can't short-cut.
+          | And <- op, k == KBool, any (has False) args = Just falseCV
+          | Or  <- op, k == KBool, any (has True)  args = Just trueCV
+          | True                                        = mapM (`Map.lookup` known) args >>= evalOp uis k op
+          where has b a = (cvToBool <$> a `Map.lookup` known) == Just b
+
+-- | Evaluate an operation on concrete arguments, using the model values of uninterpreted
+-- constants and functions. Returns 'Nothing' if we cannot.
+evalOp :: UIEnv -> Kind -> Op -> [CV] -> Maybe CV
+evalOp uis k op args = case (op, args) of
+    (Uninterpreted f, _) -> case lookupUI uis f of
+                              Just (Right (tbl, def)) -> lookupFirst args tbl def
+                              _                       -> Nothing
+
+    (Label _, [a]) -> Just a
+
+    (TupleConstructor _, _)               -> Just $ CV k (CTuple (map cvVal args))
+    (TupleAccess i _, [CV _ (CTuple vs)])
+       | i >= 1, i <= length vs           -> Just $ CV k (vs !! (i-1))
+
+    (ADTOp (ADTConstructor c _), _)                  -> Just $ CV k (CADT (T.unpack c, [(kindOf a, cvVal a) | a <- args]))
+    (ADTOp (ADTTester t _),      [CV _ (CADT (c, _))]) -> Just $ if T.unpack t == "is-" ++ c then trueCV else falseCV
+    (ADTOp (ADTAccessor a _),    [CV _ (CADT (c, fs))])
+       | Just i <- accessorIndex c (T.unpack a), i >= 1, i <= length fs
+       -> Just $ CV k (snd (fs !! (i-1)))
+
+    (SeqOp (SeqNth _), [CV _ (CList xs), CV _ (CInteger i)])
+       | i >= 0, i < genericLength xs -> Just $ CV k (xs `genericIndex` i)
+
+    (ReadArray,  [CV (KArray ki _) (CArray (ArrayModel tbl def)), i])
+       -> CV k <$> lookupFirst [i] [([CV ki key], v) | (key, v) <- tbl] def
+    (WriteArray, [CV _ (CArray (ArrayModel tbl def)), i, v]) -> Just $ CV k $ CArray $ ArrayModel ((cvVal i, cvVal v) : tbl) def
+
+    _ -> case (op, map lit args) of
+           (Plus,          [a, b])    -> conc $ svPlus        a b
+           (Times,         [a, b])    -> conc $ svTimes       a b
+           (Minus,         [a, b])    -> conc $ svMinus       a b
+           (UNeg,          [a])       -> conc $ svUNeg        a
+           (Abs,           [a])       -> conc $ svAbs         a
+           (Quot,          [a, b])    -> conc $ svQuot        a b
+           (Rem,           [a, b])    -> conc $ svRem         a b
+           (Equal True,    [a, b])    -> conc $ svStrongEqual a b
+           (Equal False,   [a, b])    -> conc $ svEqual       a b
+           (NotEqual,      [a, b])    -> conc $ svNotEqual    a b
+           (LessThan,      [a, b])    -> conc $ svLessThan    a b
+           (GreaterThan,   [a, b])    -> conc $ svGreaterThan a b
+           (LessEq,        [a, b])    -> conc $ svLessEq      a b
+           (GreaterEq,     [a, b])    -> conc $ svGreaterEq   a b
+           (Implies,       [a, b])    -> conc $ svImplies     a b
+           (And,           [a, b])    -> conc $ svAnd         a b
+           (Or,            [a, b])    -> conc $ svOr          a b
+           (XOr,           [a, b])    -> conc $ svXOr         a b
+           (Not,           [a])       -> conc $ svNot         a
+           (Shl,           [a, b])    -> conc $ svShiftLeft   a b
+           (Shr,           [a, b])    -> conc $ svShiftRight  a b
+           (Rol i,         [a])       -> conc $ svRol         a i
+           (Ror i,         [a])       -> conc $ svRor         a i
+           (Divides n,     [a])       -> conc $ svDivides     n a
+           (Extract i j,   [a])       -> conc $ svExtract     i j a
+           (Join,          [a, b])    -> conc $ svJoin        a b
+           (ZeroExtend i,  [a])       -> conc $ svZeroExtend  i a
+           (SignExtend i,  [a])       -> conc $ svSignExtend  i a
+           (KindCast f t,  [a])
+             | all isIntegral [f, t]  -> conc $ svFromIntegral t a
+
+           (OverflowOp o', [a])       -> conc $ svMkOverflow1 o' a
+           (OverflowOp o', [a, b])    -> conc $ svMkOverflow2 o' a b
+
+           (IEEEFP fop,    largs)     -> case (fop, largs) of
+                                           (FP_Abs,             [a])           -> conc $ svFPAbs             a
+                                           (FP_Neg,             [a])           -> conc $ svFPNeg             a
+                                           (FP_Add,             [rm, a, b])    -> conc $ svFPAdd             rm a b
+                                           (FP_Sub,             [rm, a, b])    -> conc $ svFPSub             rm a b
+                                           (FP_Mul,             [rm, a, b])    -> conc $ svFPMul             rm a b
+                                           (FP_Div,             [rm, a, b])    -> conc $ svFPDiv             rm a b
+                                           (FP_FMA,             [rm, a, b, c]) -> conc $ svFPFMA             rm a b c
+                                           (FP_Sqrt,            [rm, a])       -> conc $ svFPSqrt            rm a
+                                           (FP_Rem,             [a, b])        -> conc $ svFPRem             a b
+                                           (FP_RoundToIntegral, [rm, a])       -> conc $ svFPRoundToIntegral rm a
+                                           (FP_Min,             [a, b])        -> conc $ svFPMin             a b
+                                           (FP_Max,             [a, b])        -> conc $ svFPMax             a b
+                                           (FP_ObjEqual,        [a, b])        -> conc $ svStrongEqual       a b
+                                           (FP_IsNormal,        [a])           -> conc $ svFPIsNormal        a
+                                           (FP_IsSubnormal,     [a])           -> conc $ svFPIsSubnormal     a
+                                           (FP_IsZero,          [a])           -> conc $ svFPIsZero          a
+                                           (FP_IsInfinite,      [a])           -> conc $ svFPIsInfinite      a
+                                           (FP_IsNaN,           [a])           -> conc $ svFPIsNaN           a
+                                           (FP_IsNegative,      [a])           -> conc $ svFPIsNegative      a
+                                           (FP_IsPositive,      [a])           -> conc $ svFPIsPositive      a
+                                           _                                   -> Nothing
+           _                          -> Nothing
+  where lit a = SVal (kindOf a) (Left a)
+
+        conc (SVal _ (Left c)) = Just c
+        conc _                 = Nothing
+
+        isIntegral x = isBounded x || isUnbounded x
+
+-- | Look up a key in a table, where earlier entries take precedence, returning the default if there's no match.
+-- Keys are compared using object equality, which can't be done structurally: The same value can have different
+-- representations, as is the case for arrays. If we can't decide whether an entry matches before we find a
+-- match, we return 'Nothing'.
+lookupFirst :: [CV] -> [([CV], a)] -> a -> Maybe a
+lookupFirst key tbl def = go tbl
+  where go []              = Just def
+        go ((k, v) : rest) = case zipWith same key k of
+                               eqs | any (== Just False) eqs -> go rest
+                                   | all (== Just True)  eqs -> Just v
+                                   | True                    -> Nothing
+
+        same a b = case svStrongEqual (SVal (kindOf a) (Left a)) (SVal (kindOf b) (Left b)) of
+                     SVal _ (Left r) -> Just (cvToBool r)
+                     _               -> Nothing
+
+-- | Given a constructor name and an accessor name, find which field the accessor
+-- refers to, if the accessor belongs to this constructor. Accessors are named @get<Constructor>_<i>@.
+accessorIndex :: String -> String -> Maybe Int
+accessorIndex c a = stripPrefix ("get" ++ c ++ "_") a >>= readMaybe
+
+-- | Explain why an SV couldn't be computed during validation, by finding the operation responsible.
+-- This is incomplete, but should capture the most common cases.
+explainResidual :: UIEnv -> Result -> Map.Map SV CV -> SV -> Maybe String
+explainResidual uis result known = go
+  where defs    = Map.fromList $ S.toList $ pgmAssignments (resAsgns result)
+        defined = [unBar d | (d, _) <- resDefinitions result]
+
+        go sv = case sv `Map.lookup` defs of
+                  Nothing            -> Nothing
+                  Just (SBVApp o as)
+                    -- Follow the branch taken in an ite
+                    | Ite <- o, [c, t, e] <- as, Just b <- cvToBool <$> c `Map.lookup` known
+                    -> go (if b then t else e)
+                    -- If an argument is not known, the problem is further down
+                    | unknowns@(_:_) <- [a | a <- as, a `Map.notMember` known]
+                    -> case mapMaybe go unknowns of
+                         r : _ -> Just r
+                         []    -> Just $ describe o Nothing
+                    | True
+                    -> Just $ describe o (mapM (`Map.lookup` known) as)
+
+        isIrrational (CV _ (CAlgReal r)) = not (isExactRational r)
+        isIrrational _                   = False
+
+        unspecified = "This value is not specified by SMTLib, and SBV cannot determine what the solver picked for it."
+
+        describe o mbArgs = case (o, mbArgs) of
+          (QuantifiedBool{},     _) -> "The value depends on a quantified variable."
+          (IEEEFP _,             _) -> "Not all floating point operations are supported concretely."
+          (SpecialRelOp{},       _) -> "Special relations are not supported concretely."
+          (ArrayInit (Right _),  _) -> "Arrays created via lambdaArray are not supported concretely."
+
+          (_, Just cvs) | any isIrrational cvs
+             -> "The value depends on an irrational algebraic real, which SBV cannot compute with concretely."
+
+          (ADTOp (ADTAccessor a _), Just [CV _ (CADT (c, _))])
+             -> unwords [ "The field accessor", T.unpack a, "is applied to a value built with the constructor", c ++ "."
+                        , unspecified
+                        ]
+
+          (SeqOp (SeqNth _), Just [CV _ (CList xs), CV _ (CInteger i)])
+             -> unwords [ "Element", show i, "of a list of length", show (length xs), "is accessed."
+                        , unspecified
+                        ]
+
+          (Uninterpreted f, _)
+             | unBar (T.unpack f) `elem` defined
+             -> "The function " ++ unBar (T.unpack f) ++ " is applied to arguments that depend on uninterpreted values. SBV cannot evaluate it."
+             | True
+             -> case (lookupUI uis f, mbArgs) of
+                  (Nothing,      _)      -> "The model has no value for the uninterpreted name " ++ unBar (T.unpack f) ++ "."
+                  (Just Left{},  _)      -> "The model value for the uninterpreted function " ++ unBar (T.unpack f) ++ " is too complicated for SBV to evaluate."
+                  (Just Right{}, Just _) -> "SBV cannot decide which entry in the model value for the uninterpreted function " ++ unBar (T.unpack f) ++ " applies to its arguments."
+                  (Just Right{}, _)      -> "The uninterpreted function " ++ unBar (T.unpack f) ++ " is applied to arguments that are not concretely computable."
+
+          (ReadArray, Just _) -> "SBV cannot decide which entry of the array applies to the index it is read at."
+
+          _ -> "SBV cannot concretely evaluate the operation: " ++ show o
 
 -- | Given a satisfiability problem, extract the function definitions in it
 defs2smt :: SatisfiableM m a => a -> m String

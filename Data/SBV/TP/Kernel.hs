@@ -285,7 +285,8 @@ checkNewMeasures cfg@SMTConfig{tpOptions = TPOptions{measuresBeingVerified}} st 
      modifyIORef' (measuresEncountered tpSt) (Set.union allNames)
      let verify (n, isProductive, c) = do
            msg $ "[MEASURE] checkNewMeasures: verifying " ++ n
-           () <- c cfg
+           -- Counterexamples to rejected measure candidates are internal; no need to validate them
+           () <- c cfg{validateModel = False}
            msg $ "[MEASURE] checkNewMeasures: " ++ n ++ " verified"
            if isProductive
               then modifyIORef' (productiveVerified tpSt) (Set.insert n)

@@ -8,6 +8,33 @@
 
   * SBV is now tested with z3 5.3.2.
 
+  * Model validation (`validateModel`) now handles many more programs: models
+    with uninterpreted constants and functions (also in `allSat`), comparisons
+    of uninterpreted-sort values, floating-point operations with any rounding
+    mode, `fpFMA`, and overflow checks. When a model can't be validated, the
+    error now says why; for instance, when the model relies on a value SMTLib
+    leaves unspecified, such as an ADT field accessed with the wrong constructor
+    or the head of an empty list.
+
+  * Fixed a crash when validating models of programs that use recursive
+    `smtFunction` definitions.
+
+  * Floating-point operations on `SFloat` and `SDouble` now evaluate concretely
+    with all rounding modes, and `fpFMA` evaluates concretely for all
+    floating-point types. Overflow checks in `Data.SBV.Tools.Overflow` and set
+    operations mixing complemented and regular sets also evaluate concretely.
+
+  * Fixed `fpFromDouble`, which produced a value with one extra bit of precision.
+
+  * Fixed concrete equality of arrays, which could report equal arrays as
+    different when one of them had an explicit entry holding the default value,
+    as in `a .== writeArray a k (readArray a k)`, including when such arrays are
+    nested inside other arrays.
+
+  * [BACKWARDS COMPATIBILITY] `SMTModel` has a new field, `modelUIBindings`.
+    Code that constructs or pattern-matches `SMTModel` positionally needs to
+    account for it.
+
 ### Version 14.8, 2026-09-25
 
   * The main change in this release is a new C backend, with much broader

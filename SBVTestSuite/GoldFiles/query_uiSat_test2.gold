@@ -36,6 +36,6 @@
               false
               true)))
 
-MODEL: SMTModel {modelObjectives = [], modelBindings = Nothing, modelAssocs = [], modelUIFuns = [("q2",(True,SBool -> SBool -> SBool,Right ([([True :: Bool,False :: Bool],True :: Bool),([True :: Bool,True :: Bool],True :: Bool)],False :: Bool)))]}
+MODEL: SMTModel {modelObjectives = [], modelBindings = Nothing, modelAssocs = [], modelUIFuns = [("q2",(True,SBool -> SBool -> SBool,Right ([([True :: Bool,False :: Bool],True :: Bool),([True :: Bool,True :: Bool],True :: Bool)],False :: Bool)))], modelUIBindings = Nothing}
 DONE.*** Solver   : Z3
 *** Exit code: ExitSuccess

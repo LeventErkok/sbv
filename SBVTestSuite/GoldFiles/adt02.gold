@@ -92,6 +92,6 @@
 [SEND] (get-value (s0))
 [RECV] ((s0 (AList (seq.unit 2))))
 
-MODEL: SMTModel {modelObjectives = [], modelBindings = Nothing, modelAssocs = [("e",AList [2] :: ADT)], modelUIFuns = []}
+MODEL: SMTModel {modelObjectives = [], modelBindings = Nothing, modelAssocs = [("e",AList [2] :: ADT)], modelUIFuns = [], modelUIBindings = Nothing}
 DONE.*** Solver   : Z3
 *** Exit code: ExitSuccess

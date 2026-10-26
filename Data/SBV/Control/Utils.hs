@@ -203,7 +203,8 @@ verifyMeasureChecks cfg st checks = do
           debug cfg ["[MEASURE] Verifying termination measures for: " <> T.pack (intercalate ", " nms)]
           mapM_ (\(nm, isProductive, check) -> do
                     debug cfg ["[MEASURE] Checking: " <> T.pack nm]
-                    check cfg
+                    -- Counterexamples to rejected measure candidates are internal; no need to validate them
+                    check cfg{validateModel = False}
                     let tag = if isProductive then "productive" else "terminating"
                     debug cfg ["[MEASURE] Passed (" <> tag <> "): " <> T.pack nm]
                 ) checks
@@ -1524,12 +1525,15 @@ getAllSatResult = do queryDebug ["*** Checking Satisfiability, all solutions.."]
 
                                                    obsvs <- getObservables
 
+                                                   uiBindings <- getUIBindings Nothing
+
                                                    let lassocs = F.toList assocs
                                                        model   = SMTModel { modelObjectives = []
                                                                           , modelBindings   = F.toList <$> bindings
                                                                           , modelAssocs     =    (first T.unpack <$> sortOn fst obsvs)
                                                                                               <> [(T.unpack n, cv) | (_, (n, (_, cv))) <- lassocs]
                                                                           , modelUIFuns     = []
+                                                                          , modelUIBindings = uiBindings
                                                                           }
                                                        currentResult = Satisfiable cfg model
 
@@ -1628,12 +1632,15 @@ getAllSatResult = do queryDebug ["*** Checking Satisfiability, all solutions.."]
                                                          then Just <$> mapM grab allInputs
                                                          else pure Nothing
 
+                                       uiBindings <- getUIBindings Nothing
+
                                        let model = SMTModel { modelObjectives = []
                                                             , modelBindings   = F.toList <$> bindings
                                                             , modelAssocs     =    uiRegVals
                                                                                 <> (first T.unpack <$> sortOn fst obsvs)
                                                                                 <> [(T.unpack n, cv) | (_, (n, (_, cv))) <- F.toList assocs]
                                                             , modelUIFuns     = uiFunVals
+                                                            , modelUIBindings = uiBindings
                                                             }
                                            m = Satisfiable cfg model
 
@@ -2182,19 +2189,37 @@ getModelAtIndex mbi = do
 
           uiVals    <- mapM (\ui@(nm, (_, _, _)) -> (nm,) <$> getUICVal mbi ui) uiRegs
 
+          uiBindings <- getUIBindings mbi
+
           pure $ unBarModel $ SMTModel { modelObjectives = []
                                        , modelBindings   = F.toList <$> bindings
                                        , modelAssocs     = uiVals ++ F.toList (first T.unpack <$> assocs)
                                        , modelUIFuns     = uiFunVals
+                                       , modelUIBindings = uiBindings
                                        }
+
+-- | Collect the values of all uninterpreted constants and functions, so they can be used during model validation.
+-- Note that we collect all of them here, ignoring 'allSatTrackUFs' and 'isNonModelVar'; as validation needs them all.
+-- Constants are represented as functions with no arguments: The table is empty, and the value is the default.
+getUIBindings :: (MonadIO m, MonadQuery m) => Maybe Int -> m (Maybe [(String, Either String ([([CV], CV)], CV))])
+getUIBindings mbi = do
+   cfg <- getConfig
+   if not (validationRequested cfg)
+      then pure Nothing
+      else do uis <- getUIs
+              let get ui@(nm, (_, _, SBVType as))
+                    | length as == 1 = (\cv -> (nm, Right ([], cv))) <$> getUICVal mbi ui
+                    | True           = (nm,) <$> getUIFunCVAssoc mbi ui
+              Just <$> mapM get uis
 
 -- | Remove the bars from model names; these are (mostly!) automatically inserted
 unBarModel :: SMTModel -> SMTModel
-unBarModel SMTModel {modelObjectives, modelBindings, modelAssocs, modelUIFuns}
+unBarModel SMTModel {modelObjectives, modelBindings, modelAssocs, modelUIFuns, modelUIBindings}
    = SMTModel { modelObjectives = ubf       <$> modelObjectives
               , modelBindings   = (ubn <$>) <$> modelBindings
               , modelAssocs     = ubf       <$> modelAssocs
               , modelUIFuns     = ubf       <$> modelUIFuns
+              , modelUIBindings = (ubf <$>) <$> modelUIBindings
               }
    where ubf (n, a) = (unBar n, a)
          ubn (NamedSymVar sv nm, a) = (NamedSymVar sv (unBarT nm), a)

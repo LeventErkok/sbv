@@ -3720,7 +3720,7 @@ sAssert cs msg cond x
    | Just mustHold <- unliteral cond
    = if mustHold
      then x
-     else error $ show $ SafeResult (locInfo . getCallStack <$> cs, msg, Satisfiable defaultSMTCfg (SMTModel [] Nothing [] []))
+     else error $ show $ SafeResult (locInfo . getCallStack <$> cs, msg, Satisfiable defaultSMTCfg (SMTModel [] Nothing [] [] Nothing))
    | True
    = SBV $ SVal k $ Right $ cache r
   where k     = kindOf x
@@ -4686,7 +4686,7 @@ instance Testable (Symbolic SBool) where
                                Just b  -> pure (cond, b, tvals ++ mapMaybe getObservable ovals)
                        uis -> cantQuickCheck $ "Uninterpreted constants remain: " ++ unwords uis
 
-           complain qcInfo = showModel defaultSMTCfg (SMTModel [] Nothing qcInfo [])
+           complain qcInfo = showModel defaultSMTCfg (SMTModel [] Nothing qcInfo [] Nothing)
 
 -- Complain if what we got isn't something we can quick-check
 cantQuickCheck :: String -> a

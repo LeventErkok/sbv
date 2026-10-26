@@ -53,6 +53,6 @@
 [SEND] (get-value (s0))
 [RECV] ((s0 (Just 0)))
 
-MODEL: SMTModel {modelObjectives = [], modelBindings = Nothing, modelAssocs = [("x",Just 0 :: Maybe Integer)], modelUIFuns = []}
+MODEL: SMTModel {modelObjectives = [], modelBindings = Nothing, modelAssocs = [("x",Just 0 :: Maybe Integer)], modelUIFuns = [], modelUIBindings = Nothing}
 DONE.*** Solver   : Z3
 *** Exit code: ExitSuccess

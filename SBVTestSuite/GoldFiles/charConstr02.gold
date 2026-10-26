@@ -46,6 +46,6 @@
 [RECV] ((cf3 ((as const (Array Int (SBVTuple3 String String String)))
          (mkSBVTuple3 "A" "A" "A"))))
 
-MODEL: SMTModel {modelObjectives = [], modelBindings = Nothing, modelAssocs = [], modelUIFuns = [("cf3",(True,SInteger -> (SChar, SChar, SChar),Right ([],('A','A','A') :: (Char, Char, Char))))]}
+MODEL: SMTModel {modelObjectives = [], modelBindings = Nothing, modelAssocs = [], modelUIFuns = [("cf3",(True,SInteger -> (SChar, SChar, SChar),Right ([],('A','A','A') :: (Char, Char, Char))))], modelUIBindings = Nothing}
 DONE.*** Solver   : Z3
 *** Exit code: ExitSuccess

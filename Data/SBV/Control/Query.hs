@@ -696,6 +696,7 @@ mkSMTResult asgns = do
                               , modelBindings   = Nothing
                               , modelAssocs     = assocs
                               , modelUIFuns     = []
+                              , modelUIBindings = Nothing
                               }
 
              pure $ Satisfiable queryConfig m

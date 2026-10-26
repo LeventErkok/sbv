@@ -601,7 +601,7 @@ fpFromFloat eb sb f = error $ "SBV.fpFromFloat: Unexpected input: " ++ show (eb,
 
 -- | Convert from a IEEE double.
 fpFromDouble :: Int -> Int -> Double -> FP
-fpFromDouble 11 53 d = FP 11 54 $ BF.bfFromDouble d
+fpFromDouble 11 53 d = FP 11 53 $ BF.bfFromDouble d
 fpFromDouble eb sb d = error $ "SBV.fpFromDouble: Unexpected input: " ++ show (eb, sb, d)
 
 -- | Convert to a IEEE float using the given rounding mode.

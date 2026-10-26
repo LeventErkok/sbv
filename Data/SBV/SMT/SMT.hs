@@ -527,20 +527,20 @@ displayModels arrange disp AllSatResult{allSatResults = ms} = do
 -- | Show an SMTResult; generic version
 showSMTResult :: String -> String -> String -> String -> (Maybe String -> String) -> String -> SMTResult -> String
 showSMTResult unsatMsg unkMsg satMsg satMsgModel dSatMsgModel satExtMsg result = case result of
-  Unsatisfiable _ uc                 -> unsatMsg ++ showUnsatCore uc
-  Satisfiable _ (SMTModel _ _ [] []) -> satMsg
-  Satisfiable _   m                  -> satMsgModel    ++ showModel cfg m
-  DeltaSat    _ p m                  -> dSatMsgModel p ++ showModel cfg m
-  SatExtField _ (SMTModel b _ _ _)   -> satExtMsg   ++ showModelDictionary True False cfg b
-  Unknown     _ r                    -> unkMsg ++ ".\n" ++ T.unpack ("  Reason: " `alignPlain` showText r)
-  ProofError  _ [] Nothing           -> "*** An error occurred. No additional information available. Try running in verbose mode."
-  ProofError  _ ls Nothing           -> "*** An error occurred.\n" ++ intercalate "\n" (map ("***  " ++) ls)
-  ProofError  _ ls (Just r)          -> intercalate "\n" $  [ "*** " ++ l | l <- ls]
-                                                         ++ [ "***"
-                                                            , "*** Alleged model:"
-                                                            , "***"
-                                                            ]
-                                                         ++ ["*** "  ++ l | l <- lines (showSMTResult unsatMsg unkMsg satMsg satMsgModel dSatMsgModel satExtMsg r)]
+  Unsatisfiable _ uc                   -> unsatMsg ++ showUnsatCore uc
+  Satisfiable _ (SMTModel _ _ [] [] _) -> satMsg
+  Satisfiable _   m                    -> satMsgModel    ++ showModel cfg m
+  DeltaSat    _ p m                    -> dSatMsgModel p ++ showModel cfg m
+  SatExtField _ (SMTModel b _ _ _ _)   -> satExtMsg   ++ showModelDictionary True False cfg b
+  Unknown     _ r                      -> unkMsg ++ ".\n" ++ T.unpack ("  Reason: " `alignPlain` showText r)
+  ProofError  _ [] Nothing             -> "*** An error occurred. No additional information available. Try running in verbose mode."
+  ProofError  _ ls Nothing             -> "*** An error occurred.\n" ++ intercalate "\n" (map ("***  " ++) ls)
+  ProofError  _ ls (Just r)            -> intercalate "\n" $  [ "*** " ++ l | l <- ls]
+                                                            ++ [ "***"
+                                                               , "*** Alleged model:"
+                                                               , "***"
+                                                               ]
+                                                            ++ ["*** "  ++ l | l <- lines (showSMTResult unsatMsg unkMsg satMsg satMsgModel dSatMsgModel satExtMsg r)]
 
  where cfg = resultConfig result
        showUnsatCore Nothing   = ""

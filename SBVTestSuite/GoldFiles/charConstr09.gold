@@ -34,6 +34,6 @@
 [SEND] (get-value (s0))
 [RECV] ((s0 (seq.unit (mkSBVTuple2 (mkSBVTuple2 "A" "A") (seq.unit 2)))))
 
-MODEL: SMTModel {modelObjectives = [], modelBindings = Nothing, modelAssocs = [("x",[(('A','A'),[2])] :: [((Char, Char), [Integer])])], modelUIFuns = []}
+MODEL: SMTModel {modelObjectives = [], modelBindings = Nothing, modelAssocs = [("x",[(('A','A'),[2])] :: [((Char, Char), [Integer])])], modelUIFuns = [], modelUIBindings = Nothing}
 DONE.*** Solver   : Z3
 *** Exit code: ExitSuccess

@@ -169,6 +169,10 @@ insert se ss
   | eqCheckIsObjectEq ka, Just e <- unliteral se, Just (ComplementSet cs) <- unliteral ss, e `Set.member` cs
   = literal $ ComplementSet $ e `Set.delete` cs
 
+  -- Case 3: Constant complement set, with element not in the complement. It's already there:
+  | eqCheckIsObjectEq ka, Just _ <- unliteral se, Just ComplementSet{} <- unliteral ss
+  = ss
+
   -- Otherwise, go symbolic
   | True
   = SBV $ SVal k $ Right $ cache r
@@ -211,6 +215,10 @@ delete se ss
   -- Case 2: Constant complement set, with element missing in the complement, just add it:
   | eqCheckIsObjectEq ka, Just e <- unliteral se, Just (ComplementSet cs) <- unliteral ss, e `Set.notMember` cs
   = literal $ ComplementSet $ e `Set.insert` cs
+
+  -- Case 3: Constant complement set, with element in the complement. It's already missing:
+  | eqCheckIsObjectEq ka, Just _ <- unliteral se, Just ComplementSet{} <- unliteral ss
+  = ss
 
   -- Otherwise, go symbolic
   | True
@@ -330,6 +338,11 @@ isSubsetOf sa sb
   | eqCheckIsObjectEq ka, Just (ComplementSet a) <- unliteral sa, Just (ComplementSet b) <- unliteral sb
   = literal $ b `Set.isSubsetOf` a
 
+  -- Case 3: Constant regular set and a complement set, check they're disjoint. (Note that we don't
+  -- handle the reverse case, as that depends on whether the element type is finite.)
+  | eqCheckIsObjectEq ka, Just (RegularSet a) <- unliteral sa, Just (ComplementSet b) <- unliteral sb
+  = literal $ a `Set.disjoint` b
+
   -- Otherwise, go symbolic
   | True
   = SBV $ SVal KBool $ Right $ cache r
@@ -411,6 +424,12 @@ union sa sb
   | eqCheckIsObjectEq ka, Just (ComplementSet a) <- unliteral sa, Just (ComplementSet b) <- unliteral sb
   = literal $ ComplementSet $ a `Set.intersection` b
 
+  -- Case 3: Constant regular and complement sets, complement the difference:
+  | eqCheckIsObjectEq ka, Just (RegularSet a) <- unliteral sa, Just (ComplementSet b) <- unliteral sb
+  = literal $ ComplementSet $ b `Set.difference` a
+  | eqCheckIsObjectEq ka, Just (ComplementSet a) <- unliteral sa, Just (RegularSet b) <- unliteral sb
+  = literal $ ComplementSet $ a `Set.difference` b
+
   -- Otherwise, go symbolic
   | True
   = SBV $ SVal k $ Right $ cache r
@@ -454,6 +473,12 @@ intersection sa sb
   | eqCheckIsObjectEq ka, Just (ComplementSet a) <- unliteral sa, Just (ComplementSet b) <- unliteral sb
   = literal $ ComplementSet $ a `Set.union` b
 
+  -- Case 3: Constant regular and complement sets, remove the complement from the regular one:
+  | eqCheckIsObjectEq ka, Just (RegularSet a) <- unliteral sa, Just (ComplementSet b) <- unliteral sb
+  = literal $ RegularSet $ a `Set.difference` b
+  | eqCheckIsObjectEq ka, Just (ComplementSet a) <- unliteral sa, Just (RegularSet b) <- unliteral sb
+  = literal $ RegularSet $ b `Set.difference` a
+
   -- Otherwise, go symbolic
   | True
   = SBV $ SVal k $ Right $ cache r
@@ -485,9 +510,17 @@ intersections = foldr intersection full
 -- Q.E.D.
 difference :: forall a. (Ord a, SymVal a) => SSet a -> SSet a -> SSet a
 difference sa sb
-  -- Only constant fold the regular case, others are left symbolic
+  -- Case 1: Constant regular sets, just compute
   | eqCheckIsObjectEq ka, Just (RegularSet a) <- unliteral sa, Just (RegularSet b) <- unliteral sb
   = literal $ RegularSet $ a `Set.difference` b
+
+  -- Other constant cases, using: a `difference` b = a `intersection` complement b
+  | eqCheckIsObjectEq ka, Just (RegularSet a) <- unliteral sa, Just (ComplementSet b) <- unliteral sb
+  = literal $ RegularSet $ a `Set.intersection` b
+  | eqCheckIsObjectEq ka, Just (ComplementSet a) <- unliteral sa, Just (RegularSet b) <- unliteral sb
+  = literal $ ComplementSet $ a `Set.union` b
+  | eqCheckIsObjectEq ka, Just (ComplementSet a) <- unliteral sa, Just (ComplementSet b) <- unliteral sb
+  = literal $ RegularSet $ b `Set.difference` a
 
   -- Otherwise, go symbolic
   | True
