@@ -6,7 +6,7 @@
 -- Maintainer: erkokl@gmail.com
 -- Stability : experimental
 --
--- This example solves regex crosswords from <http://regexcrossword.com>
+-- This example solves regex crosswords from <https://regexcrossword.com>
 -----------------------------------------------------------------------------
 
 {-# LANGUAGE OverloadedStrings   #-}
@@ -60,7 +60,7 @@ solveCrossword rowRegExps colRegExps = runSMTWith cvc5 $ do
                      Unsat  -> error "There are no solutions to this puzzle!"
                      Sat    -> mapM getValue rows
 
--- | Solve <http://regexcrossword.com/challenges/intermediate/puzzles/1>
+-- | Solve <https://regexcrossword.com/challenges/intermediate/puzzles/1>
 --
 -- >>> puzzle1
 -- ["ATO","WEL"]
@@ -75,7 +75,7 @@ puzzle1 = solveCrossword rs cs
              , R.oneOf "BORF" * R.All     -- [BORF].
              ]
 
--- | Solve <http://regexcrossword.com/challenges/intermediate/puzzles/2>
+-- | Solve <https://regexcrossword.com/challenges/intermediate/puzzles/2>
 --
 -- >>> puzzle2
 -- ["WA","LK","ER"]
@@ -90,7 +90,7 @@ puzzle2 = solveCrossword rs cs
              , R.KPlus (R.oneOf "RANK")      -- [RANK]+
              ]
 
--- | Solve <http://regexcrossword.com/challenges/palindromeda/puzzles/3>
+-- | Solve <https://regexcrossword.com/challenges/palindromeda/puzzles/3>
 --
 -- >>> puzzle3
 -- ["RATS","ABUT","TUBA","STAR"]

@@ -54,7 +54,7 @@
 [SEND] (get-objectives)
 [RECV] (objectives
         (s3 oo)
-        (s6  (interval (* (- 1) oo) oo))
+        (s6  (interval 111 oo))
         (s9  (interval (* (- 1) oo) oo))
         (s12  (interval (* (- 1) oo) oo))
         (s15  (interval (* (- 1) oo) oo))
@@ -62,7 +62,7 @@
 [SEND] (get-value (s0))
 [RECV] ((s0 1))
 [SEND] (get-value (s4))
-[RECV] ((s4 1))
+[RECV] ((s4 111))
 [SEND] (get-value (s7))
 [RECV] ((s7 1))
 [SEND] (get-value (s10))
@@ -72,7 +72,7 @@
 [SEND] (get-value (s3))
 [RECV] ((s3 1))
 [SEND] (get-value (s6))
-[RECV] ((s6 1))
+[RECV] ((s6 111))
 [SEND] (get-value (s9))
 [RECV] ((s9 1))
 [SEND] (get-value (s12))
@@ -82,7 +82,7 @@
 [SEND] (get-objectives)
 [RECV] (objectives
         (s3 oo)
-        (s6  (interval (* (- 1) oo) oo))
+        (s6  (interval 111 oo))
         (s9  (interval (* (- 1) oo) oo))
         (s12  (interval (* (- 1) oo) oo))
         (s15  (interval (* (- 1) oo) oo))
@@ -102,7 +102,7 @@ EXCEPTION CAUGHT:
 ***
 ***     Optimal in an extension field:
 ***       goal1 =          oo :: Integer
-***       goal2 = [-oo .. oo] :: [Integer]
+***       goal2 = [111 .. oo] :: [Integer]
 ***       goal3 = [-oo .. oo] :: [Integer]
 ***       goal4 = [-oo .. oo] :: [Integer]
 ***       goal5 = [-oo .. oo] :: [Integer]

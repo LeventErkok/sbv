@@ -9,7 +9,7 @@
 -- The PrefixSum algorithm over power-lists and proof of
 -- the Ladner-Fischer implementation.
 -- See <https://www.cs.utexas.edu/~misra/psp.dir/powerlist.pdf>
--- and <http://www.cs.utexas.edu/~plaxton/c/337/05f/slides/ParallelRecursion-4.pdf>.
+-- and <https://www.cs.utexas.edu/~plaxton/c/337/05f/slides/ParallelRecursion-4.pdf>.
 -----------------------------------------------------------------------------
 
 {-# LANGUAGE CPP                 #-}

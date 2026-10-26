@@ -81,7 +81,8 @@ correctness = runTP $ do
                     \ih n -> [n .< 90] |- mcCarthy91 n
                                        ?? "unfold"
                                        =: mcCarthy91 (mcCarthy91 (n + 11))
-                                       ?? ih `at` Inst @"n" (n + 11)
+                                       ?? ih    `at` Inst @"n" (n + 11)
+                                       ?? case2 `at` Inst @"n" (n + 11)
                                        =: mcCarthy91 91
                                        =: qed
 

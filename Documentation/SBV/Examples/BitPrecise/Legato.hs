@@ -8,7 +8,7 @@
 --
 -- An encoding and correctness proof of Legato's multiplier in Haskell. Bill Legato came
 -- up with an interesting way to multiply two 8-bit numbers on Mostek, as described here:
---   <http://www.cs.utexas.edu/~moore/acl2/workshop-2004/contrib/legato/Weakest-Preconditions-Report.pdf>
+--   <https://www.cs.utexas.edu/~moore/acl2/workshop-2004/contrib/legato/Weakest-Preconditions-Report.pdf>
 --
 -- Here's Legato's algorithm, as coded in Mostek assembly:
 --

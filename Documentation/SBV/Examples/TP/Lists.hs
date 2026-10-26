@@ -1070,11 +1070,14 @@ bookKeeping a f = do
 -- >>> runTP $ filterAppend @Integer (uninterpret "p")
 -- Inductive lemma: filterAppend
 --   Step: Base                     Q.E.D.
---   Step: 1                        Q.E.D.
---   Step: 2                        Q.E.D.
---   Step: 3                        Q.E.D.
---   Step: 4                        Q.E.D.
---   Step: 5                        Q.E.D.
+--   Step: 1 (2 way case split)
+--     Step: 1.1.1                  Q.E.D.
+--     Step: 1.1.2                  Q.E.D.
+--     Step: 1.1.3                  Q.E.D.
+--     Step: 1.2.1                  Q.E.D.
+--     Step: 1.2.2                  Q.E.D.
+--     Step: 1.2.3                  Q.E.D.
+--     Step: 1.Completeness         Q.E.D.
 --   Result:                        Q.E.D.
 -- Functions proven terminating: sbv.filter
 -- [Proven] filterAppend :: Ɐxs ∷ [Integer] → Ɐys ∷ [Integer] → Bool
@@ -1083,24 +1086,31 @@ filterAppend p =
    induct "filterAppend"
           (\(Forall xs) (Forall ys) -> filter p xs ++ filter p ys .== filter p (xs ++ ys)) $
           \ih (x, xs) ys -> [] |- filter p (x .: xs) ++ filter p ys
-                               =: ite (p x) (x .: filter p xs) (filter p xs) ++ filter p ys
-                               =: ite (p x) (x .: filter p xs ++ filter p ys) (filter p xs ++ filter p ys)
-                               ?? ih
-                               =: ite (p x) (x .: filter p (xs ++ ys)) (filter p (xs ++ ys))
-                               =: filter p (x .: (xs ++ ys))
-                               =: filter p ((x .: xs) ++ ys)
-                               =: qed
+                               =: cases [ p x        ==> x .: filter p xs ++ filter p ys
+                                                      ?? ih
+                                                      =: x .: filter p (xs ++ ys)
+                                                      =: filter p ((x .: xs) ++ ys)
+                                                      =: qed
+                                        , sNot (p x) ==> filter p xs ++ filter p ys
+                                                      ?? ih
+                                                      =: filter p (xs ++ ys)
+                                                      =: filter p ((x .: xs) ++ ys)
+                                                      =: qed
+                                        ]
 
 -- | @filter p (concat xss) == concatMap (filter p xss)@
 --
 -- >>> runTP $ filterConcat @Integer (uninterpret "f")
 -- Inductive lemma: filterAppend
 --   Step: Base                     Q.E.D.
---   Step: 1                        Q.E.D.
---   Step: 2                        Q.E.D.
---   Step: 3                        Q.E.D.
---   Step: 4                        Q.E.D.
---   Step: 5                        Q.E.D.
+--   Step: 1 (2 way case split)
+--     Step: 1.1.1                  Q.E.D.
+--     Step: 1.1.2                  Q.E.D.
+--     Step: 1.1.3                  Q.E.D.
+--     Step: 1.2.1                  Q.E.D.
+--     Step: 1.2.2                  Q.E.D.
+--     Step: 1.2.3                  Q.E.D.
+--     Step: 1.Completeness         Q.E.D.
 --   Result:                        Q.E.D.
 -- Inductive lemma: filterConcat
 --   Step: Base                     Q.E.D.
@@ -1260,8 +1270,14 @@ destutterIdempotent = do
 -- Inductive lemma: appendDiff
 --   Step: Base                   Q.E.D.
 --   Step: 1                      Q.E.D.
---   Step: 2                      Q.E.D.
---   Step: 3                      Q.E.D.
+--   Step: 2 (2 way case split)
+--     Step: 2.1.1                Q.E.D.
+--     Step: 2.1.2                Q.E.D.
+--     Step: 2.1.3                Q.E.D.
+--     Step: 2.2.1                Q.E.D.
+--     Step: 2.2.2                Q.E.D.
+--     Step: 2.2.3                Q.E.D.
+--     Step: 2.Completeness       Q.E.D.
 --   Result:                      Q.E.D.
 -- Functions proven terminating: sbv.diff
 -- [Proven] appendDiff :: Ɐas ∷ [Integer] → Ɐbs ∷ [Integer] → Ɐcs ∷ [Integer] → Bool
@@ -1270,10 +1286,17 @@ appendDiff = induct "appendDiff"
                     (\(Forall as) (Forall bs) (Forall cs) -> (as ++ bs) \\ cs .== (as \\ cs) ++ (bs \\ cs)) $
                     \ih (a, as) bs cs -> [] |- (a .: as ++ bs) \\ cs
                                             =: (a .: (as ++ bs)) \\ cs
-                                            =: ite (a `elem` cs) ((as ++ bs) \\ cs) (a .: ((as ++ bs) \\ cs))
-                                            ?? ih
-                                            =: ((a .: as) \\ cs) ++ (bs \\ cs)
-                                            =: qed
+                                            =: cases [ a `elem` cs        ==> (as ++ bs) \\ cs
+                                                                           ?? ih
+                                                                           =: (as \\ cs) ++ (bs \\ cs)
+                                                                           =: ((a .: as) \\ cs) ++ (bs \\ cs)
+                                                                           =: qed
+                                                     , sNot (a `elem` cs) ==> a .: ((as ++ bs) \\ cs)
+                                                                           ?? ih
+                                                                           =: a .: ((as \\ cs) ++ (bs \\ cs))
+                                                                           =: ((a .: as) \\ cs) ++ (bs \\ cs)
+                                                                           =: qed
+                                                     ]
 
 -- | @as \\ (bs ++ cs) == (as \\ bs) \\ cs@
 --

@@ -344,6 +344,7 @@ lookupSwapPfx = do
                        ?? "cons"
                        ?? pfx .== h .: t
                        =: SL.lookup k (h .: (t ++ b1 .: b2 .: env))
+                       ?? lkC `at` (Inst @"k" k, Inst @"b" h, Inst @"rest" (t ++ b1 .: b2 .: env))
                        =: ite (k .== hk) hv (SL.lookup k (t ++ b1 .: b2 .: env))
                        ?? ih `at` (Inst @"pfx" t, Inst @"k" k, Inst @"b1" b1, Inst @"b2" b2, Inst @"env" env)
                        =: ite (k .== hk) hv (SL.lookup k (t ++ b2 .: b1 .: env))

@@ -94,11 +94,10 @@
 [RECV] sat
 [SEND] (get-value (s0))
 [RECV] ((s0 (AMaybe (Just (mkSBVTuple3 2.0
-                                  (fp #b0 #x00 #b00000000000000000000001)
-                                  (mkSBVTuple2 (Right (fp #b0 #x00 #b00000000000000000100000))
-                                               (seq.unit false)))))))
+                                  (_ +zero 8 24)
+                                  (mkSBVTuple2 (Right (_ +zero 8 24)) (seq.unit true)))))))
 
-getValue: AMaybe (Just (2.0,1.0e-45,(Right 4.5e-44,[False])))
+getValue: AMaybe (Just (2.0,0.0,(Right 0.0,[True])))
 DONE
 *** Solver   : Z3
 *** Exit code: ExitSuccess

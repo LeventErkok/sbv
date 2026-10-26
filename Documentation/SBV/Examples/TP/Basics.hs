@@ -112,20 +112,18 @@ existsDisjunction p q = runTP $ do
 -- | We cannot push a universal through a disjunction. We have:
 --
 -- >>> forallDisjunctionNot @Integer (uninterpret "p") (uninterpret "q") `catch` (\(_ :: SomeException) -> pure ())
--- Lemma: forallConjunctionNot
--- *** Failed to prove forallConjunctionNot.
+-- Lemma: forallDisjunctionNot
+-- *** Failed to prove forallDisjunctionNot.
 -- Falsifiable. Counter-example:
 --   p :: Integer -> Bool
---   p 4 = True
---   p 3 = False
---   p _ = True
+--   p 3 = True
+--   p _ = False
 -- <BLANKLINE>
 --   q :: Integer -> Bool
---   q 4 = False
---   q 3 = True
+--   q 3 = False
 --   q _ = True
 --
--- Note how @p@ and @q@ differ in their treatment of the inputs 3 and 4, but agree everywhere else. So, for each
+-- Note how @p@ and @q@ differ in their treatment of the input 3, but agree everywhere else. So, for each
 -- input, at least one of @p@ or @q@ is @True@, making the disjunction @True@ for all inputs. But the predicates
 -- @p@ and @q@ are not universally true themselves, constituting a counter-example.
 forallDisjunctionNot :: forall a. SymVal a => (SBV a -> SBool) -> (SBV a -> SBool) -> IO ()
@@ -133,7 +131,7 @@ forallDisjunctionNot p q = runTP $ do
     let qb = quantifiedBool
 
     -- This won't prove!
-    _won'tGoThrough <- lemma "forallConjunctionNot"
+    _won'tGoThrough <- lemma "forallDisjunctionNot"
                              (      (qb (\(Forall x) -> p x) .|| qb (\(Forall x) -> q x))
                               .<=> -------------------------------------------------------
                                               qb (\(Forall x) -> p x .|| q x)
@@ -368,7 +366,7 @@ axiomsAreDangerous = runTP $ do
 -- Lemma: badRevLen
 -- *** Failed to prove badRevLen.
 -- Falsifiable. Counter-example:
---   xs = [20,20,20] :: [Integer]
+--   xs = [4,11,14] :: [Integer]
 badRevLen :: IO ()
 badRevLen = runTP $
    void $ lemma "badRevLen"
@@ -376,7 +374,7 @@ badRevLen = runTP $
                 []
 
 -- | It is instructive to see what kind of counter-example we get if a lemma fails to prove.
--- Below, we do a variant of the 'lengthTail, but with a bad implementation over integers,
+-- Below, we do a variant of the 'Documentation.SBV.Examples.TP.Lists.lengthTail', but with a bad implementation over integers,
 -- and see the counter-example. Our implementation returns an incorrect answer if the given list is longer
 -- than 5 elements and have 42 in it:
 --
@@ -384,7 +382,7 @@ badRevLen = runTP $
 -- Lemma: badLengthProof
 -- *** Failed to prove badLengthProof.
 -- Falsifiable. Counter-example:
---   xs   = [13,16,19,24,34,42] :: [Integer]
+--   xs   = [11,13,16,18,21,42] :: [Integer]
 --   imp  =                  42 :: Integer
 --   spec =                   6 :: Integer
 badLengthProof :: IO ()

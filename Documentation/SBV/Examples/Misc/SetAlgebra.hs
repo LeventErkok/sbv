@@ -348,7 +348,7 @@ Subset relation does /not/ distribute over union on the left:
 
 >>> prove $ \(a :: SI) b c -> a `isSubsetOf` (b `union` c) .=> a `isSubsetOf` b .&& a `isSubsetOf` c
 Falsifiable. Counter-example:
-  s0 =     {2} :: {Integer}
+  s0 =       U :: {Integer}
   s1 =       U :: {Integer}
   s2 = U - {2} :: {Integer}
 

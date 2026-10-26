@@ -1,6 +1,13 @@
 * Hackage: <http://hackage.haskell.org/package/sbv>
 * GitHub:  <http://github.com/LeventErkok/sbv>
 
+### Version 14.9, Not yet released
+
+  * Fix compilation with GHC 9.14.2, whose deepseq deprecates `NFData` instances
+    for function types. Thanks to the Stackage curators for the report.
+
+  * SBV is now tested with z3 5.3.2.
+
 ### Version 14.8, 2026-09-25
 
   * The main change in this release is a new C backend, with much broader

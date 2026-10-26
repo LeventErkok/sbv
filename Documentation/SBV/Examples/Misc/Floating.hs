@@ -157,29 +157,29 @@ multInverse = prove $ do a <- sFloat "a"
 --
 -- >>> roundingAdd
 -- Satisfiable. Model:
---   rm = RoundTowardPositive :: RoundingMode
---   x  =       -2.341805e-38 :: Float
---   y  =        -1.83671e-40 :: Float
+--   rm = RoundTowardZero :: RoundingMode
+--   x  =    1.5312457e17 :: Float
+--   y  =    -9.009385e15 :: Float
 --
 -- (Note that depending on your version of Z3, you might get a different result.)
 -- Unfortunately Haskell floats do not allow computation with arbitrary rounding modes, but SBV's
 -- 'SFloatingPoint' type does. We have:
 --
--- >>> sat $ \x -> x .== (fpAdd sRoundTowardPositive (-2.341805e-38) (-1.83671e-40) :: SFloat)
+-- >>> sat $ \x -> x .== (fpAdd sRoundTowardZero 1.5312457e17 (-9.009385e15) :: SFloat)
 -- Satisfiable. Model:
---   s0 = -2.360172e-38 :: Float
--- >>> (-2.360172e-38) + (-1.83671e-40 :: Float)
--- -2.378539e-38
+--   s0 = 1.4411518e17 :: Float
+-- >>> 1.5312457e17 + (-9.009385e15 :: Float)
+-- 1.4411519e17
 --
--- We can see why these two results are indeed different: The 'RoundTowardPositive
--- (which rounds towards positive infinity) produces a larger result. If we do the computation
+-- We can see why these two results are indeed different: The 'RoundTowardZero'
+-- (which rounds towards zero) produces a smaller result. If we do the computation
 -- using double precision, we get:
 --
--- >>> (-2.360172e-38) + (-1.83671e-40 :: Double)
--- -2.3785390999999997e-38
+-- >>> 1.5312457e17 + (-9.009385e15 :: Double)
+-- 1.44115185e17
 --
--- we see that the "more precise" result is larger than what the 'Float' value is, justifying the
--- larger value with 'RoundTowardPositive. A more detailed study is beyond our current scope, so we'll
+-- we see that the "more precise" result is smaller than what the 'Float' value is, justifying the
+-- smaller value with 'RoundTowardZero'. A more detailed study is beyond our current scope, so we'll
 -- merely note that floating point representation and semantics is indeed a thorny subject.
 roundingAdd :: IO SatResult
 roundingAdd = sat $ do m :: SRoundingMode <- free "rm"

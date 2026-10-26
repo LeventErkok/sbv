@@ -31,4 +31,4 @@ report any issues you might see with newer releases.
       * Version 2.7.0
   * Z3:
       * http://github.com/Z3Prover/z3
-      * Version 5.1.0
+      * Version 5.3.2

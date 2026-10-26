@@ -42,10 +42,10 @@
 [RECV] sat
 [SEND] (get-value (s0))
 [RECV] ((s0 ((as A2 (A Int (A (_ FloatingPoint 8 24) Bool))) (A3 (Aab "!0!"
-                    (Aab (_ +zero 8 24) false))))))
+                    (Aa (fp #b0 #x00 #b00001000000000000000000)))))))
 
 Got:
-A2 {a2 = A3 {a3 = Aab {aba = "!0!", abb = Aab {aba = 0.0, abb = False}}}}
+A2 {a2 = A3 {a3 = Aab {aba = "!0!", abb = Aa {aa = 3.67342e-40}}}}
 DONE
 *** Solver   : Z3
 *** Exit code: ExitSuccess

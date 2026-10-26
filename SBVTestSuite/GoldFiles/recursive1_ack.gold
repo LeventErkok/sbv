@@ -468,32 +468,32 @@
 [SEND] (check-sat)
 [RECV] sat
 [SEND] (get-value (s15))
-[RECV] ((s15 2))
+[RECV] ((s15 0))
 [SEND] (get-value (s17))
 [RECV] ((s17 1))
 [SEND] (get-value (s19))
-[RECV] ((s19 1))
+[RECV] ((s19 0))
 [SEND] (get-value (s21))
-[RECV] ((s21 2))
+[RECV] ((s21 0))
 [SEND] (get-value (s0))
 [RECV] ((s0 1))
 [SEND] (get-value (s1))
-[RECV] ((s1 2))
+[RECV] ((s1 (- 1)))
 [SEND] (get-value (s8))
 [RECV] ((s8 0))
 [SEND] (get-value (s10))
-[RECV] ((s10 2))
+[RECV] ((s10 (- 1)))
 [SEND] (get-value (s11))
 [RECV] ((s11 0))
 *** Solver   : Z3
 *** Exit code: ExitSuccess
 [MEASURE] ack @(SBV Integer -> SBV Integer -> SBV Integer): smax 0 arg2 failed strict decrease: Falsifiable. Counter-example:
-  arg0    = 1 :: Integer
-  arg1    = 2 :: Integer
-  before  = 2 :: Integer
-  then[1] = 1 :: Integer
-  then[2] = 1 :: Integer
-  then[3] = 2 :: Integer
+  arg0    =  1 :: Integer
+  arg1    = -1 :: Integer
+  before  =  0 :: Integer
+  then[1] =  1 :: Integer
+  then[2] =  0 :: Integer
+  then[3] =  0 :: Integer
 [MEASURE] ack @(SBV Integer -> SBV Integer -> SBV Integer): trying next candidate..
 [MEASURE] ack @(SBV Integer -> SBV Integer -> SBV Integer): trying abs arg1 + smax 0 arg1 + abs arg2 + smax 0 arg2
 [MEASURE] replayDAG {ack @(SBV Integer -> SBV Integer -> SBV Integer)}: replaying 10 node(s)

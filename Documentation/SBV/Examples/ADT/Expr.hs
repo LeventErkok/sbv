@@ -110,9 +110,9 @@ evalPlus5 = prove $ do e :: SExpr <- free "e"
 --
 -- >>> evalSat
 -- Satisfiable. Model:
---   e = Let "a" (Val 1313) (Add (Val (-1312)) (Var "a")) :: Expr
---   a =                                                9 :: Integer
---   b =                                               10 :: Integer
+--   e = Let "a" (Val 5) (Mul (Val (-1)) (Add (Val 0) (Let "a" (Val 6) (Val (-1))))) :: Expr
+--   a =                                                                           9 :: Integer
+--   b =                                                                          10 :: Integer
 evalSat :: IO SatResult
 evalSat = sat $ do e :: SExpr    <- free "e"
                    constrain $ isValid e
@@ -129,7 +129,7 @@ evalSat = sat $ do e :: SExpr    <- free "e"
 --
 -- >>> genE
 -- Satisfiable. Model:
---   e1 = Let "t" (Val 5) (Val 3) :: Expr
+--   e1 = Let "p" (Val 4) (Val 3) :: Expr
 --   e2 =                Val (-2) :: Expr
 genE :: IO SatResult
 genE = sat $ do e1 :: SExpr <- free "e1"
@@ -146,7 +146,7 @@ genE = sat $ do e1 :: SExpr <- free "e1"
 -- | Query mode example.
 --
 -- >>> queryE
--- e1: (let t = 5 in 3)
+-- e1: (let p = 4 in 3)
 -- e2: -2
 queryE :: IO ()
 queryE = runSMT $ do
