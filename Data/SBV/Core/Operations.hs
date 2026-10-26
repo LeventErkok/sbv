@@ -678,30 +678,38 @@ cCompare k op x y =
                  | all (== Just True) cmps = Just True
                  | True                    = Nothing
 
-               keysMatch = allSame [same (valueAt asc1 def1 key) (valueAt asc2 def2 key) | key <- nub (sort (map fst (asc1 ++ asc2)))]
+               keys      = nub (sort (map fst (asc1 ++ asc2)))
+               keysMatch = allSame [same (valueAt asc1 def1 key) (valueAt asc2 def2 key) | key <- keys]
                defsMatch = same def1 def2
 
-               -- Check if keys cover everything. Clearly, we can't do this for all kinds; but only finite ones
-               -- For the time being, we're restricting ourselves to bool only. Might want to extend this later.
-               complete  = case k1 of
-                             KBool -> let bools       = map cvVal [falseCV, trueCV]
-                                          covered asc = all (`elem` map fst asc) bools
-                                      in covered asc1 && covered asc2
-                             _     -> False
+               -- Number of elements of the index type, if it's finite and we can count it
+               size :: Maybe Integer
+               size = case k1 of
+                        KBool                       -> Just 2
+                        KBounded _ n                -> Just (2 ^ n)
+                        KADT _ [] cstrs
+                          | not (null cstrs)
+                          , all (null . snd) cstrs -> Just (genericLength cstrs)
+                        _                           -> Nothing
 
-               -- If the index type is infinite, there are indexes not mentioned in either table, mapping to the defaults
-               infinite  = case k1 of
-                             KUnbounded -> True
-                             KRational  -> True
-                             KString    -> True
-                             KList{}    -> True
-                             _          -> False
+               infinite = case k1 of
+                            KUnbounded -> True
+                            KRational  -> True
+                            KString    -> True
+                            KList{}    -> True
+                            _          -> False
+
+               -- The keys are distinct elements of the index type, so we can count them to see if they cover it.
+               -- If they do, the defaults are never used. If they don't, some index maps to the defaults.
+               nKeys     = genericLength keys
+               complete  = size == Just nKeys
+               uncovered = infinite || maybe False (nKeys <) size
 
            in case (keysMatch, defsMatch, complete) of
                 (Just False, _         , _   ) -> Just False -- keys mismatch. Nothing else matters.
                 (Just True,  Just True , _   ) -> Just True  -- keys match, def matches; so all is good. Complete doesn't matter.
                 (Just True,  _         , True) -> Just True  -- keys match, and keys are complete, so defaults don't matter
-                (_,          Just False, _   ) | infinite
+                (_,          Just False, _   ) | uncovered
                                                -> Just False -- defaults differ, and some index maps to the defaults
                 _                              -> Nothing    -- otherwise, we don't really know. So, remain symbolic.
 
@@ -1651,13 +1659,26 @@ svMkOverflow2 o x y = SVal KBool (Right (cache r))
                     newExpr st KBool $ SBVApp (OverflowOp o) [sx, sy]
 
 -- | Concretely determine if an overflow occurs, by computing the result over unbounded
--- integers and checking that it's within the bounds of the given bit-vector kind.
+-- integers and checking that it's within the bounds of an n-bit word. Following SMTLib, the
+-- signedness is determined by the operation, not by the kind of the arguments: The arguments
+-- are reinterpreted as signed or unsigned values of the same bits as needed.
 cvOverflow :: OvOp -> Kind -> [CV] -> Maybe Bool
 cvOverflow o k args = case (k, map cvVal args) of
-                        (KBounded _ n, [CInteger a])             | n > 0 -> Just $ unary n a
-                        (KBounded _ n, [CInteger a, CInteger b]) | n > 0 -> Just $ binary n a b
+                        (KBounded _ n, [CInteger a])             | n > 0 -> unary  n (as n a)
+                        (KBounded _ n, [CInteger a, CInteger b]) | n > 0 -> binary n (as n a) (as n b)
                         _                                                -> Nothing
-  where signed = hasSign k
+  where signed = case o of
+                   PlusOv s -> s
+                   SubOv  s -> s
+                   MulOv  s -> s
+                   DivOv    -> True
+                   NegOv    -> True
+
+        -- Interpret the bits of the value as signed/unsigned, as required by the operation
+        as n v
+          | signed, v >= 2 ^ (n-1) = v - 2 ^ n
+          | not signed, v < 0      = v + 2 ^ n
+          | True                   = v
 
         minB, maxB :: Int -> Integer
         minB n = if signed then -(2 ^ (n-1))   else 0
@@ -1666,15 +1687,15 @@ cvOverflow o k args = case (k, map cvVal args) of
         outside n v = v < minB n || v > maxB n
 
         unary n a = case o of
-                      NegOv -> signed && a == minB n
-                      _     -> False
+                      NegOv -> Just $ a == minB n
+                      _     -> Nothing
 
         binary n a b = case o of
-                         PlusOv _ -> outside n (a + b)
-                         SubOv  _ -> outside n (a - b)
-                         MulOv  _ -> outside n (a * b)
-                         DivOv    -> signed && a == minB n && b == -1
-                         NegOv    -> False
+                         PlusOv _ -> Just $ outside n (a + b)
+                         SubOv  _ -> Just $ outside n (a - b)
+                         MulOv  _ -> Just $ outside n (a * b)
+                         DivOv    -> Just $ a == minB n && b == -1
+                         NegOv    -> Nothing
 
 --------------------------------------------------------------------------------
 -- Utility functions

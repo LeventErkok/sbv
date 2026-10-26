@@ -31,6 +31,8 @@ import qualified Data.SBV.Set   as S
 
 import Data.SBV.Tools.Overflow
 
+import qualified Data.SBV.Internals as I
+
 import Test.Tasty.HUnit (assertBool)
 
 import Utils.SBVTestFramework
@@ -40,6 +42,9 @@ mkSymbolic [''T]
 
 data U
 mkSymbolic [''U]
+
+data E = A | B | C deriving (Show, Eq, Ord)
+mkSymbolic [''E]
 
 -- Nested recursive call, used to make sure termination checks don't trip validation
 ack :: SInteger -> SInteger -> SInteger
@@ -77,8 +82,8 @@ tests = testGroup "Basics.ModelValidate" $ [
               ]
            ++ [testCase ("validate_fp_concrete_"  ++ n) a | (n, a) <- fpConcrete]
            ++ [testCase ("validate_ovf_concrete_" ++ n) a | (n, a) <- ovfConcrete]
-           ++ [testCase ("validate_set_concrete_" ++ n) (assertBool n b) | (n, b) <- setConcrete]
-           ++ [testCase ("validate_arr_concrete_" ++ n) (assertBool n b) | (n, b) <- arrConcrete]
+           ++ [testCase ("validate_set_concrete_" ++ n) a | (n, a) <- setConcrete]
+           ++ [testCase ("validate_arr_concrete_" ++ n) a | (n, a) <- arrConcrete]
     where t f test goldFile = do r <- f defaultSMTCfg{verbose=True, redirectVerbose = Just goldFile, validateModel = True} test
                                  appendFile goldFile ("\nFINAL OUTPUT:\n" ++ show r ++ "\n")
 
@@ -107,6 +112,19 @@ tests = testGroup "Basics.ModelValidate" $ [
           t5 = do x <- free "x"
                   pure $ quantifiedBool $ \(Forall y) -> fpIsPoint y .=> x .<= (y::SFloat)
 
+          -- Overflow checks with the given operation, regardless of the signedness of the arguments. The public
+          -- API always picks the signedness matching the arguments, so we build these directly.
+          ovf1 :: I.OvOp -> SBV a -> SBool
+          ovf1 o x = ovf o [I.unSBV x]
+
+          ovf2 :: I.OvOp -> SBV a -> SBV a -> SBool
+          ovf2 o x y = ovf o [I.unSBV x, I.unSBV y]
+
+          ovf :: I.OvOp -> [I.SVal] -> SBool
+          ovf o args = I.SBV $ I.SVal I.KBool $ Right $ I.cache r
+            where r st = do svs <- mapM (I.svToSV st) args
+                            I.newExpr st I.KBool (I.SBVApp (I.OverflowOp o) svs)
+
           -- Problems whose models should validate
           okSat :: [(String, Predicate)]
           okSat = [ ("usort_neq",       do u <- free "u"; v <- free "v"; pure $ (u :: SU) ./= v)
@@ -130,6 +148,13 @@ tests = testGroup "Basics.ModelValidate" $ [
                   , ("ovf_mul_signed",  do x <- sInt8  "x"; y <- sInt8  "y"; pure $ bvMulO x y .&& x .> 3)
                   , ("ovf_div_signed",  do x <- sInt8  "x"; y <- sInt8  "y"; pure $ bvDivO x y)
                   , ("ovf_neg_signed",  do x <- sInt8  "x"; pure $ bvNegO x)
+                  -- Overflow checks whose signedness differs from their arguments. The models are only valid if we
+                  -- interpret the arguments as SMTLib does: Signed or unsigned as determined by the operation.
+                  , ("ovf_signed_add_on_unsigned", do x <- sWord8 "x"; y <- sWord8 "y"; pure $ ovf2 (I.PlusOv True) x y .&& sNot (ovf2 (I.PlusOv False) x y))
+                  , ("ovf_unsigned_add_on_signed", do x <- sInt8  "x"; y <- sInt8  "y"; pure $ ovf2 (I.PlusOv False) x y .&& sNot (ovf2 (I.PlusOv True) x y))
+                  , ("ovf_signed_mul_on_unsigned", do x <- sWord8 "x"; y <- sWord8 "y"; pure $ ovf2 (I.MulOv True) x y .&& sNot (ovf2 (I.MulOv False) x y))
+                  , ("ovf_div_on_unsigned",        do x <- sWord8 "x"; y <- sWord8 "y"; pure $ ovf2 I.DivOv x y)
+                  , ("ovf_neg_on_unsigned",        do x <- sWord8 "x"; pure $ ovf1 I.NegOv x)
                   , ("set_member_union",do s <- free "s"; pure $ 3 `S.member` ((s :: SSet Integer) `S.union` S.singleton 5))
                   -- Bit-wise and/or must not be short-cut like their boolean counterparts
                   , ("ui_bitwise_or",   let x = uninterpret "bw1" :: SWord8 in pure $ x .== 2 .&& (x .|. 4) .== 6)
@@ -209,7 +234,7 @@ tests = testGroup "Basics.ModelValidate" $ [
           validatesAll :: (SInteger -> SBool) -> Assertion
           validatesAll p = do AllSatResult{allSatResults = rs} <- allSatWith vcfg{allSatMaxModelCount = Just 3} p
                               assertBool "Expected some models" (not (null rs))
-                              mapM_ (\r -> checkSat "" (SatResult r)) rs
+                              mapM_ (checkSat "" . SatResult) rs
 
           cantValidate :: String -> Predicate -> Assertion
           cantValidate msg p = do r <- satWith vcfg p
@@ -226,10 +251,10 @@ tests = testGroup "Basics.ModelValidate" $ [
                               ]
 
           fpVals :: Fractional a => [(a, a, a)]
-          fpVals = [ (1, 3, 7), (0.1, 0.2, 0.3), (-1.5, 1e-40, 2.5e-39), (3.4e38, 3.4e38, -1), (1e300, 1e300, 1e-320), (-0, 0, -0), (1/3, 2/3, -1/3) ]
+          fpVals = [ (1, 3, 7), (0.1, 0.2, 0.3), (-1.5, 1e-40, 2.5e-39), (3.4e38, 3.4e38, -1), (1e300, 1e300, 1e-320), (-0, 0, -0), (1/3, 2/3, -(1/3)) ]
 
           fpChk :: forall a. (IEEEFloating a, SymVal a, Show a) => RoundingMode -> [(a, a, a)] -> Assertion
-          fpChk rm vals = mapM_ check [ (op, a, b, c) | op <- [0 .. 5 :: Int], (a, b, c) <- vals ]
+          fpChk rm vals = mapM_ check [ (op, a, b, c) | op <- [0 .. 6 :: Int], (a, b, c) <- vals ]
             where srm = literal rm
 
                   f :: Int -> SBV a -> SBV a -> SBV a -> SBV a
@@ -238,7 +263,8 @@ tests = testGroup "Basics.ModelValidate" $ [
                   f 2 x y _ = fpMul srm x y
                   f 3 x y _ = fpDiv srm x y
                   f 4 x y z = fpFMA srm x y z
-                  f _ x _ _ = fpSqrt srm x
+                  f 5 x _ _ = fpSqrt srm x
+                  f _ x _ _ = fpRoundToIntegral srm x
 
                   check (op, a, b, c) = case unliteral (f op (literal a) (literal b) (literal c)) of
                                           Nothing -> assertFailure $ "Not concretely computed: " ++ show (op, a, b, c)
@@ -273,48 +299,87 @@ tests = testGroup "Basics.ModelValidate" $ [
                                                        ThmResult Unsatisfiable{} -> pure ()
                                                        _ -> assertFailure $ "Concrete result mismatch for " ++ show (op, a, b, r) ++ ":\n" ++ show res
 
-          -- Concrete evaluation of set operations on mixed regular/complement sets
-          setConcrete :: [(String, Bool)]
-          setConcrete = [ ("union_rc",        S.union        reg  cmp  `is` ComplementSet (Set.fromList [3]))
-                        , ("union_cr",        S.union        cmp  reg  `is` ComplementSet (Set.fromList [3]))
-                        , ("intersection_rc", S.intersection reg  cmp  `is` RegularSet    (Set.fromList [1]))
-                        , ("intersection_cr", S.intersection cmp  reg  `is` RegularSet    (Set.fromList [1]))
-                        , ("difference_rc",   S.difference   reg  cmp  `is` RegularSet    (Set.fromList [2]))
-                        , ("difference_cr",   S.difference   cmp  reg  `is` ComplementSet (Set.fromList [1, 2, 3]))
-                        , ("difference_cc",   S.difference   cmp  cmp2 `is` RegularSet    (Set.fromList [4]))
-                        , ("insert_c",        S.insert 7 cmp           `is` ComplementSet (Set.fromList [2, 3]))
-                        , ("delete_c",        S.delete 2 cmp           `is` ComplementSet (Set.fromList [2, 3]))
-                        , ("subset_rc",       unliteral (reg `S.isSubsetOf` cmp)  == Just False)
-                        , ("subset_rc_true",  unliteral (S.fromList [1] `S.isSubsetOf` cmp) == Just True)
+          -- Concrete evaluation of set operations on mixed regular/complement sets. We check that
+          -- the operation folds to the expected value, and that the solver agrees with it.
+          setConcrete :: [(String, Assertion)]
+          setConcrete = [ ("union_rc",        setChk S.union        reg  cmp  (ComplementSet (Set.fromList [3])))
+                        , ("union_cr",        setChk S.union        cmp  reg  (ComplementSet (Set.fromList [3])))
+                        , ("intersection_rc", setChk S.intersection reg  cmp  (RegularSet    (Set.fromList [1])))
+                        , ("intersection_cr", setChk S.intersection cmp  reg  (RegularSet    (Set.fromList [1])))
+                        , ("difference_rc",   setChk S.difference   reg  cmp  (RegularSet    (Set.fromList [2])))
+                        , ("difference_cr",   setChk S.difference   cmp  reg  (ComplementSet (Set.fromList [1, 2, 3])))
+                        , ("difference_cc",   setChk S.difference   cmp  cmp2 (RegularSet    (Set.fromList [4])))
+                        , ("insert_c",        setChk (const (S.insert 7)) reg cmp (ComplementSet (Set.fromList [2, 3])))
+                        , ("delete_c",        setChk (const (S.delete 2)) reg cmp (ComplementSet (Set.fromList [2, 3])))
+                        , ("subset_rc",       subsetChk reg                      False)
+                        , ("subset_rc_true",  subsetChk (RegularSet (Set.fromList [1])) True)
                         ]
-            where reg, cmp, cmp2 :: SSet Integer
-                  reg  = S.fromList [1, 2]                  -- {1, 2}
-                  cmp  = literal $ ComplementSet (Set.fromList [2, 3])  -- everything but {2, 3}
-                  cmp2 = literal $ ComplementSet (Set.fromList [2, 3, 4]) -- everything but {2, 3, 4}
+            where reg, cmp, cmp2 :: RCSet Integer
+                  reg  = RegularSet    (Set.fromList [1, 2])     -- {1, 2}
+                  cmp  = ComplementSet (Set.fromList [2, 3])     -- everything but {2, 3}
+                  cmp2 = ComplementSet (Set.fromList [2, 3, 4])  -- everything but {2, 3, 4}
 
                   is s v = case (unliteral s, v) of
                              (Just (RegularSet    a), RegularSet    b) -> a == b
                              (Just (ComplementSet a), ComplementSet b) -> a == b
                              _                                         -> False
 
-          -- Concrete equality of arrays must compare values, not representations
-          arrConcrete :: [(String, Bool)]
-          arrConcrete = [ ("noop_write_eq",  unliteral (arr .== writeArray arr 7 (readArray arr 7)) == Just True)
-                        , ("noop_write_eq2", unliteral (writeArray arr 7 10 .== arr)                  == Just True)
-                        , ("write_neq",      unliteral (writeArray arr 7 11 .== arr)                  == Just False)
-                        , ("write_neq2",     unliteral (writeArray arr 2 10 .== arr)                  == Just False)
+                  setChk :: (SSet Integer -> SSet Integer -> SSet Integer) -> RCSet Integer -> RCSet Integer -> RCSet Integer -> Assertion
+                  setChk f a b r = do assertBool "Unexpected folded value" (f (literal a) (literal b) `is` r)
+                                      onSymbolic a b $ \x y -> f x y .== literal r
+
+                  subsetChk :: RCSet Integer -> Bool -> Assertion
+                  subsetChk a r = do assertBool "Unexpected folded value" (unliteral (literal a `S.isSubsetOf` literal cmp) == Just r)
+                                     onSymbolic a cmp $ \x y -> (x `S.isSubsetOf` y) .== literal r
+
+                  -- Have the solver prove the property, on symbolic sets equal to the given ones
+                  onSymbolic :: RCSet Integer -> RCSet Integer -> (SSet Integer -> SSet Integer -> SBool) -> Assertion
+                  onSymbolic a b p = solverProves $ do x <- free "x"; y <- free "y"
+                                                       constrain $ x .== literal a .&& y .== literal b
+                                                       pure $ p x y
+
+          -- Concrete equality of arrays must compare values, not representations. When we decide
+          -- concretely, we also check that the solver agrees.
+          arrConcrete :: [(String, Assertion)]
+          arrConcrete = [ ("noop_write_eq",  arrChk arr (writeArray arr 7 (readArray arr 7)) (Just True))
+                        , ("noop_write_eq2", arrChk (writeArray arr 7 10) arr                (Just True))
+                        , ("write_neq",      arrChk (writeArray arr 7 11) arr                (Just False))
+                        , ("write_neq2",     arrChk (writeArray arr 2 10) arr                (Just False))
                         -- Nested arrays are compared by value, not by representation
-                        , ("nested_noop_eq",  unliteral (writeArray outer 0 arr .== writeArray outer 0 (writeArray arr 7 10)) == Just True)
-                        , ("nested_neq",      unliteral (writeArray outer 0 arr .== writeArray outer 0 (writeArray arr 7 11)) == Just False)
-                        -- Different defaults: Over an infinite index type, some index maps to the defaults. Over a finite one, we can't tell
-                        , ("defaults_neq_infinite",  unliteral (constArray 0 .== (constArray 1 :: SArray Integer Integer)) == Just False)
-                        , ("defaults_neq_finite",    unliteral (constArray 0 .== (constArray 1 :: SArray Word8   Integer)) == Nothing)
+                        , ("nested_noop_eq", arrChk (writeArray outer 0 arr) (writeArray outer 0 (writeArray arr 7 10)) (Just True))
+                        , ("nested_neq",     arrChk (writeArray outer 0 arr) (writeArray outer 0 (writeArray arr 7 11)) (Just False))
+                        -- Different defaults: If some index is in neither table, it maps to the defaults, so the arrays differ
+                        , ("defaults_neq_infinite", arrChk (constArray 0) (constArray 1 :: SArray Integer Integer) (Just False))
+                        , ("defaults_neq_finite",   arrChk (constArray 0) (constArray 1 :: SArray Word8   Integer) (Just False))
+                        -- Over a finite index type, if the keys of the tables together cover it, defaults don't matter
+                        , ("bool_split_cover_eq",   arrChk (listArray [(False, 1)] 2) (listArray [(True, 2)] 1 :: SArray Bool Integer) (Just True))
+                        , ("bool_split_cover_neq",  arrChk (listArray [(False, 1)] 2) (listArray [(True, 3)] 1 :: SArray Bool Integer) (Just False))
+                        , ("bool_uncovered_neq",    arrChk (listArray [(False, 1)] 0) (listArray [(False, 1)] 5 :: SArray Bool Integer) (Just False))
+                        , ("enum_cover_eq",         arrChk (constArray 0) (listArray [(A, 0), (B, 0), (C, 0)] 1 :: SArray E Integer) (Just True))
+                        , ("enum_uncovered_neq",    arrChk (constArray 0) (listArray [(A, 0), (B, 0)]         1 :: SArray E Integer) (Just False))
+                        -- We can't count the elements of a tuple index type, so we can't tell
+                        , ("defaults_neq_unknown",  arrChk (constArray 0) (constArray 1 :: SArray (Bool, Bool) Integer) Nothing)
                         ]
             where arr :: SArray Integer Integer
                   arr = listArray [(2, 7)] 10
 
                   outer :: SArray Integer (ArrayModel Integer Integer)
                   outer = constArray (literal (ArrayModel [] 0))
+
+                  arrChk :: (SymVal a, SymVal b) => SArray a b -> SArray a b -> Maybe Bool -> Assertion
+                  arrChk a b r = do assertBool ("Unexpected folded value: " ++ show (unliteral (a .== b))) (unliteral (a .== b) == r)
+                                    case r of
+                                      Nothing -> pure ()
+                                      Just v  -> solverProves $ do x <- free "x"; y <- free "y"
+                                                                   constrain $ x .== a .&& y .== b
+                                                                   pure $ (x .== y) .== literal v
+
+          -- Make sure the solver proves the given predicate
+          solverProves :: Predicate -> Assertion
+          solverProves p = do r <- prove p
+                              case r of
+                                ThmResult Unsatisfiable{} -> pure ()
+                                _                         -> assertFailure $ "Solver disagrees with the concrete result:\n" ++ show r
 
           -- Regression test for a z3 bug that returned an invalid model here.
           -- See: https://github.com/Z3Prover/z3/issues/7664

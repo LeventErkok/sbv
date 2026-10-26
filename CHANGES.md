@@ -24,12 +24,17 @@
     floating-point types. Overflow checks in `Data.SBV.Tools.Overflow` and set
     operations mixing complemented and regular sets also evaluate concretely.
 
-  * Fixed `fpFromDouble`, which produced a value with one extra bit of precision.
+  * Fixed `fpFromDouble`, which tagged its result with one extra bit of
+    precision, so later arithmetic on it could round incorrectly.
 
   * Fixed concrete equality of arrays, which could report equal arrays as
     different when one of them had an explicit entry holding the default value,
     as in `a .== writeArray a k (readArray a k)`, including when such arrays are
-    nested inside other arrays.
+    nested inside other arrays. Concrete array equality is also decided in more
+    cases when the arrays have different defaults: arrays indexed by `Integer`,
+    `String`, list, or rational values are then unequal, and for bit-vector,
+    `Bool`, or enumeration indexes, the result is decided by checking whether
+    the explicit entries cover every index.
 
   * [BACKWARDS COMPATIBILITY] `SMTModel` has a new field, `modelUIBindings`.
     Code that constructs or pattern-matches `SMTModel` positionally needs to

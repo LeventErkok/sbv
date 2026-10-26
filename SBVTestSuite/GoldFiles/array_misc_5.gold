@@ -5,25 +5,19 @@
 [GOOD] (set-option :smtlib2_compliant true)
 [GOOD] (set-option :diagnostic-output-channel "stdout")
 [GOOD] (set-option :produce-models true)
-[GOOD] (set-option :pp.max_depth      4294967295)
-[GOOD] (set-option :pp.min_alias_size 4294967295)
-[GOOD] (set-option :model.inline_def  true      )
 [GOOD] (set-logic ALL) ; NB. User specified.
 [GOOD] ; --- tuples ---
 [GOOD] ; --- sums ---
 [GOOD] ; --- literal constants ---
-[GOOD] (define-fun s0 () (Array (_ BitVec 2) (_ BitVec 2)) (store (store (store (store ((as const (Array (_ BitVec 2) (_ BitVec 2))) #b00) #b11 #b11) #b10 #b10) #b01 #b01) #b00 #b00))
-[GOOD] (define-fun s1 () (Array (_ BitVec 2) (_ BitVec 2)) (store (store (store (store ((as const (Array (_ BitVec 2) (_ BitVec 2))) #b01) #b11 #b11) #b10 #b10) #b01 #b01) #b00 #b00))
 [GOOD] ; --- top level inputs ---
 [GOOD] ; --- constant tables ---
 [GOOD] ; --- non-constant tables ---
 [GOOD] ; --- uninterpreted constants ---
 [GOOD] ; --- user defined functions ---
 [GOOD] ; --- assignments ---
-[GOOD] (define-fun s2 () Bool (= s0 s1))
 [GOOD] ; --- delayedEqualities ---
 [GOOD] ; --- formula ---
-[GOOD] (assert (not s2))
+[GOOD] (assert false)
 [SEND] (check-sat)
 [RECV] unsat
 *** Solver   : Z3

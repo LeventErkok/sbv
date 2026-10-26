@@ -686,7 +686,7 @@ lookupFirst :: [CV] -> [([CV], a)] -> a -> Maybe a
 lookupFirst key tbl def = go tbl
   where go []              = Just def
         go ((k, v) : rest) = case zipWith same key k of
-                               eqs | any (== Just False) eqs -> go rest
+                               eqs | Just False `elem` eqs   -> go rest
                                    | all (== Just True)  eqs -> Just v
                                    | True                    -> Nothing
 
