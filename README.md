@@ -189,6 +189,7 @@ SBV ships with many worked examples. Here are some highlights:
 | [Infinitely many primes](http://hackage.haskell.org/package/sbv/docs/Documentation-SBV-Examples-TP-Primes.html) | Prove there are infinitely many primes |
 | [Tautology checker](http://hackage.haskell.org/package/sbv/docs/Documentation-SBV-Examples-TP-TautologyChecker.html) | A verified BDD-style tautology checker |
 | [Rubik's Cube](http://hackage.haskell.org/package/sbv/docs/Documentation-SBV-Examples-Puzzles-Rubik.html) | Find bounded shortest or two-phase face-turn solutions |
+| [Huffman coding](http://hackage.haskell.org/package/sbv/docs/Documentation-SBV-Examples-TP-Huffman.html) | Prove Huffman trees minimize weighted path length for positive frequencies |
 
 Browse the full collection in `Documentation.SBV.Examples` [on Hackage](http://hackage.haskell.org/package/sbv).
 

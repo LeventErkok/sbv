@@ -3,6 +3,8 @@
 
 ### Version 14.9, Not yet released
 
+  * Add `Documentation/SBV/Examples/TP/Huffman.hs`, proving optimality of Huffman coding.
+
   * Add `Documentation/SBV/Examples/Puzzles/Rubik.hs`, with examples of bounded shortest
     and two-phase solutions for Rubik's Cube.
 
