@@ -234,6 +234,7 @@ Library
                     , Documentation.SBV.Examples.Puzzles.NQueens
                     , Documentation.SBV.Examples.Puzzles.Orangutans
                     , Documentation.SBV.Examples.Puzzles.Rabbits
+                    , Documentation.SBV.Examples.Puzzles.Rubik
                     , Documentation.SBV.Examples.Puzzles.SendMoreMoney
                     , Documentation.SBV.Examples.Puzzles.SquareBirthday
                     , Documentation.SBV.Examples.Puzzles.Sudoku
@@ -492,6 +493,7 @@ Test-Suite SBVTest
                   , TestSuite.Puzzles.MagicSquare
                   , TestSuite.Puzzles.NQueens
                   , TestSuite.Puzzles.PowerSet
+                  , TestSuite.Puzzles.Rubik
                   , TestSuite.Puzzles.Sudoku
                   , TestSuite.Puzzles.Temperature
                   , TestSuite.Puzzles.U2Bridge

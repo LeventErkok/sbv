@@ -3,10 +3,10 @@
 
 ### Version 14.9, Not yet released
 
+  * Add `Documentation/SBV/Examples/Puzzles/Rubik.hs`, with examples of bounded shortest and two-phase solutions for Rubik's Cube.
+
   * Fix compilation with GHC 9.14.2, whose deepseq deprecates `NFData` instances
     for function types. Thanks to the Stackage curators for the report.
-
-  * SBV is now tested with z3 5.3.2.
 
   * Model validation (`validateModel`) now handles many more programs: models
     with uninterpreted constants and functions (also in `allSat`), comparisons

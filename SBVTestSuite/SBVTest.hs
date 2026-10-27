@@ -109,6 +109,7 @@ import qualified TestSuite.Puzzles.Euler185
 import qualified TestSuite.Puzzles.MagicSquare
 import qualified TestSuite.Puzzles.NQueens
 import qualified TestSuite.Puzzles.PowerSet
+import qualified TestSuite.Puzzles.Rubik
 import qualified TestSuite.Puzzles.Sudoku
 import qualified TestSuite.Puzzles.Temperature
 import qualified TestSuite.Puzzles.U2Bridge
@@ -245,6 +246,7 @@ main = do sCaseTests <- TestSuite.CompileTests.SCase.tests
                       , TestSuite.Puzzles.MagicSquare.tests
                       , TestSuite.Puzzles.NQueens.tests
                       , TestSuite.Puzzles.PowerSet.tests
+                      , TestSuite.Puzzles.Rubik.tests
                       , TestSuite.Puzzles.Sudoku.tests
                       , TestSuite.Puzzles.Temperature.tests
                       , TestSuite.Puzzles.U2Bridge.tests
