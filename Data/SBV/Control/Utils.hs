@@ -1419,7 +1419,7 @@ getAllSatResult = do queryDebug ["*** Checking Satisfiability, all solutions.."]
                      --
                      -- So, if these two things are present, we go the "slow" route, by repeatedly rejecting the
                      -- previous model and asking for a new one. If they don't exist (which is the common case anyhow)
-                     -- we use an idea due to z3 folks <http://theory.stanford.edu/%7Enikolaj/programmingz3.html#sec-blocking-evaluations>
+                     -- we use an idea due to z3 folks <https://z3prover.github.io/papers/programmingz3.html#sec-blocking-evaluations>
                      -- which splits the search space into disjoint models and can produce results much more quickly.
                      let isSimple = null allUiFuns && null usorts && not (hasQuants progInfo)
 

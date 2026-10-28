@@ -1258,7 +1258,7 @@
     The new algorithm has been measured to be at least an order of magnitude
     faster or more in common cases as it splits the search space into disjoint
     models, reducing the burden of accumulated lemmas over multiple calls. (See
-    http://theory.stanford.edu/%7Enikolaj/programmingz3.html#sec-blocking-evaluations
+    https://z3prover.github.io/papers/programmingz3.html#sec-blocking-evaluations
     for details.)
 
 ### Version 8.12, 2021-03-09

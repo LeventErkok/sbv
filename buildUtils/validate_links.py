@@ -24,16 +24,21 @@ def extract_links_from_file(filepath):
 
         # Pattern to match HTTP/HTTPS URLs
         url_patterns = [
-            r'https?://[^\s\)\]\>\'"]+',  # Plain URLs
             r'\[([^\]]*)\]\((https?://[^\)]+)\)',  # Markdown links
             r'<(https?://[^>]+)>',  # URLs in angle brackets
+            r'https?://[^\s\)\]\>\'"]+',  # Plain URLs
         ]
 
         links = []
         for line_num, line in enumerate(lines, 1):
+            matched_spans = []
             for pattern in url_patterns:
                 matches = re.finditer(pattern, line)
                 for match in matches:
+                    # Do not re-extract part of an already matched formatted link.
+                    if any(start < match.end() and match.start() < end for start, end in matched_spans):
+                        continue
+                    matched_spans.append(match.span())
                     if pattern.startswith(r'\['):
                         # For markdown links, extract the URL (group 2)
                         url = match.group(2)
