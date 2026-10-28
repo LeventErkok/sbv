@@ -1128,7 +1128,7 @@ filterConcat p = do
          (\(Forall xss) -> filter p (concat xss) .== concatMap (filter p) xss) $
          \ih (xs, xss) -> [] |- filter p (concat (xs .: xss))
                              =: filter p (xs ++ concat xss)
-                             ?? fa
+                             ?? fa `at` (Inst @"xs" xs, Inst @"ys" (concat xss))
                              =: filter p xs ++ filter p (concat xss)
                              ?? ih
                              =: concatMap (filter p) (xs .: xss)
