@@ -16,13 +16,13 @@ report any issues you might see with newer releases.
       * Version 1.8
   * CVC5:
       * https://github.com/cvc5/cvc5
-      * Version 1.4.0
+      * Version 1.4.2
   * dReal:
       * http://dreal.github.io/
       * Version 4.21.06.2
   * MathSAT:
       * http://mathsat.fbk.eu/
-      * Version 5.6.18
+      * Version 5.6.19
   * OpenSMT:
       * https://verify.inf.usi.ch/opensmt
       * Version 2.9.2
