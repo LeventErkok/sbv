@@ -300,8 +300,9 @@ interpEUF = runInterpM . interpEUFExpr
 --
 -- > f (f (a) - f (b)) /= f (c), b >= a, a >= b + c, c >= 0
 --
--- from <https://goto.ucsd.edu/~rjhala/classes/sp13/cse291/slides/lec-smt.markdown.pdf>
--- noting that @x >= y@ is the same as @not (x < y)@. We have:
+-- from Ranjit Jhala's lecture "SMT: Satisfiability Modulo Theories," given
+-- in UC San Diego's CSE 291 course in Spring 2013. Note that @x >= y@ is
+-- the same as @not (x < y)@. We have:
 --
 -- >>> sat $ interpEUF example
 -- Satisfiable. Model:

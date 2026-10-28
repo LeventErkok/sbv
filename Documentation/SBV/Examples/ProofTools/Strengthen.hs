@@ -10,7 +10,7 @@
 -- can be coded using SBV, using induction. We also demonstrate the use of
 -- invariant strengthening.
 --
--- This example comes from Bradley's [Understanding IC3](http://theory.stanford.edu/~arbrad/papers/Understanding_IC3.pdf) paper,
+-- This example comes from Bradley's [Understanding IC3](https://doi.org/10.1007/978-3-642-31612-8_1) paper,
 -- which considers the following two programs:
 --
 -- @
