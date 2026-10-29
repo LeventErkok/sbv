@@ -50,6 +50,8 @@ import qualified Data.SBV.List as L
 
 -- * Trees and weighted path length
 
+-- ** Tree representations
+
 -- | A full binary code tree. Leaves carry integer frequencies; internal
 -- nodes represent a choice of the next bit. Optimality uses positive weights.
 data Tree = Leaf Integer | Fork Tree Tree
@@ -74,6 +76,8 @@ mkSymbolic [''Tree, ''Context, ''SiblingPair]
 -- Just (Fork (Leaf 1) (Fork (Leaf 5) (Fork (Leaf 1) (Leaf 3))))
 exampleTree :: STree
 exampleTree = literal $ Fork (Leaf 1) (Fork (Leaf 5) (Fork (Leaf 1) (Leaf 3)))
+
+-- ** Weight, cost, and multiplicity
 
 -- | Sum of the leaf weights.
 --
@@ -108,6 +112,8 @@ count = smtFunction "count" $ \w t -> [sCase| t of
                                       |]
 
 -- * Tree contexts and contraction
+
+-- ** Context operations
 
 -- | Replace the hole with a tree.
 --
@@ -163,6 +169,8 @@ outsideCount = smtFunction "outsideCount" $ \w c -> [sCase| c of
                                                        GoLeft  k r -> outsideCount w k + count w r
                                                        GoRight l k -> count w l + outsideCount w k
                                                     |]
+
+-- ** Weight, multiplicity, and cost identities
 
 -- | Filling the hole adds exactly the inserted tree's weight.
 --
@@ -243,6 +251,8 @@ costPlug = do
 depthNonNegative :: TP (Proof (Forall "c" Context -> SBool))
 depthNonNegative = inductiveLemma "depthNonNegative" (\(Forall c) -> depth c .>= 0) []
 
+-- ** Contracting sibling leaves
+
 -- | Contracting sibling leaves of weights @a@ and @b@ to a single leaf of
 -- weight @a+b@ decreases the total cost by exactly @a+b@, at any depth.
 --
@@ -267,6 +277,8 @@ contraction = do
           =: qed
 
 -- * Finding deepest siblings
+
+-- ** Selecting a deepest pair
 
 -- | Maximum leaf depth. A tree consisting of one leaf has height zero.
 --
@@ -311,6 +323,8 @@ siblingDepth p = [sCase| p of
                     SiblingPair c _ _ -> depth c + 1
                  |]
 
+-- ** Height and reconstruction proofs
+
 -- | Every tree has a nonnegative height.
 --
 -- >>> runTP heightNonNegative
@@ -352,6 +366,8 @@ deepestPairCorrect = do
 
 -- * Locating and replacing leaves
 
+-- ** Leaf replacement
+
 -- | Replace the first occurrence of a leaf weight, searching left before
 -- right. If the weight is absent, the tree is unchanged.
 --
@@ -377,6 +393,8 @@ leafDepth = smtFunction "leafDepth" $ \w t -> [sCase| t of
                                                  Leaf _   -> 0
                                                  Fork l r -> 1 + ite (count w l .> 0) (leafDepth w l) (leafDepth w r)
                                               |]
+
+-- ** Replacement invariants
 
 -- | Leaf multiplicities are nonnegative.
 --
@@ -442,6 +460,8 @@ replaceCost = do
          =: cost t + (new-old) * leafDepth old t
          =: qed
 
+-- ** Locating a leaf as a context
+
 -- | Locate the first occurrence of a weight as a context. The result is
 -- meaningful when the weight occurs in the tree.
 --
@@ -500,6 +520,8 @@ replaceOutside = smtFunction "replaceOutside" $ \old new c ->
      GoRight l k | count old l .> 0        -> sGoRight (replace old new l) k
                  | True                    -> sGoRight l (replaceOutside old new k)
   |]
+
+-- ** Preserving the context
 
 -- | Replacing outside leaves does not change the hole's depth.
 --
@@ -592,6 +614,8 @@ replaceOutsideHeight = do
                   =: height (plug c (sLeaf 0))
                   =: qed
 
+-- ** Cost of outside replacement
+
 -- | Exact change to the outside cost when one nonzero weight is replaced.
 --
 -- >>> runTP replaceOutsideCost
@@ -635,6 +659,8 @@ replaceOutsideCost = do
       =: qed
 
 -- * Moving minimum weights into sibling positions
+
+-- ** Depth bounds and exchange costs
 
 -- | A smaller inserted tree cannot increase the height of its context.
 --
@@ -764,6 +790,8 @@ sinkCost = do
                                                              =: sTrue
                                                              =: qed
 
+-- ** Placing the two minimum weights
+
 -- | Place the smallest weight in the left sibling position, exchanging
 -- within the pair if possible and otherwise looking outside it.
 --
@@ -811,6 +839,8 @@ firstWeight p = [sCase| p of SiblingPair _ x _ -> x |]
 -- | The weight at the second selected sibling position.
 secondWeight :: SSiblingPair -> SInteger
 secondWeight p = [sCase| p of SiblingPair _ _ y -> y |]
+
+-- ** Correctness of the exchanges
 
 -- | Swapping an outside occurrence into a deepest sibling slot preserves
 -- multiplicities and the depth bound, while never increasing cost.
@@ -1144,6 +1174,8 @@ insert = smtFunction "insert" $ \e xs -> [sCase| xs of
                                                    | True    -> x .: insert e ys
                                          |]
 
+-- ** Queue invariants
+
 -- | Insertion adds one queue entry. This supplies the termination argument
 -- for Huffman's recursion, where two entries are replaced by one.
 --
@@ -1288,6 +1320,8 @@ huffman = smtFunctionWithMeasure "huffman" (L.length, [measureLemma insertLength
      a : b : ys -> expand a b (huffman (insert (a+b) ys))
   |]
 
+-- ** Frequency and cost of leaf expansion
+
 -- | Expanding a summed leaf removes one copy of the sum and adds the two
 -- original frequencies. Coincident frequencies are counted with multiplicity.
 --
@@ -1342,6 +1376,8 @@ expandCost = do
                            ?? lc `at` (Inst @"t" t, Inst @"w" (a+b), Inst @"new" (a+b))
                            =: cost t + a+b
                            =: qed
+
+-- ** Invariants of the recursive construction
 
 -- | Huffman's construction preserves every input frequency, for any
 -- nonempty queue. Sorting and positivity are needed only for optimality.
@@ -1488,6 +1524,8 @@ competitorCost = do
     (\(Forall xs) (Forall t) -> ordered xs .&& sameWeights xs t .=> cost t .>= 0)
     [proofOf op, proofOf nc]
 
+-- ** Relating queue minima to tree weights
+
 -- | The first two queue entries bound every weight in a competing tree.
 --
 -- >>> runTP queueBounds
@@ -1530,6 +1568,8 @@ queueMinima = do
     (\(Forall a) (Forall b) (Forall xs) (Forall t) ->
        ordered (a .: b .: xs) .&& sameWeights (a .: b .: xs) t .=> smallestTwo a b t)
     [proofOf qb, proofOf ac, proofOf cn]
+
+-- ** Contracting the competing tree
 
 -- | Apply the greedy exchange to a competing tree, then contract its two
 -- minimum-weight sibling leaves to their sum.
@@ -1648,6 +1688,8 @@ contractGreedyWeights = do
 
 -- * Optimality and correctness
 
+-- ** Optimality by induction on queue length
+
 -- | The constructed Huffman tree is no more costly than any full binary
 -- tree with the same positive frequencies. Strong induction is on queue
 -- length; each recursive comparison uses the exchanged, contracted competitor.
@@ -1712,6 +1754,8 @@ huffmanOptimal = do
                                                                               =: sTrue
                                                                               =: qed
                                                           |]
+
+-- ** The complete correctness theorem
 
 -- | Correctness of Huffman's construction: it preserves the supplied
 -- frequencies and minimizes weighted path length among all full binary trees

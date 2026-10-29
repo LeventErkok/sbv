@@ -1,6 +1,10 @@
 * Hackage: <http://hackage.haskell.org/package/sbv>
 * GitHub:  <http://github.com/LeventErkok/sbv>
 
+### Version 14.10, Not yet released
+
+  * New development version
+
 ### Version 14.9, 2026-10-28
 
   * Add `Documentation/SBV/Examples/TP/Huffman.hs`, proving optimality of Huffman coding.
