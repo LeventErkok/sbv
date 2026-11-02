@@ -1,101 +1,79 @@
-# Editorial notes for the first draft
+# Editorial and technical review notes
 
-## Central argument
+## Argument and contribution
 
-The manuscript argues that a Haskell verification library grows successfully
-only when three boundaries stay explicit:
+The revised manuscript argues that verification as a library requires
+composition at three levels: symbolic expressions, live solver interactions,
+and structured proofs. Its contributions are the architectural explanation of
+that composition, an analysis of the mechanisms that preserve it, and executable
+case studies connecting symbolic semantics to proof and generated execution.
 
-1. Haskell evaluation versus construction of symbolic computation.
-2. A typed value versus the symbolic run and solver session to which it belongs.
-3. The intended agreement between concrete evaluation, SMT translation, and C.
-
-The historical material and examples are selected to support this argument.
-The draft does not claim a new solver algorithm, measured usability benefits,
-industrial adoption, or a formally verified implementation.
-
-## Three placeholders reserved at the author's request
-
-The PDF marks each of these visibly using `\authorplaceholder`:
-
-1. **A consequential design choice** (representation section): alternatives,
-   the actual reason for the decision, and what later experience revealed.
-2. **A historical surprise** (incremental-solving section): a particular
-   user request, solver behavior, or failed approach that changed the design.
-3. **An application beyond the shipped examples** (evidence section): a
-   concrete use, its outcome, difficulties, and evidence we may describe.
-
-These should add the author's perspective, not repeat information already
-available in the implementation. We can replace or move the boxes once the
-episodes are chosen. No responses are needed until the author is ready.
+The report now explains capabilities directly. It does not use a release
+chronology, version-specific improvements, or an account of personal motivations.
+The three author-placeholder boxes have been removed. The negative overflow
+example, explicit dependency invariant, generalized induction argument, and
+constant-folding proof decomposition supply concrete technical content.
 
 ## Evidence map
 
-All source references below are relative to the repository root at the pinned
-commit. The manuscript keeps most implementation filenames out of its prose;
-this map makes the claims auditable during revision.
+Paths below are relative to the SBV repository root. The precise revision and
+tool environment used for the executable checks are in `results/validation.txt`.
 
-| Claim or episode | Evidence |
+| Manuscript claim | Implementation or executable evidence |
 |---|---|
-| Initial development in 2010; public release in 2011 | End of `CHANGES.md`, versions 0.0.0--0.9.7 |
-| Early C generation and stable-name redesign | `CHANGES.md`, versions 0.9.12 and 0.9.14 |
-| Interleaved execution replaces the earlier model | `CHANGES.md`, version 7.0; `Data/SBV/Control/Query.hs` |
-| Transformer support | `CHANGES.md`, version 8.0; `Data/SBV/Trans.hs`; `Core/Symbolic.hs` |
-| Expanded calculational/inductive interface | `CHANGES.md`, version 11.1 (then named KnuckleDragger) |
-| User ADTs | `CHANGES.md`, version 13.0; `Data/SBV/Client.hs`; `Data/SBV/SCase.hs` |
-| Typed wrapper and run-time kinds | `Data/SBV/Core/Data.hs`: `SBV`; `Core/Symbolic.hs`: `SVal`, `SV`, `State` |
-| Two sharing mechanisms | `Core/Symbolic.hs`: `uncacheGen`, `newExpr` |
-| Symbolic context checks | `Core/Symbolic.hs`: `checkConsistent`, `compatibleContext`, `runSymbolicInState` |
-| Incremental synchronization | `Data/SBV/Control/Utils.hs`: `syncUpSolver`, `inNewContext`; `SMT/SMTLib2.hs`: `cvtInc` |
-| Query-first function and rational registration | `CHANGES.md`, version 14.8; `SBVTestSuite/TestSuite/Basics/Recursive.hs` and query tests |
-| Nested ADT registration matrix | `SBVTestSuite/TestSuite/ADT/Registration.hs` |
-| Construction can diverge while unfolding recursion | `Documentation/SBV/Examples/CodeGeneration/Fibonacci.hs`: `fib0`, `fib1` |
-| Accumulator reversal proof | `Documentation/SBV/Examples/TP/RevAcc.hs`; adapted and rerun in `paper/examples/PaperExamples.hs` |
-| Constant folding and substitution | `Documentation/SBV/Examples/TP/ConstFold.hs`; expression/interpreter definitions in `TP/VM.hs` |
-| Proof-step treatment of solver outcomes | `Data/SBV/TP/Kernel.hs`: `smtProofStep`; discussion excludes the internal formatting dry run |
-| Termination dependencies | `Data/SBV/TP/Kernel.hs`: `lemmaWith`, `checkNewMeasures`; `Core/Model.hs`: function-definition checks |
-| C lowering with conditional setup | `Data/SBV/Compilers/C/Lowering.hs`; `C/Backend.hs` |
-| C runtime and numeric boundaries | `Data/SBV/Tools/CodeGen.hs`; `Data/SBV/Compilers/C.hs`; `CHANGES.md`, version 14.8 |
-| Executed C boundary regressions | `SBVTestSuite/TestSuite/CodeGeneration/ScalarSafety.hs` and `PseudoBoolean.hs` |
-| Concrete/solver paired tests | `SBVTestSuite/Utils/SBVTestFramework.hs`: `qc1`, `qc2` |
-| Compile-time diagnostics | `SBVTestSuite/TestSuite/CompileTests/{SCase,PCase}` |
+| Symbolic domains and reasoning entry points | `Data/SBV.hs`; `Data/SBV/List.hs` |
+| Typed wrapper, kinds, deferred values | `Data/SBV/Core/Data.hs`; `Data/SBV/Core/Symbolic.hs`: `SVal`, `SV`, `Cached`, `State` |
+| Two forms of sharing | `Data/SBV/Core/Symbolic.hs`: `uncacheGen`, `newExpr` |
+| Run-specific context checks | `Data/SBV/Core/Symbolic.hs`: `checkConsistent`, `compatibleContext` |
+| Incremental state and synchronization | `Data/SBV/Control/Utils.hs`: `inNewContext`, `syncUpSolver`; `Data/SBV/SMT/SMTLib2.hs` |
+| Named recursive functions | `Data/SBV/Core/Model.hs`; `Documentation/SBV/Examples/CodeGeneration/Fibonacci.hs` |
+| Datatype derivation and symbolic matching | `Data/SBV/Client.hs`; `Data/SBV/SCase.hs` |
+| Nested datatype and phase-of-first-use coverage | `SBVTestSuite/TestSuite/ADT/Registration.hs` |
+| Generalized reversal proof | `Documentation/SBV/Examples/TP/RevAcc.hs`; companion `examples/PaperExamples.hs` |
+| Local proof-step outcomes and dependency checks | `Data/SBV/TP/Kernel.hs`: `smtProofStep`, `checkNewMeasures` |
+| Constant folding, substitution, and environment lemmas | `Documentation/SBV/Examples/TP/ConstFold.hs` |
+| Expression semantics and size measure | `Documentation/SBV/Examples/TP/VM.hs` |
+| C declarations, setup, expressions, runtime requirements | `Data/SBV/Compilers/C/Lowering.hs`; `Data/SBV/Compilers/C/Backend.hs` |
+| Generated-C boundary regressions | `SBVTestSuite/TestSuite/CodeGeneration/ScalarSafety.hs`, `PseudoBoolean.hs` |
+| Concrete and solver comparisons | `SBVTestSuite/Utils/SBVTestFramework.hs`: `qc1`, `qc2` |
+| Pattern-matching diagnostics | `SBVTestSuite/TestSuite/CompileTests/SCase`; `PCase` |
 
-## What has actually been checked
+The dependency-closure invariant is an explanatory specification of the
+implementation obligation, not a claimed formal verification of the protocol.
+The displayed induction and calculation equations explain the checked examples;
+they do not claim a new induction calculus or independent proof kernel.
 
-The companion was compiled with `-Wall -Werror`. Seven small Haskell tasks,
-the existing constant-folding development using CVC5, and exhaustive checking
-of the generated C adder all passed. The complete log is in
-`results/validation.txt`; do not generalize these results to the full suite.
+## Validation and bibliographic review
 
-The bibliography uses primary publications, author-hosted papers, and project
-sources. Related-work prose deliberately avoids performance rankings. The
-core comparison set is QuickCheck, observable sharing, Smten, Rosette,
-Grisette, and Liquid Haskell's refinement reflection. SMT-LIB and Z3 are cited
-as infrastructure. Further reading may suggest adding Cryptol/SAW, Lava,
-hs-to-coq, or more direct comparisons for TP; no priority claim depends on
-excluding them.
+On November 2, 2026 the companion compiled with `-Wall -Werror` and passed eight
+small Haskell checks, the existing CVC5 constant-folding development, and exhaustive
+execution of the generated byte adder. Its incorrect overflow guard produced a
+counterexample checked using concrete integer arithmetic. The C build enabled
+`-O2`, warnings as errors, and undefined-behavior sanitization. The full SBV suite
+was not run. The validation script's obsolete `paper/` paths were replaced with
+paths resolved from its actual repository location.
 
-## Revision priorities after the first read
+Related-work descriptions were checked against the primary papers for observable
+sharing, Smten, Rosette, Grisette, and refinement reflection. These comparisons
+concern architecture and specification style, not performance rankings or claims
+of priority. The software citation points to the project; the execution log
+provides the reproducibility pin.
 
-1. Decide whether the three-boundary argument expresses what the author most
-   wants to say. Adjust the scope before polishing individual sentences.
-2. Fill the three experience placeholders. Concrete lessons from applications
-   will be more persuasive than adding more feature descriptions.
-3. Review the trust/termination account carefully. The draft neither claims
-   general coinduction nor treats finite symbolic sequences as lazy Haskell
-   lists. It also distinguishes proof orchestration from independent proof
-   certificate checking.
-4. Add appropriate credit and acknowledgments for contributors. In particular,
-   the release history credits Brian Schroeder for transformer support. A final
-   first-person account should not imply that all contributions were made by
-   one person. Confirm author list and affiliation rather than inferring them.
-5. Review whether the code-generation section should remain a full section.
-   It provides a concrete third interpretation and boundary tests, but should
-   not overwhelm the longitudinal argument simply because it is recent.
-6. Decide the actual venue/year and adjust length, anonymization, metadata,
-   references, and disclosure accordingly. The current document is a named
-   author-review draft using the 2026 format as a baseline.
+## Author review before submission
 
-The current C backend's release notes explicitly say it was largely developed
-with LLM assistance. That fact has not been turned into an unsubstantiated
-evaluation of AI-assisted development. If it becomes part of the paper's
-argument, it needs the author's account and evidence.
+- Confirm that the composition argument expresses the intended contribution.
+  An independently documented application could strengthen the experience
+  evidence, but the manuscript does not depend on an unfilled anecdote.
+- Review the trust account, including explicit axioms, bypassed termination
+  checks, finite-sequence semantics, and the distinction between symbolic
+  verification and C execution. The ordinary TP account concerns checked
+  execution, not its internal formatting dry run.
+- Confirm contributor credit, author information, acknowledgments, and any
+  required AI-assistance disclosure. No personal or historical claims should
+  be inferred from implementation alone.
+- Apply the chosen venue's format, page limit, anonymity rules, and publication
+  metadata. No particular conference year is presumed.
+
+A comparative evaluation would require new matched workloads and measurements.
+The present manuscript makes its case through mechanisms, proof structure, and
+reproducible semantic checks, and should be evaluated on that basis.

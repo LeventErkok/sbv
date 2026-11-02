@@ -31,6 +31,24 @@ satAddSpec x y = sFromIntegral (satAdd x y) .==
   where total = sFromIntegral x + sFromIntegral y :: SInteger
 -- END saturating
 
+-- A deliberately incorrect guard: the byte sum has already wrapped.
+wrongAdd :: SWord8 -> SWord8 -> SWord8
+wrongAdd x y = ite (x + y .> 255) 255 (x + y)
+
+wrongAddRefuted :: IO Bool
+wrongAddRefuted = do
+  result <- prove $ do
+    x <- sWord8 "x"
+    y <- sWord8 "y"
+    let total = sFromIntegral x + sFromIntegral y :: SInteger
+    pure $ sFromIntegral (wrongAdd x y) .== ite (total .> 255) 255 total
+  print result
+  pure $ case (getModelValue "x" result, getModelValue "y" result) of
+    (Just (x :: Word8), Just (y :: Word8)) ->
+      let total = toInteger x + toInteger y
+      in toInteger (x + y) /= min 255 total
+    _ -> False
+
 -- BEGIN roots
 roots :: IO [Integer]
 roots = runSMT $ do
@@ -118,6 +136,7 @@ main = do
         print r
         pure $ maybe False isNaN (getModelValue "x" r :: Maybe Float)
       check "saturating addition theorem" $ isTheorem satAddSpec
+      check "incorrect overflow guard has an independently checked counterexample" wrongAddRefuted
       check "incremental enumeration" $ (== [-3, 3]) . sort <$> roots
       check "datatype first introduced during query" $ (== Sat) <$> lateDatatype
       check "accumulator reversal induction" $ void (runTP revAccCorrect) >> pure True

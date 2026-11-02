@@ -1,5 +1,4 @@
-% Author-review draft. See EDITORIAL.md for the remaining submission work.
-% The 2026 Haskell Symposium format is a planning baseline, not a target date.
+% Technical manuscript; submission metadata is intentionally venue-neutral.
 \documentclass[acmsmall,screen,nonacm]{acmart}
 \usepackage{listings}
 \usepackage{booktabs}
@@ -13,54 +12,54 @@
   xleftmargin=0.4em,xrightmargin=0.4em,aboveskip=0.7em,belowskip=0.7em}
 \newcommand{\code}[1]{\texttt{#1}}
 \newcommand{\sbv}{\textsc{SBV}}
-\newcommand{\sourceversion}{14.8}
 \newcommand{\paperlisting}[1]{\par\noindent
   \begin{minipage}{\linewidth}
   \lstinputlisting{build/snippets/#1.hs}
   \end{minipage}\par}
-\newcommand{\authorplaceholder}[2]{\par\medskip\noindent
-  \fbox{\begin{minipage}{0.94\linewidth}\small
-  \textbf{Author material to add: #1.} #2
-  \end{minipage}}\par\medskip}
 
-\title{Verification as a Library: Lessons from Sixteen Years of SBV}
+\title[Verification as a Library]{Verification as a Library: Symbolic Programs and Compositional Proofs in SBV}
 \subtitle{Experience Report}
 \author{Levent Erkok}
 \authorsaddresses{}
 \renewcommand{\shortauthors}{Levent Erkok}
 
 \begin{document}
-
 \begin{abstract}
-SMT solvers make many verification problems accessible to programmers, but
-turning a program into a faithful solver query remains a substantial engineering
-task. SBV addresses this task as a Haskell library: programmers construct typed
-symbolic computations, state properties, and inspect counterexamples using
-ordinary Haskell abstractions. Developed since 2010, the library has grown from
-bit-vector verification to incremental solver interaction, symbolic algebraic
-datatypes, structured inductive proofs, and C generation. This report examines
-the architectural decisions and semantic boundaries exposed by that evolution.
-Three lessons recur: a symbolic embedding must make the boundary between host
-evaluation and logical computation explicit; incremental interaction makes
-declaration lifetime and dependency discovery part of the semantics of the API;
-and multiple interpretations of one symbolic representation require independent
-validation at their boundaries. We develop these lessons through executable
-examples, documented release changes, and the current regression infrastructure.
-The resulting account identifies both the reach of verification as a library
-and the obligations that remain with the programmer, the embedding, and the
-solver. It offers design guidance for Haskell libraries that connect a typed,
-functional interface to a stateful reasoning engine.
+A verification library must provide a language for models, control over solver
+interaction, and support for proofs that exceed push-button automation. SBV
+supplies these facilities in Haskell: typed symbolic values describe
+computations, query programs orchestrate solver sessions, and proof programs
+combine induction and equational reasoning with SMT discharge of local
+obligations. This report argues that effective library embedding requires
+composition at all three levels. We explain the mechanisms that enable it:
+deferred graph construction with two forms of sharing, incremental discovery
+of declarations and definitions, and proof decomposition with explicit
+hypotheses and termination obligations. Executable examples cover machine
+arithmetic, model enumeration, symbolic datatypes, accumulator reversal, and
+semantics preservation for constant folding. C generation supplies a second
+consumer of the symbolic representation and a concrete validation boundary.
+The account identifies what Haskell contributes to solver-aided programming,
+which semantic choices must remain visible, and how to test the contracts
+connecting expressions, sessions, proofs, and generated execution.
 \end{abstract}
 
-\keywords{Haskell, symbolic programming, SMT, embedded languages, verification, experience report}
+\keywords{Haskell, symbolic programming, SMT, embedded languages, induction, verification}
 \maketitle
 
 \section{Introduction}
 \label{sec:introduction}
 
-An appealing way to introduce verification to a Haskell programmer is to start
-with a function and ask whether a property holds for every input. The notation
-can be almost familiar:
+A verification library should let a programmer begin with a small question
+and retain the same modeling vocabulary as the question becomes harder.
+Checking an arithmetic identity, searching for a counterexample, adapting a
+query to a model, and proving a recursive transformation require different
+reasoning strategies. They need not require different representations of the
+program being studied. SBV~\citep{sbv} explores this design space in Haskell:
+computations over typed symbolic values can be used in automated queries,
+interactive solver programs, and structured proofs.
+
+A small example shows both the appeal and the semantic precision of this
+approach:
 \begin{lstlisting}
 prove $ \x -> abs (x :: SInteger) .>= 0
 -- Q.E.D.
@@ -68,631 +67,684 @@ prove $ \x -> abs (x :: SInteger) .>= 0
 prove $ \x -> abs (x :: SInt8) .>= 0
 -- Counterexample: x = -128
 \end{lstlisting}
-The first claim concerns unbounded mathematical integers. The second concerns
-eight-bit signed arithmetic, where \code{abs (-128)} is -128: the positive value
-128 is not representable. The change of type changes the theorem. Neither a
-pleasant interface nor a powerful solver removes the need to choose the right
-semantics.
+The first theorem concerns mathematical integers. The second concerns signed
+eight-bit arithmetic, where the positive value 128 is unrepresentable and
+\code{abs (-128)} is -128. The type changes the theorem, while the property
+retains its structure. This is more than convenient notation: symbolic types
+select the domain in which the solver must interpret a program.
 
-\sbv{}~\citep{sbv} provides symbolic counterparts of Haskell types and operations
-for expressing such problems. A program over symbolic values constructs a
-representation that can be translated into SMT-LIB~\citep{smtlib}, submitted to
-an external solver, and interpreted as a proof result or a model. The same
-infrastructure also supports constraint solving, optimization, interactive
-queries, and compilation of supported computations to C. Haskell supplies the
-host language, the type system, and much of the program-construction machinery.
+The central challenge is to preserve this convenience beyond isolated
+formulas. Haskell evaluates the program that builds a symbolic computation;
+it does not automatically turn arbitrary Haskell execution into logic.
+A solver session has state, declaration order, and model lifetimes that are
+absent from a pure arithmetic expression. A recursive theorem needs an
+induction argument that a solver may not discover. SBV addresses these
+problems through a layered interface: symbolic expressions describe what is
+to be reasoned about, query programs describe how to interact with the solver,
+and proof programs describe how a theorem reduces to smaller obligations.
 
-The library began in 2010. Its release history records a first stable public
-Hackage release in January 2011, early C generation and changes to sharing,
-an incremental execution model in 2017, transformer support in 2019, and major
-extensions to proofs and datatypes in 2025--2026~\citep{sbvchanges}. This history
-provides an opportunity to examine a question that is broader than any one
-feature: \emph{which boundaries must an embedded verification library preserve
-as its capabilities grow?}
+The thesis is that \emph{verification as a library depends on composition at
+all three levels}. Expressions supply a modeling vocabulary; programmable
+queries embed reasoning in algorithms; structured proofs let users supply
+mathematical arguments while automating their local steps. A shared symbolic
+representation connects these uses and supports compilation of an executable
+subset to C.
 
-The answer developed here concerns three boundaries. First, Haskell evaluates
-the program that constructs a symbolic problem; symbolic operations describe
-the problem itself. Second, a typed expression exists within a particular
-symbolic run and, during a query, a particular evolving solver session. Third,
-concrete evaluation, SMT interpretation, and generated code must agree wherever
-they claim to implement the same operation. Several apparently unrelated
-maintenance problems become understandable as failures to preserve one of
-these boundaries.
+The report makes three contributions:
+\begin{enumerate}
+\item An architectural explanation of how SBV combines a typed, largely pure
+expression interface with deferred construction of a shared graph. We separate
+host evaluation, logical meaning, and symbolic-run identity, showing why each
+requires its own mechanism (Sections~\ref{sec:example}--\ref{sec:architecture}).
+\item An account of compositional solver and proof interfaces: dependency
+synchronization allows new expressions inside live queries, while explicit
+induction and calculations turn recursive correctness claims into local SMT
+obligations (Sections~\ref{sec:queries}--\ref{sec:proofs}).
+\item Executable case studies and a validation method connecting specification,
+proof, and generated execution. These identify distinct obligations for the
+embedding, solver, proof layer, and C backend, and yield concrete design lessons
+for other embedded reasoning systems (Sections~\ref{sec:codegen}--\ref{sec:lessons}).
+\end{enumerate}
+The contribution is the design and analysis of this composition, supported by
+implementation mechanisms and reproducible examples. The underlying solver
+algorithms, observable sharing, and induction principles are established
+techniques. We concentrate on how a library makes them work together.
 
-This report contributes an architectural account of the typed embedding and
-its shared representation; an analysis of documented changes to sharing,
-incremental execution, and datatype registration; and executable case studies
-connecting automated checking, inductive proof, and C generation. The
-contribution is experience with composing and maintaining these mechanisms.
-We do not claim a new SMT decision procedure, a new general technique for
-observable sharing, or a verified implementation of the library.
-
-Our evidence is the \sourceversion{} source snapshot, its release history,
-selected regression tests, and the small reproducibility companion supplied
-with this draft. The scope is deliberately explicit: examples demonstrate
-particular capabilities, while historical changes expose particular engineering
-pressures. Neither is a measurement of adoption or a comparative performance
-study. Section~\ref{sec:evidence} states the limits of this evidence.
-
-\section{A Small Program with Several Interpretations}
+\section{A Modeling Language with Several Uses}
 \label{sec:example}
 
-Consider addition of unsigned bytes that saturates at 255 rather than wrapping.
-The implementation can test for overflow before adding. Its specification can
-use unbounded integers, making the intended mathematical result explicit:
+\subsection{Types choose the mathematical problem}
+
+SBV supplies symbolic booleans, bounded signed and unsigned words, mathematical
+integers and reals, IEEE floating-point values, strings, sequences, arrays,
+sets, and algebraic datatypes. These are modeling choices, not interchangeable
+representations of one universal numeric or collection type. Bit-vector
+addition wraps; integer addition does not. Floating-point equality is not
+reflexive on NaNs. An SMT array describes a total mapping with read and write
+operations; it does not inherit the allocation and bounds behavior of a
+Haskell array.
+
+There is a similar distinction between \code{[SInteger]} and
+\code{SList Integer}. The former is a Haskell list whose spine is manipulated
+by Haskell and whose elements may be symbolic. Its concrete length can guide
+construction of a fixed-size formula. The latter is a symbolic finite sequence:
+its length and contents can both be unknown, and operations on it are represented
+in logic. Choosing between them determines whether a traversal executes while
+building the problem or remains part of the problem to be solved.
+
+Table~\ref{tab:capabilities} summarizes the uses of this vocabulary. Solver
+configurations select a backend, including Z3~\citep{z3}, and SMT-LIB provides
+the principal interchange language~\citep{smtlib}. The available theories and
+reasoning strength depend on that backend.
+
+\begin{table}[t]
+\caption{Ways to use a common symbolic model. Each interface adds a distinct
+kind of control or result.}
+\label{tab:capabilities}
+\begin{tabularx}{\linewidth}{@{}l X X@{}}
+\toprule
+Interface & Programmer supplies & Result or capability\\
+\midrule
+\code{prove} & Property and assumptions & Proof result or counterexample\\
+\code{sat}, \code{allSat} & Constraints on unknowns & Models satisfying the constraints\\
+\code{optimize} & Constraints and objectives & Models optimized under a chosen policy\\
+\code{query} & A solver interaction algorithm & Adaptive checks and model inspection\\
+TP & Lemmas, induction, and calculations & Checked steps and dependencies\\
+C generation & An executable symbolic computation & Executable C code\\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\subsection{One implementation, an independent specification}
+
+Consider unsigned-byte addition that saturates at 255. The implementation can
+detect overflow before adding, while the specification can use unbounded
+integers:
 \paperlisting{saturating}
-The conditional \code{ite} and equality \code{.==} operate on symbolic values.
-The specification converts each byte to an unbounded integer before adding.
-The expression \code{255 - y} does not
-underflow because every \code{SWord8} value is in the range $0$ to $255$.
-\code{prove satAddSpec} asks whether the two expressions agree for every pair of
-byte inputs. A successful result covers the finite input domain through the
-solver's reasoning; it is not a sample of concrete executions.
+The guard is safe because \code{255 - y} is representable for every byte
+\code{y}. On the other branch, \code{x + y} is known not to overflow.
+In the specification, conversion occurs \emph{before} addition. Converting an
+already wrapped sum to an integer would preserve the wrong value and could
+make the specification repeat the implementation's error.
 
-For literal inputs, operations can evaluate during construction. For example,
-\code{satAdd 250 10} yields the literal byte 255. For symbolic inputs, the
-operations build a graph. For C generation, the same definition supplies the
-body of a generated function:
-\paperlisting{codegen}
-The generator declares the input interface and the returned value. It does not
-invoke a solver at C run time. Moreover, proving \code{satAddSpec} does not
-establish correctness of the C compiler. The companion therefore also compiles
-the generated code and compares all 65,536 input pairs with an independently
-written C oracle using wider unsigned arithmetic. The theorem and the exhaustive
-execution check establish different facts.
+Writing \code{prove satAddSpec} asks for the absence of a counterexample over
+all 65,536 input pairs. More generally, for assumptions $A$ and a property $P$,
+a universal proof query checks satisfiability of
+\[
+             A(\vec{x}) \land \neg P(\vec{x}).
+\]
+Unsatisfiability establishes the property under the assumptions; a satisfying
+model supplies inputs that refute it. An inconclusive response establishes
+neither. Satisfiability queries use the same modeling language to search for
+values instead of refuting a universal claim. Optimization adds objectives and
+a policy for combining them, such as lexicographic order or Pareto optimization.
+Thus the operations on symbolic values describe the problem independently of
+the reasoning task chosen for it.
 
-Even a minimal example has several contracts. The input types specify the
-arithmetic domain. The property specifies the desired behavior. The embedding
-must encode both correctly. The solver must answer the encoded question
-correctly. The code generator must implement the symbolic operations correctly
-under its documented C assumptions. Separating these contracts makes it possible
-to use one representation productively without attributing every guarantee to
-every consumer of that representation.
+The distinction between domains also produces a useful negative control.
+The tempting implementation
+\begin{lstlisting}
+wrongAdd :: SWord8 -> SWord8 -> SWord8
+wrongAdd x y = ite (x + y .> 255) 255 (x + y)
+\end{lstlisting}
+never takes its saturation branch: a byte sum cannot exceed 255. The companion
+asks for a counterexample to this implementation and checks the returned pair
+using ordinary integer arithmetic. A successful proof of the corrected program
+and a concrete refutation of this plausible error exercise both outcomes of the
+verification interface.
 
-The familiar arithmetic syntax is selective. Haskell's \code{Num} class allows
-overloading of addition and literals. Its \code{Eq} class returns \code{Bool},
-so a symbolic equality needs a distinct operation returning \code{SBool}.
-Similarly, ordinary Haskell \code{if} inspects a concrete boolean; it cannot
-choose between branches on a symbolic condition. The resulting interface mixes
-ordinary operators with symbolic combinators. This visible distinction helps
-locate the boundary between constructing a problem and asking a logical
-question about it.
+\subsection{What Haskell contributes}
 
-\section{The Representation Behind the Interface}
+For literal arguments, symbolic operations can evaluate immediately:
+\code{satAdd 250 10} yields the literal byte 255. For unknown arguments, the
+same definition constructs a graph. Haskell functions, higher-order
+combinators, modules, and type classes organize this construction. A function
+can generate a family of circuits or constraints without those construction
+abstractions appearing in the resulting logic.
+
+The embedding uses ordinary overloaded operators where their types permit it.
+\code{Num} supports symbolic addition and literals. Haskell's \code{Eq},
+however, returns \code{Bool}; symbolic equality must return \code{SBool}, hence
+\code{.==}. Ordinary \code{if} chooses a branch during Haskell evaluation;
+\code{ite} represents a choice whose condition may remain unknown. This
+explicit boundary lets a library retain ordinary Haskell execution while
+constructing logical computations. It also means that verifying a symbolic
+model is a claim about that model's semantics, rather than an automatic
+verification of arbitrary Haskell source.
+
+\section{A Pure Interface over a Shared Symbolic Graph}
 \label{sec:architecture}
 
-\subsection{Typed values, concrete values, and graph nodes}
+\subsection{Deferred construction connects expressions to state}
 
-The central public type is \code{SBV a}. For example, \code{SBool} is
-\code{SBV Bool}, \code{SInteger} is \code{SBV Integer}, and \code{SWord8} is
-\code{SBV Word8}. Internally, the representation has the following shape; this
-listing omits fields and constructors not needed for the discussion:
+The central type is \code{SBV a}; for example, \code{SWord8} abbreviates
+\code{SBV Word8}. Its internal representation has the following shape, omitting
+fields irrelevant to the discussion:
 \begin{lstlisting}
 newtype SBV a = SBV { unSBV :: SVal }
 data SVal = SVal Kind (Either CV (Cached SV))
 data SV = SV Kind NodeId
 data SBVExpr = SBVApp Op [SV]
-newtype SymbolicT m a =
-  SymbolicT { runSymbolicT :: ReaderT State m a }
+newtype Cached a = Cached (State -> IO a)
 \end{lstlisting}
-The parameter of \code{SBV} is phantom in this representation but carries the
-public type information. \code{Kind} records the symbolic sort at run time;
-\code{CV} represents a concrete value. A non-concrete value contains a deferred
-computation that produces a symbolic node within a state. \code{SymVal} connects
-Haskell types to symbolic kinds and concrete representations.
+The phantom parameter carries the public Haskell type. A run-time \code{Kind}
+records the logical sort, and \code{SymVal} connects Haskell types with symbolic
+kinds and literal representations. A value contains either a concrete payload
+or a deferred computation that produces a graph node in a particular symbolic
+state. This indirection explains how expressions such as \code{x + y} can have
+an ordinary pure-looking type even though allocating and reusing their graph
+nodes requires state.
 
-This separation avoids making every internal graph operation a heterogeneous
-Haskell term indexed by its full type. It also creates implementation
-obligations: the phantom interface, run-time kinds, concrete payloads, and
-operation signatures must agree. The public API rules out many ill-typed
-combinations, but it is not a type-level proof of the implementation. Internal
-checks remain necessary, especially for casts and dynamically represented
-operations.
+Operations fold concrete arguments when possible and otherwise construct
+applications. Simplifications must respect the operand kind: replacing
+\code{x .== x} with true is valid for integers but not for floating-point
+values that may be NaNs. When a deferred value is demanded in a symbolic run, its operands
+are materialized and its application is recorded. The state accumulates inputs,
+constants, assignments, constraints, sorts, and function definitions.
+\code{SymbolicT} exposes the state through a reader transformer; mutable tables
+implement the graph and caches. Clients can integrate construction with their
+own effects without making every arithmetic operation monadic.
+
+This organization trades a fully type-indexed internal syntax for a compact,
+uniform representation. Public types reject many invalid combinations;
+run-time checks must still ensure agreement between kinds, payloads, and
+operation signatures. The type discipline and the representation checks are
+complementary parts of the design.
 
 \begin{figure}[t]
 \centering
-\fbox{\begin{minipage}{0.91\linewidth}
+\fbox{\begin{minipage}{0.92\linewidth}
 \centering
-Haskell program over \code{SBV a}\\[3pt]
-$\downarrow$\quad concrete evaluation and symbolic construction\\[3pt]
-Shared graph, kinds, constraints, and function definitions\\[5pt]
+Haskell functions over \code{SBV a}\\[3pt]
+$\downarrow$\quad concrete evaluation and deferred construction\\[3pt]
+Shared graph + kinds + constraints + function definitions\\[6pt]
 \begin{tabular}{ccc}
 SMT-LIB translation & & C lowering\\
 $\downarrow$ & & $\downarrow$\\
-Solver session & & C source and runtime helpers\\
+Live solver session & & C source and runtime helpers\\
 $\updownarrow$ & & $\downarrow$\\
-Queries and models & & Executable program
-\end{tabular}\\[5pt]
-TP constructs proof obligations using the symbolic and query interfaces.
+Query programs and models & & Executable program
+\end{tabular}\\[6pt]
+TP builds and checks proof obligations through the symbolic and query layers.
 \end{minipage}}
-\caption{The shared representation and its consumers. The arrows describe
-implementation flow, not a proved correctness relation between backends.}
-\Description{Haskell constructs a shared symbolic graph. One branch translates
-the graph to SMT-LIB and connects a solver to queries and models. Another
-lowers it to C source and runtime helpers. TP uses the symbolic and query
-interfaces to construct proof obligations.}
+\caption{One representation supports several reasoning and execution workflows.
+The shared front end enables reuse; each consumer retains its own correctness
+obligations.}
+\Description{Haskell constructs a shared symbolic graph. SMT translation connects
+it to a live solver controlled by query programs. C lowering produces executable
+code. The TP proof layer uses symbolic construction and solver queries.}
 \label{fig:architecture}
 \end{figure}
 
-Concrete evaluation is embedded in the operation constructors. When arguments
-are known, an operation may produce a concrete result; otherwise it records an
-application of an operation to symbolic nodes. Algebraic simplifications can
-avoid graph construction as well. These simplifications must respect the
-operand kind. In particular, identities justified for integers cannot simply
-be reused for IEEE floating-point values, whose semantics includes NaNs, signed
-zero, and rounding.
+\subsection{Sharing construction and sharing expressions}
 
-\subsection{Two forms of sharing}
+Two kinds of sharing are needed. First, forcing the same deferred computation
+repeatedly should reuse its result within a run. SBV memoizes these computations
+using stable names. Second, separately constructed applications of the same
+operator to the same symbolic nodes should reuse a graph node. The expression
+table implements this second form of sharing, with normalization of selected
+argument orders and a check that the reused result has the requested kind.
 
-The implementation preserves sharing at two levels. Deferred symbolic
-computations are memoized within a symbolic state using stable names. Separately,
-\code{newExpr} consults a map of symbolic applications to reuse existing nodes.
-It normalizes certain argument orders and checks that a reused node has the
-requested kind. The latter check matters because an expression can participate
-in signedness-changing operations.
+The distinction matters for a generator that repeatedly combines a term with
+itself. If reification follows both occurrences afresh at every level, a
+linearly described family can expand into an exponentially large tree. Caching
+the deferred construction avoids revisiting shared host computations; interning
+applications also finds duplication introduced by different construction paths.
+The former concerns the work of building the graph, the latter the graph that
+is built. Neither equates arbitrary mathematically equivalent expressions.
 
-These mechanisms solve related but different problems. Reusing the result of a
-deferred computation avoids repeatedly constructing the same graph fragment.
-Reusing an existing application identifies equal constructed expressions even
-when their Haskell computations were separately allocated. Neither mechanism
-turns the graph into a canonical representation of mathematical equivalence:
-two equivalent formulas can still have different nodes.
+Observable sharing is an established technique for embedded
+languages~\citep{sharing}. Its role here is to reconcile ordinary expression
+syntax with an explicitly shared intermediate representation. A global cache
+of graph nodes would be inappropriate: a node identifier is meaningful in the
+run that allocated it. SBV therefore associates memoized construction with the
+symbolic state rather than treating a Haskell expression as a globally valid
+solver object.
 
-\authorplaceholder{a design decision}{Describe one consequential choice in
-the embedding: the alternatives considered, the reason for the choice, and
-what subsequent experience changed. Sharing is a candidate, but the author
-should choose the episode. Do not infer personal motivations from the code.}
+This also explains a limit of the public types. Two values of type
+\code{SInteger} need not belong to the same run. Nodes carry context information,
+and construction checks for common context mismatches. A concrete
+\code{Integer} extracted from a model can safely be made into a literal in
+another run; moving a run-specific symbolic node does not have the same meaning.
+A type that identifies a logical sort does not, by itself, identify the lifetime
+of the external resource interpreting that sort.
 
-The state contains mutable tables, counters, and accumulated assignments.
-\code{SymbolicT} presents this environment through a reader transformer, with
-mutation performed through references. \code{Symbolic} specializes the
-transformer to \code{IO}. The transformer interface allows clients to combine
-symbolic construction with their own effects; the ordinary interface keeps
-simple uses short. The 2019 release introduced this transformer support while
-retaining the usual entry points~\citep{sbvchanges}.
+\subsection{Recursion must occur at the intended level}
 
-\subsection{Values belong to runs}
+A recursive Haskell function under a symbolic \code{ite} can keep unfolding
+while constructing branches. The finiteness of an input type does not ensure
+that construction terminates: the stopping condition may remain symbolic.
+There are two useful ways to control this. A concrete bound can drive a finite
+host-language unfolding, appropriate for bounded models and fixed-size circuits.
+Alternatively, \code{smtFunction} records a named logical definition and
+represents recursive calls as calls, preserving recursion in the target logic.
 
-Haskell type equality does not establish that two symbolic nodes belong to the
-same symbolic execution. Nodes therefore carry context information, and graph
-construction checks for common context mismatches. Returning a symbolic value
-from one solver run and combining it with a value from another can violate this
-invariant even when both have type \code{SInteger}.
+These choices answer different questions. A bound restricts the generated
+model. A recursive definition describes behavior beyond a fixed unfolding,
+but requires well-founded definitions and may require induction to prove its
+properties. Moving recursion into logic is therefore both a representational
+choice and a change in the reasoning obligations. Section~\ref{sec:proofs}
+shows how SBV lets the programmer supply that missing proof structure.
 
-This is a limitation of what the current public types express. In contrast,
-extracting a concrete \code{Integer} from a model and using it to construct a
-literal in a new run has a clear interpretation. The distinction suggests a
-general rule for embedded libraries: sharing the host type of a value does not
-establish the lifetime of the external resource to which that value refers.
-The implementation's context checks detect common violations, rather than
-providing a static guarantee for every possible misuse.
+\section{Programming the Solver}
+\label{sec:queries}
 
-\section{Evolution Exposes the Boundaries}
-\label{sec:evolution}
+\subsection{Models become inputs to the next computation}
 
-Table~\ref{tab:history} selects changes relevant to the argument. The dates and
-descriptions are taken from the release history; the lessons below are an
-analysis of those changes and their current implementations.
-
-\begin{table}[t]
-\caption{Selected milestones recorded in the release history~\citep{sbvchanges}.}
-\label{tab:history}
-\begin{tabularx}{\linewidth}{@{}l l X@{}}
-\toprule
-Date & Release & Change relevant to this report\\
-\midrule
-2010 & 0.0.0--0.9.6 & Initial infrastructure and design exploration\\
-2011-03 & 0.9.12, 0.9.14 & C generation; sharing reworked using stable names\\
-2017-07 & 7.0 & Interleaved symbolic execution and solver interaction\\
-2019-01 & 8.0 & Symbolic computations integrated with transformer stacks\\
-2025-02 & 11.1 & Reworked calculational and inductive proof interfaces\\
-2025-10 & 13.0 & User-defined symbolic algebraic datatypes\\
-2026-09 & 14.8 & New C backend; query and datatype registration fixes\\
-\bottomrule
-\end{tabularx}
-\end{table}
-
-\subsection{Host evaluation is part of the embedding design}
-
-The March 2011 release history records replacing an earlier sharing mechanism
-with one based on stable names, inspired by \code{Data.Reify}. It also records
-problems involving constant applicative forms in the earlier approach. This is
-a concrete instance of the observable-sharing problem studied by
-\citet{sharing}: a functional description can share a computation, while a
-naive reification expands it into a much larger tree.
-
-For \sbv{}, the practical requirement is to recover reusable structure without
-making the ordinary arithmetic interface monadic at every operation. The
-current design defers node creation until a symbolic state is available and
-memoizes within that state. The historical record supports the need to revise
-this mechanism; it does not by itself quantify the performance improvement.
-
-Recursion reveals the same host/object distinction from a different direction.
-A Haskell function that recursively calls itself under \code{ite} may continue
-constructing symbolic branches indefinitely. A finite input type does not
-guarantee a finite construction: unless the stopping condition becomes concrete
-during host evaluation, the construction can keep unfolding. The Fibonacci
-code-generation example in the repository illustrates using an explicit
-construction bound to obtain a finite graph.
-
-Named symbolic functions provide another route. \code{smtFunction} represents
-a function definition and its calls at the SMT level, allowing recursive
-definitions to remain recursive rather than being fully unfolded by Haskell.
-That changes where the recursion is represented; it also introduces obligations
-about definitions and termination. The library can help discharge those
-obligations, but moving a recursive call into the solver is not itself a proof
-that the function is well founded.
-
-\subsection{Incremental solving changes the lifetime of declarations}
-\label{sec:incremental}
-
-The 2017 release documents a change from running a symbolic program before
-invoking the solver to interleaving execution with solver interaction. Its
-stated motivation was to let clients send and receive solver commands instead
-of being limited to predefined recipes. The earlier tactic interface was
-removed as part of that change~\citep{sbvchanges}.
-
-The query interface makes it possible to inspect a model and decide what to ask
-next. The following example enumerates the integer roots of a polynomial:
+A fixed invocation of \code{prove} or \code{sat} is insufficient when the next
+question depends on the previous answer. SBV's query interface gives Haskell
+control over a live solver session. Consider enumerating the integer roots of
+$x^2=9$:
 \paperlisting{roots}
-After a satisfiable result, the program obtains a concrete root and adds a
-constraint excluding it. The next check runs in the same session. Enumeration
-ends when the remaining constraints are unsatisfiable. An inconclusive solver
-response is handled separately; it is not treated as exhaustion. Root order is
-not part of the contract.
+Each satisfying model supplies a concrete root. The program constructs a new
+constraint excluding that root, and asks again in the same session. The solver
+can return the roots in either order. Unsatisfiability after both exclusions
+establishes that enumeration is complete; an unknown result is an incomplete
+computation and takes a separate branch.
 
-Such a small loop has consequences for the implementation. Literals,
-expressions, types, and functions can be encountered after the initial problem
-has been sent. The library must record newly created objects and synchronize
-them with the solver before a command refers to them. Its symbolic state
-therefore maintains an incremental component as well as the full accumulated
-program. Query operations use that component to emit new declarations,
-definitions, assignments, and constraints.
+The loop illustrates a general pattern: solve, inspect, refine. Enumeration,
+application-specific search, and counterexample-guided refinement can all use
+Haskell control flow around symbolic constraints. The host branch on
+\code{Sat} is concrete; the new constraint remains symbolic. Keeping those two
+forms of control distinct makes the solver usable as a component within a
+larger algorithm. Assertion-stack operations support temporary hypotheses,
+while named constraints and model queries support diagnosis and inspection.
 
-Release 14.8 fixes first use of \code{smtFunction} definitions during queries
-without prior explicit registration. It also fixes first use of rational kinds
-in query mode, including occurrences nested inside other types. These changes
-demonstrate that incremental support is not complete merely because
-\code{checkSat} and \code{getValue} are available. Every operation that can
-introduce a dependency must participate in synchronization.
+Enumeration also needs a stopping argument. Here the constraint has only two
+solutions. Over an unbounded domain, a loop that excludes
+one model at a time can run indefinitely even when each solver call terminates.
+The interface supplies the mechanism; the client algorithm supplies its
+progress and stopping conditions.
 
-The resulting lesson is about API compositionality. If an expression can be
-constructed during setup and during a query, its dependencies should normally
-follow it in either context. Requiring an unrelated setup-time use to make a
-later expression work exposes an implementation accident. Some solver options
-genuinely must be chosen before a session starts; those restrictions should be
-distinguished from missing dependency registration.
+\subsection{Incrementality is dependency management}
 
-\authorplaceholder{a historical surprise}{Add a specific user request, solver
-behavior, or failed design that changed the direction of SBV. Include an
-approximate date and, where available, a release or issue reference. Explain
-the resulting lesson rather than only recounting the event.}
+New constraints can introduce new constants, sorts, expressions, and recursive
+functions after the solver has started. An incremental API must therefore do
+more than send another assertion. It must ensure that every referenced object
+has a declaration or definition available in the live session.
 
-\subsection{Datatypes make dependencies structural}
+The implementation maintains both the accumulated symbolic state and an
+incremental component containing newly discovered objects. A query operation
+that materializes a value runs in a fresh incremental context, records the
+objects it introduces, and synchronizes them before subsequent use. The
+synchronization path processes pending definition checks and emits the new
+sorts, inputs, constants, definitions, assignments, and constraints in a form
+the solver can accept. It also distinguishes uninterpreted function declarations
+from functions whose definitions are now available.
 
-\sbv{} uses Template Haskell to make user-defined datatypes symbolic. A splice
-such as \code{mkSymbolic [''Box]} generates the symbolic infrastructure for a
-Haskell datatype. \code{sCase} provides symbolic pattern matching, including
-nested patterns and guards. The mechanism works with the embedding's symbolic
-representation; it does not change the meaning of arbitrary Haskell
-\code{case} expressions throughout a program.
+A useful specification of this behavior is the following dependency invariant.
+Let $D$ be the objects available in the current solver context and
+$\operatorname{deps}(e)$ the declarations and definitions needed by a new
+expression $e$. Before a command uses $e$, synchronization must establish
+\[
+                   \operatorname{deps}(e) \subseteq D.
+\]
+Dependencies include those required by other dependencies. The implementation
+realizes this through kind registration, function discovery, and incremental
+translation; the invariant summarizes the obligation rather than claiming a
+formal proof of the protocol.
 
-A datatype dependency need not occur immediately in a constructor field. It
-can appear inside a tuple, a list, a set, an array, or a type argument. Mutually
-recursive definitions add cycles. Consequently, registering only the visible
-root constructor is insufficient. The library must discover the structural
-dependencies needed to declare and use the symbolic kind.
+This is what makes the expression interface compose with the query interface.
+A helper function should carry the dependencies of the terms it constructs,
+whether it is called during initial setup or after a model has been inspected.
+Requiring an unrelated earlier use merely to register a type would couple
+clients to translation order. Genuine solver restrictions, such as options
+that must precede session initialization, remain explicit protocol constraints.
 
-The 14.8 release records fixes for precisely these cases. The associated
-registration tests vary both the position of a nested datatype and the phase
-in which a symbolic value is first created: setup, a named query variable, or
-an unnamed query variable. This forms a useful regression matrix. A test of
-one nested datatype in a conventional setup block cannot establish that first
-use inside a query will work.
+\subsection{Symbolic datatypes make dependencies structural}
 
-An abbreviated example in the companion creates two \code{Box Word8} values
-for the first time inside a query and requires them to differ. The result
-should be satisfiable. The full repository tests extend that idea to container
-nesting, synonyms, and recursive dependencies. The general lesson is to test a
-feature at the places where it enters the system, in addition to testing the
-feature's operations once it is already registered.
+Template Haskell's \code{mkSymbolic} derives symbolic support for user datatypes,
+and \code{sCase} supplies symbolic pattern matching. Constructors, recognizers,
+and selectors connect the host declaration to the corresponding logical
+structure. Ordinary Haskell pattern matching still runs in the host; symbolic
+matching builds the tests and branch values needed for an unknown constructor.
 
-\section{From Automated Checks to Structured Proofs}
+The companion exercises a deliberately awkward entry point:
+\paperlisting{datatype}
+Both \code{Box Word8} values are first introduced inside the query. Their
+inequality is satisfiable, but only if the datatype has been registered before
+its variables and operations reach the solver. For larger datatypes, a required
+sort can occur under a tuple, sequence, set, array, or type argument. Recursive
+definitions can introduce cycles. Dependency discovery must therefore follow
+type structure rather than inspecting only the immediately visible fields.
+
+This yields a practical testing method: vary both \emph{what} is introduced
+and \emph{where} it is first introduced. SBV's datatype-registration tests
+cross nested representations with setup-time and query-time variable creation.
+The relevant correctness property is not merely that an operation works once
+its dependencies happen to exist; it is that composing the operation into a
+valid client program brings those dependencies with it.
+
+\section{From Solver Automation to Compositional Proofs}
 \label{sec:proofs}
 
-Push-button checking is effective when the solver can discover the necessary
-argument. Recursive functions often need structure supplied by the user:
-an induction principle, a stronger invariant, a case split, or intermediate
-equalities. \sbv{}'s TP layer lets that structure be written as a Haskell
-program that generates and checks proof obligations.
+\subsection{The programmer supplies the induction structure}
 
-An accumulator-based list reversal illustrates the interaction. Its useful
-invariant quantifies over both the input list and the accumulator:
-\paperlisting{reverse}
-The function is specialized to symbolic lists of integers here to keep the
-listing small. \code{Forall} names quantified parameters at the type level.
-\code{induct} supplies the list induction structure, including a base case and
-an induction hypothesis. The user gives the calculation for the step case.
-The operators \code{|-}, \code{=:}, and \code{??} introduce assumptions,
-successive expressions, and proof hints respectively.
+SMT automation is effective for many local arithmetic and datatype facts.
+Recursive correctness claims often need a stronger invariant, induction,
+case analysis, or intermediate equalities. SBV's TP layer expresses this
+structure as a Haskell proof program, generating obligations for the same
+symbolic and query infrastructure.
 
-The crucial human contribution is the generalized statement involving
-\code{acc}. A claim only about reversing into an empty accumulator is too weak
-to apply directly to the recursive call. Once the stronger statement is
-chosen, the calculation exposes the useful intermediate expressions and gives
-the solver smaller obligations. The notation expresses a proof strategy;
-Haskell's type checker alone does not certify the displayed equalities.
-
-In ordinary checked execution, TP's proof-step machinery negates the requested
-proposition under the current assumptions and asks for satisfiability.
-Unsatisfiability discharges the step. A satisfiable or inconclusive result does
-not. The layer records proof dependencies and supports reuse of lemmas.
-Recursive definitions additionally require attention to their termination
-measures. The library offers measure-based checks and records uses of functions
-whose termination checks were explicitly bypassed.
-
-The constant-folding development is a larger example already shipped with the
-library. Its expression datatype includes variables, constants, arithmetic,
-and local bindings. The transformation recursively folds children and then
-simplifies their parent. Replacing a binding by a constant requires
-substitution that respects shadowing. Its main claim is:
+Accumulator-based reversal is a compact example. The desired top-level result
+is reversal into an empty accumulator, but the recursive call changes the
+accumulator. The useful theorem is therefore
 \[
-  \forall e,\rho.\quad
-  \operatorname{interpInEnv}(\rho,\operatorname{cfold}(e))
-  = \operatorname{interpInEnv}(\rho,e).
+ P(xs) \equiv \forall acc.\;
+ \operatorname{revAcc}(acc,xs) = \operatorname{reverse}(xs) \mathbin{++} acc.
 \]
-The proof uses a size measure and auxiliary lemmas about substitution,
-environments, and arithmetic. This example makes an important limitation
-visible: the convenience of an embedded prover does not eliminate the work of
-discovering the supporting theory. The paper companion invokes the existing
-development; it does not claim a new constant-folding algorithm or a new proof
-of that algorithm.
+The companion expresses the recursive function and its proof together:
+\paperlisting{reverse}
+Here \code{Forall} names quantified parameters, \code{induct} provides list
+induction, \code{|-} introduces the calculation under assumptions, \code{=:}
+connects successive expressions, and \code{??} supplies a proof hint. The named
+recursive function remains a logical definition; Haskell does not unfold it
+for all possible input lengths.
 
-These are claims about the represented semantics. \code{SList a} denotes a
-finite sequence of values of type \code{a}; it is not the domain of arbitrary
-lazy Haskell lists with partial and infinite values. A reversal theorem over
-symbolic lists therefore does not establish the corresponding statement for
-all Haskell list computations. Likewise, an interpreter represented with
-symbolic datatypes has the semantics of its symbolic definitions. Relating it
-to a separately implemented interpreter is a further verification task.
+The quantifier placement is the mathematical core of the proof. At the
+inductive step the hypothesis must be available for \emph{every} accumulator,
+so it can be instantiated with \code{x .: acc}. A statement specialized to the
+empty accumulator would not justify that recursive call. The base case reduces
+to $acc=[]\mathbin{++}acc$. For the step, the supplied calculation exposes
+exactly the transformations needed:
+\begin{align*}
+ \operatorname{revAcc}(acc,x:xs)
+ &= \operatorname{revAcc}(x:acc,xs)
+       &&\text{definition}\\
+ &= \operatorname{reverse}(xs)\mathbin{++}(x:acc)
+       &&\text{induction hypothesis}\\
+ &= (\operatorname{reverse}(xs)\mathbin{++}[x])\mathbin{++}acc
+       &&\text{sequence laws}\\
+ &= \operatorname{reverse}(x:xs)\mathbin{++}acc
+       &&\text{definition.}
+\end{align*}
+The user chooses the theorem and the intermediate expressions; the solver
+checks the local consequences. This division of labor is the reason a small
+proof language can be useful without implementing a general proof-search
+procedure for induction.
 
-\section{Code Generation Tests the Common Representation}
+\subsection{Calculations are programs that generate obligations}
+
+A calculation $e_0=e_1=\cdots=e_n$ under assumptions $A$ and applicable lemmas
+$L$ is checked through obligations of the form
+\[
+                A \land L \land \neg(e_i=e_{i+1}).
+\]
+In ordinary checked execution, the proof-step machinery accepts
+unsatisfiability and rejects satisfiable or inconclusive responses. Induction
+and case-split combinators additionally organize the conditions under which
+those steps suffice for the claimed result. Proof objects record propositions
+and dependencies; reusable lemmas let later proofs work at the level of a
+previously established interface rather than repeatedly exposing definitions.
+
+For strong induction on a measure $m$, the available hypothesis has the shape
+\[
+ \bigl(\forall y.\;m(y)<m(x)\Rightarrow P(y)\bigr)\Rightarrow P(x),
+\]
+with a well-founded measure domain and its accompanying obligations. Recursive
+function definitions also need justified termination. These are related but
+distinct requirements: an induction measure justifies use of a hypothesis,
+while a function's termination argument justifies its recursive definition.
+SBV supplies measure checks and records functions whose termination checking
+was explicitly bypassed. Supplying an axiom or bypassing a check changes the
+dependencies of the result and must be understood as such.
+
+\subsection{Case study: semantics-preserving constant folding}
+
+The library's constant-folding development shows how this approach scales in
+\emph{proof structure}. Its expression language has seven constructors:
+variables, constants, squaring, increment, addition, multiplication, and local
+bindings. An environment-based interpreter gives the language meaning.
+The transformation recursively folds children, then simplifies their parent;
+for example, constant arithmetic becomes a constant and multiplication by one
+disappears. Its theorem is
+\[
+ \forall e,\rho.\quad
+ \operatorname{interpInEnv}(\rho,\operatorname{cfold}(e))
+ =\operatorname{interpInEnv}(\rho,e).
+\]
+This quantifies over all finite represented expressions and environments, not
+just expressions up to an externally selected test depth.
+
+The interesting case is local binding. Simplifying
+$\operatorname{Let}(n,\operatorname{Con}(v),b)$ substitutes $v$ for $n$ in $b$.
+A substitution must respect shadowing: in a nested binding of the same name,
+it still processes the binding's right-hand side, but leaves the bound body
+alone. The central supporting equation is
+\[
+ \operatorname{interpInEnv}(\rho,\operatorname{subst}(n,v,b))
+ =\operatorname{interpInEnv}((n,v):\rho,b).
+\]
+Proving this requires facts about environment lookup and how bindings interact.
+These facts are reusable semantic lemmas, rather than additional clauses in
+one large solver query.
+
+The proof decomposes into three layers. Environment and substitution lemmas
+establish the meaning of replacing a variable. A simplification theorem shows
+that each local rewrite preserves interpretation. Finally, strong induction
+on an expression-size measure combines the recursive hypotheses with that
+simplification theorem. The main proof splits over all seven constructors;
+the binding case uses the induction hypothesis at an updated environment.
+As with the accumulator in reversal, generalizing over the environment is
+necessary because recursive reasoning changes it.
+
+This case study demonstrates the practical contribution of the proof layer:
+symbolic datatypes describe syntax, named functions describe semantics and
+transformations, and proof combinators organize the correctness argument in
+the same host language. It also locates the remaining intellectual work.
+SBV can check the substitution lemma, but the programmer must identify that
+lemma and choose a sufficiently general statement. Automation is most useful
+when the proof program presents the right interface between subproblems.
+
+The domain of these theorems remains explicit. \code{SList} describes finite
+logical sequences, not arbitrary lazy Haskell lists including bottoms and
+infinite values. The constant-folding theorem concerns its symbolic interpreter.
+Connecting that interpreter to a separately implemented language runtime would
+require an additional correspondence argument.
+
+\section{From Symbolic Computation to Executable C}
 \label{sec:codegen}
 
-C generation has been present since 2011, but the 14.8 backend substantially
-extends its scope. It supports, among other values, arbitrary-width
-bit-vectors, exact integers, rational-valued reals, floating-point values,
-structured values, and recursive function definitions. Exact unbounded
-integers and rational-valued reals use GMP; some floating-point operations
-require LibBF. The legacy backend remains separately available.
+A shared symbolic representation can serve execution as well as reasoning.
+The saturating adder is compiled by specifying its input and output interface:
+\paperlisting{codegen}
+The generated function runs without a solver. Reusing \code{satAdd} keeps the
+verified symbolic algorithm and the input to code generation aligned, while
+the backend remains responsible for implementing each operation faithfully.
+This is useful even without a verified compiler: it removes a manual rewrite
+of the algorithm and makes the remaining translation boundary explicit.
 
-Sharing the expression graph avoids repeating the front-end representation,
-but the target has different operational requirements. A solver reasons about
-mathematical terms. C needs a choice of evaluation order, storage, ownership,
-and failure behavior. The backend therefore lowers an expression to a result
-expression together with declarations, setup statements, and required runtime
-facilities. Setup statements must execute when their values are needed. Moving
-them across conditional branches indiscriminately can change behavior.
+\subsection{A logical term needs an operational implementation}
 
-Numeric operations expose another boundary. The release notes record fixes to
-pseudo-Boolean comparisons whose totals exceed the range of a naive native
-accumulator, and to flooring of native-mapped reals when converting to
-integers. Both operations can be easy to express symbolically while being
-subtle to implement in C. The regression suite uses independent mathematical
-expectations and executes generated code, including checks at different
-optimization levels and with sanitizers in selected tests.
+The difficult part is not printing an operator in C syntax. Logical values may
+need allocated storage, initialization, copying, and runtime support. A lowering
+result therefore contains four components: the expression producing the value,
+declarations for storage, setup statements that must precede evaluation, and
+the runtime capabilities it requires. The distinction between declarations and
+setup is essential for conditionals. Storage declarations can sometimes be
+hoisted; setup for a branch must execute where that value is demanded. Eagerly
+moving both branches' setup before a conditional can introduce operations that
+the selected branch never needed.
 
-The generator has explicit limits. Quantifiers and other solver-only
-constructs are rejected. Exact real support covers rational values rather
-than arbitrary algebraic reals. Direct array equality is supported only for
-enumerable finite key domains within a configured budget. Floating-point
-generation has documented rounding and compiler-option requirements. These
-boundaries are part of the meaning of using the backend, not implementation
-details that can be hidden behind a common API.
+Numeric representations impose further obligations. Bit-vector operations need
+specified widths and signedness instead of accidental dependence on C integer
+promotion or signed overflow. Exact integers and rational-valued reals can use
+GMP-backed representations; floating-point operations may need rounding support
+and LibBF. The mathematical-real domain of SMT is larger than exact rational
+values, so an executable real representation cannot be treated as an unrestricted
+implementation of every solver-level real term. Similarly, quantifiers are
+reasoning constructs rather than executable enumeration instructions.
 
-The saturating-adder case in Section~\ref{sec:example} is intentionally small
-enough to validate exhaustively. It shows one way to test the connection between
-the specification, symbolic implementation, and generated code. It supplies
-no blanket guarantee for the other operations or runtime representations.
+These examples show why the shared graph is a semantic interface, not a promise
+that every consumer implements its whole vocabulary. A backend must either
+provide the required interpretation under stated assumptions or reject the
+unsupported construct. Silent approximation would change the meaning of a
+previously verified property.
+
+\subsection{Validate the translation boundary independently}
+
+There are two separate correctness statements for the adder:
+\begin{align*}
+ &\forall x,y\in\{0,\ldots,255\}.\quad
+   \operatorname{satAdd}_{\mathrm{SMT}}(x,y)=\min(255,x+y),\\
+ &\forall x,y\in\{0,\ldots,255\}.\quad
+   \operatorname{satAdd}_{\mathrm{C}}(x,y)=\min(255,x+y).
+\end{align*}
+The proof query establishes the first, subject to the embedding and solver.
+The companion checks the second by compiling the generated function and
+executing all input pairs against an independent wider-arithmetic oracle.
+Neither statement alone establishes the other. Together they give a complete
+finite-domain comparison for this function in the recorded compilation
+environment, without turning that result into a claim about the entire backend.
+
+This suggests a general testing discipline for a representation with several
+consumers. Compare concrete evaluation and solver interpretation, then compare
+generated execution with an independent mathematical expectation. Selected C
+regressions additionally vary optimization settings and enable sanitizers.
+Independent oracles matter because a shared implementation error can make two
+consumers agree with each other while both disagree with the intended semantics.
 
 \section{Evidence and Reproducibility}
 \label{sec:evidence}
 
-The source snapshot used here is commit
-\code{f4f7a7a08445e63c2fb74c6f2084dfea5ad8b7d2}, identifying release 14.8.
-The companion's \code{README.md} records build commands and the local tool
-versions; \code{results/validation.txt} records the executed checks. The paper's
-main executable listings are extracted from the checked Haskell source rather
-than maintained as separate copies.
-
-\subsection{Small, explicit validation tasks}
-
-Table~\ref{tab:checks} defines the companion's tasks and the evidence each
-supplies. The original nine tasks completed successfully on 26 September 2026 using
-GHC 9.14.1, Z3 5.1.0, and CVC5 1.4.0 on an ARM64 macOS host. The generated C
-was compiled with Apple Clang 21.0.0, optimization enabled, strict warnings,
-and undefined-behavior sanitization. The introductory examples were subsequently
-changed to absolute value; all seven small Haskell checks passed again on
-27 September 2026. The checks cover distinct paths through
-the library. Their
-small scale is deliberate: they make the claims in the text reproducible
-without turning an experience report into a broad solver benchmark.
+The companion contains executable Haskell examples, an independent C oracle,
+and reproduction scripts. The five main listings are extracted from the checked
+source. All ten tasks in Table~\ref{tab:checks} completed successfully: eight
+small Haskell checks, the constant-folding proof, and exhaustive C execution.
+For the incorrect adder, the counterexample was 223 and 124: their integer sum
+is 347, their byte sum is 91, and the specified saturated result is 255.
+The execution record supplies the source revision and tool versions.
 
 \begin{table}[t]
-\caption{Companion validation tasks. These are semantic checks, not timing
-benchmarks; the execution record accompanies the draft.}
+\caption{Executable evidence for the report's claims. The checks exercise
+specific semantic and architectural obligations.}
 \label{tab:checks}
 \begin{tabularx}{\linewidth}{@{}l X@{}}
 \toprule
 Task & Required outcome\\
 \midrule
-Integer absolute value & Theorem holds over unbounded integers\\
-Signed-byte absolute value & Counterexample is the value $-128$\\
-Floating-point reflexivity & A NaN is returned as a counterexample\\
+Integer absolute value & Universal nonnegativity theorem succeeds\\
+Signed-byte absolute value & Counterexample is $-128$\\
+Floating-point equality & Reflexivity has a NaN counterexample\\
 Saturating addition & Implementation satisfies the integer specification\\
-Incremental roots & Exactly $-3$ and $3$, followed by unsatisfiability\\
-Late datatype declaration & Distinct query-created byte boxes are satisfiable\\
-Accumulator reversal & TP completes the generalized inductive proof\\
-Constant folding & The existing CVC5 proof development completes\\
-Generated C addition & All 65,536 input pairs agree with a wider-arithmetic oracle\\
+Incorrect overflow guard & Returned counterexample fails an integer oracle\\
+Incremental roots & Exactly $-3$ and $3$, then unsatisfiability\\
+Query-created datatype & Distinct byte boxes are satisfiable\\
+Accumulator reversal & Generalized inductive proof completes\\
+Constant folding & Existing semantics-preservation development completes\\
+Generated C addition & All 65,536 pairs agree with an independent oracle\\
 \bottomrule
 \end{tabularx}
 \end{table}
 
-The companion checks model values rather than assuming a particular printed
-model order. It treats timeouts as failures to complete a task, not as evidence
-that a proposition is false. It also checks the generated adder against an
-oracle whose arithmetic domain is wider than the inputs. These choices keep
-the evidence close to the semantic claim being made.
+The checks inspect model values rather than rely on root order or printed
+transcripts. Timeouts are incomplete checks, not logical answers. The
+constant-folding task runs the existing development with CVC5. C validation
+uses optimization, strict warnings, and undefined-behavior sanitization.
 
-\subsection{Regression infrastructure as experience evidence}
+The repository adds complementary regression techniques: QuickCheck properties
+compare concrete symbolic literals with solver interpretation; datatype tests
+vary nesting and phase of first use; compile-failure tests check diagnostics
+for symbolic pattern matching; and generated-code tests exercise runtime
+semantics. These target different obligations that no single arithmetic
+proof can establish. The complete regression suite is outside the companion run.
 
-The repository's testing infrastructure combines HUnit tests, QuickCheck
-properties, golden files, compile-time diagnostics, executable documentation,
-and generated-C integration tests. Each addresses a different failure mode.
-The shared \code{qc1} and \code{qc2} helpers, for example, can exercise an
-operation both on concrete symbolic literals and through a solver. This is a
-direct response to the need for concrete evaluation and SMT translation to
-agree.
-
-Golden files make changes to models, proof transcripts, and generated text
-reviewable. They are valuable records of behavior, but their evidential force
-depends on what was recorded and reviewed. A stable transcript is not an
-independent proof that the translation was correct. Similarly, compile-failure
-tests for \code{sCase} and \code{pCase} exercise the diagnostics and rejection
-behavior of the metaprogramming interface; they address concerns that a
-successful solver example cannot test.
-
-The datatype-registration matrix and executed C boundary tests are especially
-useful examples of tests derived from architectural obligations. They vary the
-phase, nesting, representation, or compilation mode that previously exposed a
-problem. That is more informative than demonstrating a newly added operation
-only in an already well-prepared context.
-
-\subsection{Limits of the account}
-
-\authorplaceholder{an application outside the example suite}{Describe a real
-use of SBV: the problem, why this approach was chosen, what worked, what did
-not, and evidence that can be cited or reproduced. Identify any limitations
-on naming the application. This material will extend the present account
-beyond examples and maintenance records.}
-
-The examples and regressions were selected to explain the three boundaries
-identified in Section~\ref{sec:introduction}. They are not a random sample of
-all uses of \sbv{}, and they do not estimate failure rates. The release notes
-provide contemporaneous records of changes, but not a controlled study of
-their causes or effects. We make no measured claim that the API reduces
-development effort, that every supported solver behaves identically, or that
-the current implementation is free of semantic bugs.
-
-The source contains many larger examples, but the existence of an example is
-not evidence that arbitrary problems in the same domain will be tractable.
-Quantifiers, nonlinear arithmetic, and recursive definitions can make solver
-behavior difficult to predict. Different solver releases can require different
-proof guidance. The successful small checks establish only their stated
-outcomes in the recorded environment.
+These selected examples support the architectural claims, not a comparative
+performance or usability evaluation. They do not measure adoption or development
+effort. In particular, the unbounded inductive statements do not establish
+scalability for arbitrary recursive theorems: quantifiers, nonlinear arithmetic,
+and recursive definitions remain sources of incomplete or expensive reasoning.
 
 \section{Related Work}
 \label{sec:related}
 
-\paragraph{Properties as Haskell programs.}
-QuickCheck~\citep{quickcheck} established an influential style in which
-programmers express properties in Haskell and use generated inputs to seek
-counterexamples. \sbv{} shares the appeal of a library-level interface but
-constructs logical formulas for supported symbolic operations. Testing and
-SMT reasoning offer different forms of evidence and can be used together, as
-they are within \sbv{}'s own regression suite. The syntax of a property alone
-does not determine its evidential strength.
+\paragraph{Properties and symbolic execution in a host language.}
+QuickCheck~\citep{quickcheck} makes executable properties part of ordinary
+Haskell development, searching for counterexamples by generated testing. SBV
+uses a related library style but represents supported operations as logical
+formulas. The distinction lies in the evidence obtained: a successful finite
+test campaign and an unsatisfiability result establish different claims.
+SBV's own tests combine these techniques.
 
-\paragraph{Reification and sharing.}
-\citet{sharing} develops type-safe observable sharing for embedded languages.
-\sbv{}'s release history explicitly connects its stable-name implementation
-to \code{Data.Reify}. Our account concerns how deferred construction,
-expression reuse, and per-run state coexist in this particular library. It
-does not present observable sharing as a new technique.
+Smten~\citep{smten} translates high-level symbolic computations into solver
+queries, addressing the difficulty of producing useful encodings from program
+structure. Rosette~\citep{rosette} supplies a symbolic virtual machine for
+solver-aided host languages, using concrete execution to eliminate host
+constructs outside its symbolic core. SBV likewise depends on host execution
+to construct a logical computation, but exposes symbolic types and control
+operators directly through a Haskell library. The visible host/symbolic boundary
+is a central interface choice in the present account.
 
-\paragraph{High-level symbolic computation.}
-Smten~\citep{smten} translates high-level symbolic computations into SMT
-queries, addressing the burden of manually constructing effective formulas.
-Rosette's symbolic virtual machine~\citep{rosette} supports solver-aided host
-languages and uses symbolic evaluation to make rich program descriptions
-available to solvers. These systems share the goal of raising the level at
-which a user describes a reasoning problem. The relevant distinction here is
-the boundary exposed by a Haskell library whose symbolic values and operations
-are explicit in the host program. This report does not attempt a feature or
-performance ranking of these systems.
+Grisette~\citep{grisette} is a particularly close comparison: symbolic
+compilation is also a typed Haskell library. Its purely functional representation
+and ordered-guards technique address symbolic state merging and constraint
+size. SBV's focus here is a complementary architectural problem: connecting
+shared expression construction, live solver sessions, explicit inductive
+proofs, and executable code through one representation. Library embedding
+alone is therefore not a novelty claim; the contribution is the analysis of
+how these interfaces compose and which obligations their composition creates.
 
-Grisette~\citep{grisette} is a particularly close comparison: it provides
-symbolic compilation as a typed functional library in Haskell, with a purely
-functional representation and an ordered-guards approach to state merging.
-Its work demonstrates that a library embedding is itself an established
-research direction. \sbv{}'s contribution here is a longitudinal account of a
-different engineering composition: deferred graph construction with per-run
-state, incremental SMT sessions, structured proof orchestration, and a C
-consumer of the symbolic representation. A direct performance comparison would
-require carefully matched workloads and is outside this report.
+\paragraph{Representation and proof structure.}
+\citet{sharing} explains type-safe observable sharing for Haskell embedded
+languages. SBV uses stable names to memoize deferred construction and expression
+interning to reuse graph applications. The distinction between these two
+mechanisms, and their dependence on symbolic-run state, is the relevant design
+point here.
 
-\paragraph{SMT-assisted deductive proofs.}
-Refinement reflection~\citep{reflection} connects user-defined functions to
-SMT reasoning within Liquid Haskell's refinement-type verification framework.
-TP instead presents explicit proof programs whose obligations are discharged
-through \sbv{}'s symbolic and query interfaces. Both approaches let users
-supply structure that automated reasoning alone may not discover. Their
-relationship calls for a comparison of specification styles, trusted
-components, and proof guidance, rather than an assumption that all
-SMT-assisted proofs provide the same interface or guarantees.
+Refinement reflection~\citep{reflection} connects user-defined functions with
+SMT reasoning through refinement types, supporting equational proofs and
+inductive reasoning in Liquid Haskell. SBV's TP instead makes the proof a
+program that constructs and executes solver obligations over explicitly
+symbolic definitions. Both give users a way to supply structure that SMT
+automation needs. They differ in where specifications and proofs live: in a
+refinement-type verification framework versus an embedded proof API run by
+Haskell. This distinction is more informative for choosing an approach than
+comparing the surface similarity of their equational notation.
 
-\paragraph{Solvers and their interface.}
-SMT-LIB~\citep{smtlib} provides the language through which \sbv{} communicates
-with its backends. Z3~\citep{z3} is the default solver, with other solvers
-selected through configurations and capability descriptions. \sbv{} relies on
-these engines for the logical reasoning. Its responsibilities include choosing
-faithful encodings, maintaining the protocol, and interpreting responses
-without converting an inconclusive outcome into a proof.
+\section{Design Lessons and Trust}
+\label{sec:lessons}
 
-\section{Discussion and Lessons}
-\label{sec:discussion}
+\paragraph{Give each level of composition its own contract.}
+Expression composition requires compatible sorts and graph contexts; query
+composition requires available dependencies; proof composition requires valid
+hypotheses and induction. A well-typed term can still reference the wrong run,
+and a correctly declared recursive function can still need a stronger theorem.
+Testing these contracts separately exposes failures that end-to-end examples
+alone can miss.
 
-Verification as a library provides a useful division of labor. Haskell handles
-program construction, abstraction, and much of the static discipline. \sbv{}
-records symbolic meaning and manages the connection to external reasoning.
-Solvers discharge the resulting obligations. The experience examined here
-suggests three lessons for similar libraries.
+\paragraph{Expose semantic choices and make reasoning programmable.}
+Haskell supplies abstraction and construction, while symbolic types distinguish
+bounded words from integers and host lists from logical sequences. Query
+procedures supply search strategies; proof programs supply generalized invariants
+and semantic lemmas. These reusable units let clients organize reasoning around
+the solver's strengths while retaining one modeling vocabulary.
 
-First, expose semantic differences at the point where users make choices.
-Separate symbolic equality and branching, distinguish a symbolic sequence from
-a Haskell container of symbolic elements, and state the domain of a theorem.
-Familiar notation is useful when its interpretation is clear.
+\paragraph{Validate shared representations with independent expectations.}
+A common graph reduces duplicate modeling but concentrates risk in shared
+constructors and simplifications. The adder's integer specification avoids
+repeating its bounded arithmetic; its execution oracle avoids reusing the
+symbolic implementation. Both check intended mathematics, rather than agreement
+with the system's own output.
 
-Second, treat incremental execution as a property of the whole interface.
-Registration, recursive definitions, constants, and nested types must work
-when first encountered during a live session. Tests should vary the phase of
-first use as systematically as they vary operand types.
-
-Third, use a shared representation to organize independent checks of its
-interpretations. Concrete evaluation, SMT translation, and generated C can
-cross-check selected operations, but common implementation structure can also
-propagate a mistake. Independent mathematical specifications and execution
-oracles are therefore valuable at semantic boundaries.
-
-The trusted base remains substantial: the Haskell implementation and its
-runtime, the symbolic encoding, proof orchestration and any supplied axioms,
-solver behavior, and, where relevant, the C compiler and generated runtime.
-TP proof objects record propositions and dependencies; the ordinary workflow
-does not establish every result by replaying a certificate in an independent
-small kernel. This account should be read with that trust model in mind.
+The trusted base includes the Haskell implementation and runtime, symbolic
+encoding, solver, and TP's obligation generation. User axioms and unchecked
+termination assumptions add dependencies when used. C generation additionally
+relies on its lowering, runtime support, and toolchain. TP checks solver outcomes
+and records dependencies; its ordinary workflow does not replay certificates in
+an independent small proof kernel. Verified translation and certificate checking
+would establish stronger guarantees than the validation reported here.
 
 \section{Conclusion}
 
-Sixteen years of \sbv{} development show how a Haskell library can grow from
-bit-vector properties to interactive reasoning and structured proofs while
-retaining a compact programming interface. The documented changes also show
-where the cost of that growth appears: host evaluation and sharing, the
-lifetime of solver declarations, and agreement between interpretations.
-Making those boundaries explicit yields both a clearer user model and more
-targeted tests. Those lessons are applicable to embedded libraries that must
-preserve a typed functional interface while coordinating stateful external
-tools.
+SBV connects typed expressions, live solver interaction, and structured proofs
+through a shared symbolic representation. Deferred construction preserves
+expression sharing; incremental synchronization carries dependencies into solver
+sessions; proof programs reduce recursive claims to local obligations. C
+generation adds execution with a separate translation contract. The examples
+locate the programmer's contribution precisely: selecting the semantic domain,
+choosing a general enough invariant, and validating the connection to execution.
+For embedded reasoning systems, composition therefore requires contracts for
+values, sessions, and proofs as well as a convenient syntax for formulas.
 
 \bibliographystyle{ACM-Reference-Format}
 \bibliography{references}

@@ -8,7 +8,7 @@ import sys
 import time
 
 paper = Path(__file__).resolve().parent
-repo = paper.parent
+repo = paper.parents[1]
 build = paper / "build"
 build.mkdir(exist_ok=True)
 results = paper / "results"
@@ -48,19 +48,20 @@ with log_path.open("w") as log:
                     ["cabal", "--numeric-version"], ["z3", "--version"],
                     ["cvc5", "--version"], ["cc", "--version"]]:
         run(command)
-    run([sys.executable, "paper/prepare.py"])
+    run([sys.executable, paper / "prepare.py"])
     run(["cabal", "exec", "--offline", "--", "ghc", "-O0", "-Wall", "-Werror",
-         "-i", "-ipaper/examples", "-package", "sbv", "-outputdir", "paper/build",
-         "-o", "paper/build/paper-examples", "paper/examples/PaperExamples.hs"])
-    run(["paper/build/paper-examples"])
-    run(["paper/build/paper-examples", "--const-fold"])
+         "-i", "-i" + str(paper / "examples"), "-package", "sbv",
+         "-outputdir", build, "-o", build / "paper-examples",
+         paper / "examples/PaperExamples.hs"])
+    run([build / "paper-examples"])
+    run([build / "paper-examples", "--const-fold"])
     (build / "c").mkdir(exist_ok=True)
-    run(["paper/build/paper-examples", "--generate", "paper/build/c"])
+    run([build / "paper-examples", "--generate", build / "c"])
     run(["cc", "-std=c11", "-Wall", "-Wextra", "-Werror", "-O2",
-         "-fsanitize=undefined", "-fno-sanitize-recover=all", "-Ipaper/build/c",
-         "paper/build/c/sat_add.c", "paper/examples/adder-check.c",
-         "-o", "paper/build/adder-check"])
-    run(["paper/build/adder-check"])
-    record("\nVALIDATION PASSED: seven small Haskell checks, the existing constant-folding")
+         "-fsanitize=undefined", "-fno-sanitize-recover=all", "-I" + str(build / "c"),
+         build / "c/sat_add.c", paper / "examples/adder-check.c",
+         "-o", build / "adder-check"])
+    run([build / "adder-check"])
+    record("\nVALIDATION PASSED: eight small Haskell checks, the existing constant-folding")
     record("proof, and exhaustive generated-C checking. Timings are single-run diagnostics,")
     record("not benchmark measurements. No full-suite or cross-solver claim is made.")

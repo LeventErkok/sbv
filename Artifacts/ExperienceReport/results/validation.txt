@@ -1,26 +1,26 @@
 SBV experience-report companion validation
-UTC: 2026-09-26T19:36:41.358851+00:00
+UTC: 2026-11-02T17:38:30.622677+00:00
 Scope: paper examples only; not the full repository test suite.
 
 $ git rev-parse HEAD
-f4f7a7a08445e63c2fb74c6f2084dfea5ad8b7d2
+2db61a211c5bae5965a29108d997e32a0ce5521d
 Exit status: 0; elapsed: 0.01s
 
 $ ghc --numeric-version
 9.14.1
-Exit status: 0; elapsed: 0.25s
+Exit status: 0; elapsed: 0.05s
 
 $ cabal --numeric-version
 3.16.1.0
-Exit status: 0; elapsed: 0.04s
+Exit status: 0; elapsed: 0.02s
 
 $ z3 --version
-Z3 version 5.1.0 - 64 bit
-Exit status: 0; elapsed: 0.21s
+Z3 version 5.3.2 - 64 bit - build hashcode b411c90217766c924e6ea3d0b51f452a89fd8fc2
+Exit status: 0; elapsed: 0.05s
 
 $ cvc5 --version
-cvc5 1.4.0 [git b432cd7 on branch HEAD]
-compiled as a unrestricted build with GCC version Apple LLVM 17.0.0 (clang-1700.0.13.5) on Sep 17 2026 22:40:27
+cvc5 1.4.2 [git 282d5e0 on branch HEAD]
+compiled as a unrestricted build with GCC version Apple LLVM 17.0.0 (clang-1700.0.13.5) on Oct  8 2026 02:13:26
 
 Copyright (c) 2009-2026 by the authors and their institutional
 affiliations listed at https://cvc5.github.io/people.html
@@ -78,32 +78,39 @@ See licenses/gpl-3.0.txt for more information.
 See the file COPYING (distributed with the source code, and with
 all binaries) for the full cvc5 copyright, licensing, and (lack of)
 warranty information.
-Exit status: 0; elapsed: 0.17s
+Exit status: 0; elapsed: 0.04s
 
 $ cc --version
 Apple clang version 21.0.0 (clang-2100.3.34.2)
 Target: arm64-apple-darwin25.6.0
 Thread model: posix
 InstalledDir: /Library/Developer/CommandLineTools/usr/bin
-Exit status: 0; elapsed: 0.03s
+Exit status: 0; elapsed: 0.02s
 
-$ /Library/Developer/CommandLineTools/usr/bin/python3 paper/prepare.py
+$ /Library/Developer/CommandLineTools/usr/bin/python3 /Users/lerkok/Projects/sbv/Artifacts/ExperienceReport/prepare.py
 Extracted 5 executable listings
-Exit status: 0; elapsed: 0.05s
+Exit status: 0; elapsed: 0.02s
 
-$ cabal exec --offline -- ghc -O0 -Wall -Werror -i -ipaper/examples -package sbv -outputdir paper/build -o paper/build/paper-examples paper/examples/PaperExamples.hs
-Loaded package environment from /Users/lerkok/Projects/sbv/dist-newstyle/tmp/environment.-68897/.ghc.environment.aarch64-darwin-9.14.1
-Exit status: 0; elapsed: 0.86s
+$ cabal exec --offline -- ghc -O0 -Wall -Werror -i -i/Users/lerkok/Projects/sbv/Artifacts/ExperienceReport/examples -package sbv -outputdir /Users/lerkok/Projects/sbv/Artifacts/ExperienceReport/build -o /Users/lerkok/Projects/sbv/Artifacts/ExperienceReport/build/paper-examples /Users/lerkok/Projects/sbv/Artifacts/ExperienceReport/examples/PaperExamples.hs
+Resolving dependencies...
+Loaded package environment from /Users/lerkok/Projects/sbv/dist-newstyle/tmp/environment.-26957/.ghc.environment.aarch64-darwin-9.14.1
+[1 of 2] Compiling Main             ( /Users/lerkok/Projects/sbv/Artifacts/ExperienceReport/examples/PaperExamples.hs, /Users/lerkok/Projects/sbv/Artifacts/ExperienceReport/build/Main.o ) [Source file changed]
+[2 of 2] Linking /Users/lerkok/Projects/sbv/Artifacts/ExperienceReport/build/paper-examples [Objects changed]
+Exit status: 0; elapsed: 4.62s
 
-$ paper/build/paper-examples
-PASS integer successor
+$ /Users/lerkok/Projects/sbv/Artifacts/ExperienceReport/build/paper-examples
+PASS integer absolute value is nonnegative
 Falsifiable. Counter-example:
-  x = 127 :: Int8
-PASS Int8 counterexample is 127
+  x = -128 :: Int8
+PASS Int8 absolute value counterexample is -128
 Falsifiable. Counter-example:
   x = NaN :: Float
 PASS float reflexivity counterexample is NaN
 PASS saturating addition theorem
+Falsifiable. Counter-example:
+  x = 223 :: Word8
+  y = 124 :: Word8
+PASS incorrect overflow guard has an independently checked counterexample
 PASS incremental enumeration
 PASS datatype first introduced during query
 Inductive lemma: revAccCorrect
@@ -115,9 +122,9 @@ Inductive lemma: revAccCorrect
   Result:                         Q.E.D.
 Functions proven terminating: paper.revAcc, sbv.reverse
 PASS accumulator reversal induction
-Exit status: 0; elapsed: 2.11s
+Exit status: 0; elapsed: 1.51s
 
-$ paper/build/paper-examples --const-fold
+$ /Users/lerkok/Projects/sbv/Artifacts/ExperienceReport/build/paper-examples --const-fold
 Lemma: measureNonNeg                         Q.E.D.
 Lemma: simpCorrect                           Q.E.D.
 Lemma: sqrCong                               Q.E.D. [Cached]
@@ -168,46 +175,20 @@ Inductive lemma (strong): cfoldCorrect
   Result:                                    Q.E.D.
 Functions proven terminating: cfold, exprSize, interpInEnv, sbv.lookup, simplify, subst
 PASS constant folding (CVC5)
-Exit status: 0; elapsed: 10.49s
+Exit status: 0; elapsed: 12.19s
 
-$ paper/build/paper-examples --generate paper/build/c
+$ /Users/lerkok/Projects/sbv/Artifacts/ExperienceReport/build/paper-examples --generate /Users/lerkok/Projects/sbv/Artifacts/ExperienceReport/build/c
 
-Exit status: 0; elapsed: 0.02s
+Exit status: 0; elapsed: 0.03s
 
-$ cc -std=c11 -Wall -Wextra -Werror -O2 -fsanitize=undefined -fno-sanitize-recover=all -Ipaper/build/c paper/build/c/sat_add.c paper/examples/adder-check.c -o paper/build/adder-check
+$ cc -std=c11 -Wall -Wextra -Werror -O2 -fsanitize=undefined -fno-sanitize-recover=all -I/Users/lerkok/Projects/sbv/Artifacts/ExperienceReport/build/c /Users/lerkok/Projects/sbv/Artifacts/ExperienceReport/build/c/sat_add.c /Users/lerkok/Projects/sbv/Artifacts/ExperienceReport/examples/adder-check.c -o /Users/lerkok/Projects/sbv/Artifacts/ExperienceReport/build/adder-check
 
-Exit status: 0; elapsed: 0.12s
+Exit status: 0; elapsed: 0.11s
 
-$ paper/build/adder-check
+$ /Users/lerkok/Projects/sbv/Artifacts/ExperienceReport/build/adder-check
 PASS generated C: all 65536 unsigned-byte input pairs
-Exit status: 0; elapsed: 0.28s
+Exit status: 0; elapsed: 0.21s
 
-VALIDATION PASSED: seven small Haskell checks, the existing constant-folding
+VALIDATION PASSED: eight small Haskell checks, the existing constant-folding
 proof, and exhaustive generated-C checking. Timings are single-run diagnostics,
 not benchmark measurements. No full-suite or cross-solver claim is made.
-
-Introduction absolute-value revision: seven small Haskell checks rerun
-UTC: 2026-09-28T01:22:35.615848+00:00
-Repository HEAD: c61238508f1256e1d44e41e7b35b322a4bf49976
-Compiled with GHC -O0 -Wall -Werror before this run.
-$ Artifacts/ExperienceReport/build/paper-examples
-PASS integer absolute value is nonnegative
-Falsifiable. Counter-example:
-  x = -128 :: Int8
-PASS Int8 absolute value counterexample is -128
-Falsifiable. Counter-example:
-  x = NaN :: Float
-PASS float reflexivity counterexample is NaN
-PASS saturating addition theorem
-PASS incremental enumeration
-PASS datatype first introduced during query
-Inductive lemma: revAccCorrect
-  Step: Base                      Q.E.D.
-  Step: 1                         Q.E.D.
-  Step: 2                         Q.E.D.
-  Step: 3                         Q.E.D.
-  Step: 4                         Q.E.D.
-  Result:                         Q.E.D.
-Functions proven terminating: paper.revAcc, sbv.reverse
-PASS accumulator reversal induction
-Exit status: 0
