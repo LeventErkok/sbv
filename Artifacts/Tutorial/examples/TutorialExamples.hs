@@ -653,3 +653,5 @@ main = do
       check "exercise 2: largest below 100 is 94" $ (== 94) <$> largestBelow100
       check "exercise 3: revAcc length" $ void (runTP revAccLength) >> pure True
     _ -> fail "Usage: tutorial-examples [--tautology | --generate DIR]"
+
+{- HLint ignore shiftEach "Avoid lambda" -}
