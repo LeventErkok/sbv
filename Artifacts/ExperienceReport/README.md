@@ -1,15 +1,16 @@
-# Verification as a Library: Symbolic Programs and Compositional Proofs in SBV
+# From Counterexamples to Inductive Proofs: A Tutorial on SBV
 
-A conference-style experience report about what SBV offers, how its interesting
-mechanisms work, and what their composition contributes. The argument connects
-typed symbolic expressions, programmable solver sessions, and structured proofs;
-C generation supplies a second interpretation and a concrete validation boundary.
+A tutorial submission for the Haskell Symposium 2027. It takes a Haskell
+programmer with no automated-reasoning background from one-line theorems to
+inductive proofs: specifications, `sat`/`allSat`/`optimize`, programmable
+queries, symbolic datatypes, TP proofs (including a detailed proof of Kadane's
+algorithm and an overview of the verified tautology checker), and C generation.
 
-- `sbv-experience.pdf`: rendered manuscript.
-- `sbv-experience.tex`: manuscript in ACM `acmsmall` format.
-- `references.bib`: bibliography with primary-source links.
-- `EDITORIAL.md`: technical evidence map and remaining author-review considerations.
-- `examples/PaperExamples.hs`: executable listings and semantic checks.
+- `sbv-tutorial.pdf`: rendered manuscript.
+- `sbv-tutorial.tex`: manuscript in ACM `acmsmall` format (`review,anonymous`).
+- `references.bib`: bibliography.
+- `EDITORIAL.md`: submission notes, evidence map, and open items for the author.
+- `examples/TutorialExamples.hs`: executable companion; source of the listings.
 - `examples/adder-check.c`: independent exhaustive oracle for generated C.
 - `results/validation.txt`: execution record, source revision, and tool versions.
 
@@ -21,19 +22,22 @@ From this directory, with Tectonic installed:
 make pdf
 ```
 
-Tectonic downloads TeX dependencies as needed. A particular binary can be selected
-with `make pdf TECTONIC=/path/to/tectonic`. With a conventional TeX installation
-providing `acmart`, `listings`, `tabularx`, and BibTeX:
+A particular binary can be selected with `make pdf TECTONIC=/path/to/tectonic`.
+With a conventional TeX installation providing `acmart`, `listings`, `tikz`,
+`tabularx`, and BibTeX:
 
 ```sh
 python3 prepare.py
-latexmk -pdf sbv-experience.tex
+latexmk -pdf sbv-tutorial.tex
 ```
 
-The five main listings are extracted from the Haskell companion into
-`build/snippets/`. Edit the Haskell source rather than those generated files.
-The introductory calls and deliberately incorrect adder are short explanatory
-listings whose behavior is also exercised by the companion.
+`prepare.py` extracts listings into `build/snippets/` from two places: blocks
+between `-- BEGIN name` and `-- END name` in the companion, and a few
+declarations quoted verbatim from `Documentation/SBV/Examples/TP/TautologyChecker.hs`.
+It fails if the manuscript refers to a listing that has no source. Edit the
+Haskell sources, never the generated snippets. Short `ghci` transcripts and the
+abbreviated `normalize` and internal-representation listings are typed directly
+in the manuscript; the behavior they show is exercised by the companion.
 
 ## Reproduce the examples
 
@@ -44,38 +48,24 @@ cabal build --offline lib:sbv
 python3 Artifacts/ExperienceReport/validate.py
 ```
 
-Alternatively, after building SBV, run `make validate` from this directory.
-Omit `--offline` from the library build if dependencies are unavailable locally.
-The script locates the repository independently of the invoking directory.
-It requires `ghc`, `cabal`, `z3`, `cvc5`, and a C compiler named `cc`.
+Alternatively, after building SBV, run `make validate` from this directory. The
+script requires `ghc`, `cabal`, `z3`, `cvc5`, and a C compiler named `cc`.
 
-Validation compiles the Haskell companion with `-Wall -Werror`, executes eight
-small checks and the existing constant-folding proof, generates a C adder, and
-checks every one of its 65,536 input pairs against a wider-arithmetic oracle.
-The negative adder check asks for a counterexample to an incorrect overflow
-guard and validates the returned inputs independently. The C build enables
-optimization, strict warnings, and undefined-behavior sanitization.
+Validation compiles the companion with `-Wall -Werror` and runs every example in
+the paper, checking results independently where possible (counterexamples are
+re-checked with Haskell arithmetic, the synthesized expression is re-evaluated
+by a plain Haskell interpreter, and the deliberately weak reversal proof must
+fail). It also runs the exercise solutions, the tautology checker's soundness
+and completeness proofs, and an exhaustive check of the generated C adder against
+a C oracle built with `-O2`, warnings as errors, and undefined-behavior
+sanitization. Each Haskell check has a 120-second timeout; a timeout is a
+failure, never a proof. Running the script replaces `results/validation.txt`.
+The complete SBV regression suite is outside this validation.
 
-Each Haskell task has a 120-second timeout; the script also bounds subprocess
-execution. A timeout is an incomplete check, never a proof result. Running the
-script replaces `results/validation.txt`. The recorded November 2, 2026 run passed
-all ten tasks. Timings are diagnostic single runs, not benchmarks, and the
-complete SBV regression suite is outside this validation.
+## Submission notes
 
-## Manuscript status
-
-The manuscript has a capabilities-centered argument, explicit contributions,
-source-backed mechanism descriptions, and checked examples. Release chronology
-and author-placeholder boxes have been removed. Source and tool revisions are
-recorded for reproducibility rather than used to organize the paper.
-
-The named-author `nonacm` format omits proceedings metadata. Select the actual
-venue before applying its page limit, anonymity requirements, author affiliations,
-and publication metadata. The evidence supports the technical design account;
-it does not establish comparative performance, measured usability, or external
-adoption. Author review should confirm credit, emphasis, and final disclosure.
-
-The initial draft and this revision were prepared with AI assistance at the
-author's request. Personal motivations and application anecdotes have not been
-invented. This is a working provenance record; final acknowledgments and any
-required disclosure should follow the chosen venue's requirements.
+The 2027 call for papers had not been published when this draft was prepared;
+the format follows the 2026 call (acmsmall, lightweight double-blind, 25 pages
+for tutorials, labeled by subtitle). Remove `anonymous` and `review` for the
+camera-ready version. `results/validation.txt` records local paths and the git
+revision; anonymize it before uploading the companion as supplementary material.

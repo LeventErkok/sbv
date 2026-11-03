@@ -8,7 +8,7 @@ snippets:
 	$(PYTHON) prepare.py
 
 pdf: snippets
-	$(TECTONIC) --untrusted --keep-logs sbv-experience.tex
+	$(TECTONIC) --untrusted --keep-logs sbv-tutorial.tex
 
 validate:
 	$(PYTHON) validate.py

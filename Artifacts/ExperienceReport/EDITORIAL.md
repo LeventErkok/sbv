@@ -1,79 +1,64 @@
-# Editorial and technical review notes
+# Editorial notes
 
-## Argument and contribution
+## Target and format
 
-The revised manuscript argues that verification as a library requires
-composition at three levels: symbolic expressions, live solver interactions,
-and structured proofs. Its contributions are the architectural explanation of
-that composition, an analysis of the mechanisms that preserve it, and executable
-case studies connecting symbolic semantics to proof and generated execution.
+Haskell Symposium 2027, tutorial category. The 2026 call evaluates tutorials on
+whether they explain an aspect of Haskell or its ecosystem in a generally useful
+way; they need not report original research. Tutorials are limited to 25 pages
+in single-column `acmsmall`, must be labeled as such in the subtitle, and are
+reviewed lightweight double-blind. The current draft is 17 pages including
+references. Re-check all of this against the 2027 call when it appears.
 
-The report now explains capabilities directly. It does not use a release
-chronology, version-specific improvements, or an account of personal motivations.
-The three author-placeholder boxes have been removed. The negative overflow
-example, explicit dependency invariant, generalized induction argument, and
-constant-folding proof decomposition supply concrete technical content.
+## Structure
 
-## Evidence map
+| Section | Teaches | Companion listings |
+|---|---|---|
+| 1 Introduction | Audience, roadmap, setup | (inline transcript) |
+| 2 First proofs | Symbolic types, dotted operators, `ite`, what `prove` does | (inline) |
+| 3 Specifications | Independent specs; a refuted wrong guard | `saturating`, `wrongAdd` |
+| 4 Finding values | `allSat`, `optimize` | `idempotent`, `production` |
+| 5 Haskell vs symbolic structure | Host lists, `SList`, `smtFunction`, why `prove` stalls | `hostSum`, `sumL` |
+| 6 Programming the solver | `query` descent loop, dependency synchronization | `descent` |
+| 7 Symbolic datatypes | `mkSymbolic`, `sCase`, synthesis by `sat` | `expr` |
+| 8 Proofs by induction | `induct`, calculations, hints, generalization | `sumNonNeg`, `revAcc`, `revWeak`, `revAccCorrect` |
+| 9 Kadane (detailed) | Spec, implementation, finding the invariant, proof | `mss`, `kadane`, `kadaneCorrect` |
+| 10 Tautology checker (overview) | Measures, strong induction, proof architecture | library quotes |
+| 11 C generation | `compileToC`, validating the translation boundary | `codegen` |
+| 12 Under the hood | Deferred nodes, sharing, run contexts, synchronization | (inline) |
+| 13 Pitfalls and trust | Checklist and trusted base | — |
+| 14 Related tools | QuickCheck, Rosette, Grisette, Smten, what4, Liquid Haskell, Dafny | — |
 
-Paths below are relative to the SBV repository root. The precise revision and
-tool environment used for the executable checks are in `results/validation.txt`.
+Three exercises (Sections 3, 6, 8) have checked solutions in the companion.
 
-| Manuscript claim | Implementation or executable evidence |
+## Evidence for implementation claims
+
+Paths are relative to the repository root.
+
+| Claim | Source |
 |---|---|
-| Symbolic domains and reasoning entry points | `Data/SBV.hs`; `Data/SBV/List.hs` |
-| Typed wrapper, kinds, deferred values | `Data/SBV/Core/Data.hs`; `Data/SBV/Core/Symbolic.hs`: `SVal`, `SV`, `Cached`, `State` |
+| Deferred values, kinds, `Cached` | `Data/SBV/Core/Data.hs`, `Data/SBV/Core/Symbolic.hs` |
 | Two forms of sharing | `Data/SBV/Core/Symbolic.hs`: `uncacheGen`, `newExpr` |
-| Run-specific context checks | `Data/SBV/Core/Symbolic.hs`: `checkConsistent`, `compatibleContext` |
-| Incremental state and synchronization | `Data/SBV/Control/Utils.hs`: `inNewContext`, `syncUpSolver`; `Data/SBV/SMT/SMTLib2.hs` |
-| Named recursive functions | `Data/SBV/Core/Model.hs`; `Documentation/SBV/Examples/CodeGeneration/Fibonacci.hs` |
-| Datatype derivation and symbolic matching | `Data/SBV/Client.hs`; `Data/SBV/SCase.hs` |
-| Nested datatype and phase-of-first-use coverage | `SBVTestSuite/TestSuite/ADT/Registration.hs` |
-| Generalized reversal proof | `Documentation/SBV/Examples/TP/RevAcc.hs`; companion `examples/PaperExamples.hs` |
-| Local proof-step outcomes and dependency checks | `Data/SBV/TP/Kernel.hs`: `smtProofStep`, `checkNewMeasures` |
-| Constant folding, substitution, and environment lemmas | `Documentation/SBV/Examples/TP/ConstFold.hs` |
-| Expression semantics and size measure | `Documentation/SBV/Examples/TP/VM.hs` |
-| C declarations, setup, expressions, runtime requirements | `Data/SBV/Compilers/C/Lowering.hs`; `Data/SBV/Compilers/C/Backend.hs` |
-| Generated-C boundary regressions | `SBVTestSuite/TestSuite/CodeGeneration/ScalarSafety.hs`, `PseudoBoolean.hs` |
-| Concrete and solver comparisons | `SBVTestSuite/Utils/SBVTestFramework.hs`: `qc1`, `qc2` |
-| Pattern-matching diagnostics | `SBVTestSuite/TestSuite/CompileTests/SCase`; `PCase` |
+| Run-context checks | `Data/SBV/Core/Symbolic.hs`: `checkConsistent`, `compatibleContext` |
+| Query dependency synchronization | `Data/SBV/Control/Utils.hs`: `inNewContext`, `syncUpSolver` |
+| Automatic termination measures | `Data/SBV/Core/Model.hs`: `smtFunction` documentation |
+| `Proven` vs `Modulo` reporting | `Data/SBV/TP/Utils.hs`: `RootOfTrust` and `Show (Proof a)` |
+| C backend rejects quantifiers/uninterpreted sorts | `Data/SBV/Compilers/C/Backend.hs` |
+| Kadane proof | `Documentation/SBV/Examples/TP/Kadane.hs` (companion has a reformatted copy) |
+| Tautology checker: 21 TP lemmas, measures, `sInduct` | `Documentation/SBV/Examples/TP/TautologyChecker.hs` |
+| ~40 TP example modules | `Documentation/SBV/Examples/TP/` (41 files, including helpers) |
 
-The dependency-closure invariant is an explanatory specification of the
-implementation obligation, not a claimed formal verification of the protocol.
-The displayed induction and calculation equations explain the checked examples;
-they do not claim a new induction calculus or independent proof kernel.
+Timings quoted in the text (Kadane ~0.1s with Z3; soundness and completeness
+1–2s each) are single runs on the author's machine, not benchmarks.
 
-## Validation and bibliographic review
+## Open items for the author
 
-On November 2, 2026 the companion compiled with `-Wall -Werror` and passed eight
-small Haskell checks, the existing CVC5 constant-folding development, and exhaustive
-execution of the generated byte adder. Its incorrect overflow guard produced a
-counterexample checked using concrete integer arithmetic. The C build enabled
-`-O2`, warnings as errors, and undefined-behavior sanitization. The full SBV suite
-was not run. The validation script's obsolete `paper/` paths were replaced with
-paths resolved from its actual repository location.
-
-Related-work descriptions were checked against the primary papers for observable
-sharing, Smten, Rosette, Grisette, and refinement reflection. These comparisons
-concern architecture and specification style, not performance rankings or claims
-of priority. The software citation points to the project; the execution log
-provides the reproducibility pin.
-
-## Author review before submission
-
-- Confirm that the composition argument expresses the intended contribution.
-  An independently documented application could strengthen the experience
-  evidence, but the manuscript does not depend on an unfilled anecdote.
-- Review the trust account, including explicit axioms, bypassed termination
-  checks, finite-sequence semantics, and the distinction between symbolic
-  verification and C execution. The ordinary TP account concerns checked
-  execution, not its internal formatting dry run.
-- Confirm contributor credit, author information, acknowledgments, and any
-  required AI-assistance disclosure. No personal or historical claims should
-  be inferred from implementation alone.
-- Apply the chosen venue's format, page limit, anonymity rules, and publication
-  metadata. No particular conference year is presumed.
-
-A comparative evaluation would require new matched workloads and measurements.
-The present manuscript makes its case through mechanisms, proof structure, and
-reproducible semantic checks, and should be evaluated on that basis.
+- Verify the bibliography entries added for the tutorial: `bentley` (CACM 27(9),
+  DOI), `boyermoore`, `imandraTautology` (author, year, and title are
+  descriptive), `what4`, `liquidhaskell`, `dafny`, and the SMT-LIB 2.7 citation.
+- Decide whether the tutorial should mention Cryptol/SAW or other users of SBV.
+  The text currently makes no adoption claims.
+- Consider whether Section 12 (Under the hood) earns its space in a tutorial or
+  should shrink further in favor of more exercises.
+- Confirm acknowledgments and any AI-assistance disclosure required by the venue.
+  The initial draft and this revision were prepared with AI assistance at the
+  author's request.
