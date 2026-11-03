@@ -1,3 +1,4 @@
+-- BEGIN extensions
 {-# LANGUAGE DataKinds           #-}
 {-# LANGUAGE FlexibleInstances   #-}
 {-# LANGUAGE OverloadedLists     #-}
@@ -5,23 +6,29 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TemplateHaskell     #-}
 {-# LANGUAGE TypeApplications    #-}
+-- END extensions
 
 -- Executable companion for the SBV tutorial. Every listing in the manuscript
 -- that is delimited by BEGIN/END markers below is extracted from this file by
 -- prepare.py, so the text and the checked code cannot drift apart.
 module Main (main) where
 
-import Control.Exception (SomeException, try)
-import Control.Monad (unless, void)
-import Data.List (sort)
+import Control.Exception (ErrorCall, displayException, try)
+import Control.Monad (replicateM, unless, void)
+import Data.List (inits, isInfixOf, sort, tails)
 import System.Environment (getArgs)
 import qualified System.Timeout as Timeout
 
+-- BEGIN imports
 import Data.SBV
 import Data.SBV.Control
 import qualified Data.SBV.List as SL
 import Data.SBV.TP
 import Data.SBV.Tools.CodeGen
+-- END imports
+-- BEGIN listProofImports
+import qualified Documentation.SBV.Examples.TP.Lists as ListProofs
+-- END listProofImports
 import qualified Documentation.SBV.Examples.TP.TautologyChecker as Taut
 
 -------------------------------------------------------------------------------
@@ -67,6 +74,10 @@ idempotentBytes :: IO AllSatResult
 idempotentBytes = allSat $ \(x :: SWord8) -> x * x .== x
 -- END idempotent
 
+-------------------------------------------------------------------------------
+-- Section: Optimization
+-------------------------------------------------------------------------------
+
 -- BEGIN production
 production :: IO OptimizeResult
 production = optimize Lexicographic $ do
@@ -82,9 +93,38 @@ productionOptimal :: IO Bool
 productionOptimal = do
   r <- production
   print r
+  -- Independently enumerate all feasible plans within the resource bounds.
+  let plans = [(x, y) | x <- [0 .. 5], y <- [0 .. 5],
+                       x + 2 * y <= 10, 3 * x + y <= (15 :: Integer)]
   pure $ case r of
-    LexicographicResult m -> getModelValue "profit" m == Just (17 :: Integer)
-    _                     -> False
+    LexicographicResult m ->
+      case (getModelValue "x" m, getModelValue "y" m, getModelValue "profit" m) of
+        (Just x, Just y, Just p) -> (x, y) `elem` plans && p == 2 * x + 3 * y
+                                 && p == maximum [2 * a + 3 * b | (a, b) <- plans]
+        _ -> False
+    _ -> False
+
+-- BEGIN realBounds
+realBounds :: IO OptimizeResult
+realBounds = optimize Independent $ do
+  x <- sReal "x"
+  constrain $ x .> 0
+  minimize "lower" x
+  maximize "upper" x
+-- END realBounds
+
+realBoundsChecked :: IO Bool
+realBoundsChecked = do
+  r <- realBounds
+  print r
+  pure $ case r of
+    IndependentResult rs -> sort (map fst rs) == ["lower", "upper"]
+                         && all (boundsMatch . snd) rs
+    _ -> False
+  where boundsMatch m = case (getModelObjectiveValue "lower" m,
+                             getModelObjectiveValue "upper" m) of
+          (Just (ExtendedCV Epsilon{}), Just (ExtendedCV Infinite{})) -> True
+          _ -> False
 
 -------------------------------------------------------------------------------
 -- Section: Host structure versus symbolic structure
@@ -97,6 +137,14 @@ nonNegSum n = do
   pure $ sAll (.>= 0) xs .=> sum xs .>= 0
 -- END hostSum
 
+-- The integer premise is feasible; the byte premise is contradictory.
+assumptionsChecked :: IO Bool
+assumptionsChecked = do
+  feasible <- isSatisfiable $ \(x :: SInteger) -> x + 1 .> x
+  impossible <- isSatisfiable $ \(x :: SWord8) -> x .> 255
+  vacuous <- isTheorem $ \(x :: SWord8) -> x .> 255 .=> x .== 0
+  pure $ feasible && not impossible && vacuous
+
 -- BEGIN sumL
 sumL :: SList Integer -> SInteger
 sumL = smtFunction "sumL" $ \xs -> [sCase| xs of
@@ -104,6 +152,45 @@ sumL = smtFunction "sumL" $ \xs -> [sCase| xs of
           y : ys -> y + sumL ys
        |]
 -- END sumL
+
+-- BEGIN sumWithoutInduction
+sumWithoutInduction :: IO ThmResult
+sumWithoutInduction =
+  proveWith (z3 { solverSetOptions = [SetTimeOut 5000] }) $
+    \xs -> SL.all (.>= 0) xs .=> sumL xs .>= 0
+-- END sumWithoutInduction
+
+-------------------------------------------------------------------------------
+-- Section: Arrays and symbolic memory
+-------------------------------------------------------------------------------
+
+-- BEGIN writesCommute
+writesCommute :: SArray Integer Integer
+              -> SInteger -> SInteger -> SInteger -> SInteger -> SBool
+writesCommute a i j x y =
+  i ./= j .=>
+    writeArray (writeArray a i x) j y .==
+    writeArray (writeArray a j y) i x
+-- END writesCommute
+
+arrayAliasingRefuted :: IO Bool
+arrayAliasingRefuted = do
+  result <- prove $ do
+    a <- sArray "a" :: Symbolic (SArray Integer Integer)
+    i <- sInteger "i"
+    j <- sInteger "j"
+    x <- sInteger "x"
+    y <- sInteger "y"
+    pure $ writeArray (writeArray a i x) j y .==
+           writeArray (writeArray a j y) i x
+  print result
+  pure $ case (getModelValue "i" result, getModelValue "j" result,
+               getModelValue "x" result, getModelValue "y" result) of
+    (Just i, Just j, Just x, Just (y :: Integer)) ->
+      -- Newest binding first: lookup independently checks the last write wins.
+      i == (j :: Integer) && x /= y &&
+      lookup i [(j, y), (i, x)] /= lookup i [(i, x), (j, y)]
+    _ -> False
 
 -------------------------------------------------------------------------------
 -- Section: Programming the solver
@@ -233,8 +320,11 @@ revWeak = induct "revWeak"
 revWeakFails :: IO Bool
 revWeakFails = do
   let cfg = z3 { solverSetOptions = solverSetOptions z3 ++ [SetTimeOut 5000] }
-  r <- tryTP (runTPWith cfg revWeak)
-  pure (not r)
+  r <- try (void (runTPWith cfg revWeak)) :: IO (Either ErrorCall ())
+  case r of
+    Left err -> do putStrLn (displayException err)
+                   pure $ takeWhile (/= '\n') (displayException err) == "Failed"
+    Right () -> pure False
 
 -- BEGIN revAccCorrect
 revAccCorrect :: TP (Proof (Forall "xs" [Integer] -> Forall "acc" [Integer] -> SBool))
@@ -249,6 +339,15 @@ revAccCorrect = induct "revAccCorrect"
                         =: qed
 -- END revAccCorrect
 
+-- BEGIN reverseCorrect
+reverseCorrect :: TP (Proof (Forall "xs" [Integer] -> SBool))
+reverseCorrect = do
+  generalized <- recall revAccCorrect
+  lemma "reverseCorrect"
+    (\(Forall xs) -> revAcc [] xs .== SL.reverse xs)
+    [proofOf generalized]
+-- END reverseCorrect
+
 -- Exercise 3 solution.
 revAccLength :: TP (Proof (Forall "xs" [Integer] -> Forall "acc" [Integer] -> SBool))
 revAccLength = induct "revAccLength"
@@ -259,6 +358,132 @@ revAccLength = induct "revAccLength"
                         =: SL.length xs + SL.length (x .: acc)
                         =: SL.length (x .: xs) + SL.length acc
                         =: qed
+
+-- BEGIN reverseLength
+reverseLength :: forall a. SymVal a => TP (Proof (Forall "xs" [a] -> SBool))
+reverseLength = induct "reverseLength"
+  (\(Forall xs) -> SL.length (SL.reverse xs) .== SL.length xs) $
+  \ih (x, xs) -> [] |- SL.length (SL.reverse (x .: xs))
+                    =: SL.length (SL.reverse xs SL.++ [x])
+                    =: SL.length (SL.reverse xs) + 1
+                    ?? ih
+                    =: SL.length xs + 1
+                    =: SL.length (x .: xs)
+                    =: qed
+-- END reverseLength
+
+-------------------------------------------------------------------------------
+-- Section: Higher-order proofs
+-- Adapted from Documentation.SBV.Examples.TP.Lists.bookKeeping.
+-------------------------------------------------------------------------------
+
+-- The helper is proved here; foldr-over-append is reused from the library.
+foldBase :: forall a. SymVal a
+         => SBV a -> (SBV a -> SBV a -> SBV a)
+         -> TP (Proof (Forall "xs" [a] -> Forall "y" a -> SBool))
+foldBase e f = do
+  let assoc = quantifiedBool $ \(Forall x) (Forall y) (Forall z) ->
+                f x (f y z) .== f (f x y) z
+      lUnit = quantifiedBool $ \(Forall x) -> f e x .== x
+  induct "foldBase"
+    (\(Forall xs) (Forall y) -> lUnit .&& assoc .=>
+       SL.foldr f y xs .== f (SL.foldr f e xs) y) $
+    \ih (x, xs) y -> [lUnit, assoc] |- SL.foldr f y (x .: xs)
+                                    =: f x (SL.foldr f y xs)
+                                    ?? ih
+                                    =: f x (f (SL.foldr f e xs) y)
+                                    =: f (f x (SL.foldr f e xs)) y
+                                    =: f (SL.foldr f e (x .: xs)) y
+                                    =: qed
+
+-- BEGIN bookKeeping
+bookKeeping :: forall a. SymVal a
+            => SBV a -> (SBV a -> SBV a -> SBV a)
+            -> TP (Proof (Forall "xss" [[a]] -> SBool))
+bookKeeping e f = do
+  let assoc = quantifiedBool $ \(Forall x) (Forall y) (Forall z) ->
+                f x (f y z) .== f (f x y) z
+      rUnit = quantifiedBool $ \(Forall x) -> f x e .== x
+      lUnit = quantifiedBool $ \(Forall x) -> f e x .== x
+      reduce = SL.foldr f e
+  base <- foldBase e f
+  over <- ListProofs.foldrOverAppend e f
+  induct "bookKeeping"
+    (\(Forall xss) -> assoc .&& rUnit .&& lUnit .=>
+       reduce (SL.concat xss) .== reduce (SL.map reduce xss)) $
+    \ih (xs, xss) -> [assoc, rUnit, lUnit] |- reduce (SL.concat (xs .: xss))
+      =: reduce (xs SL.++ SL.concat xss)
+      ?? over
+      =: SL.foldr f (reduce (SL.concat xss)) xs
+      ?? ih
+      =: SL.foldr f (reduce (SL.map reduce xss)) xs
+      ?? base `at` (Inst @"xs" xs, Inst @"y" (reduce (SL.map reduce xss)))
+      =: f (reduce xs) (reduce (SL.map reduce xss))
+      =: reduce (reduce xs .: SL.map reduce xss)
+      =: reduce (SL.map reduce (xs .: xss))
+      =: qed
+-- END bookKeeping
+
+-- BEGIN bookKeepingRun
+bookKeepingAbstract :: IO (Proof (Forall "xss" [[Integer]] -> SBool))
+bookKeepingAbstract = runTP $
+  bookKeeping @Integer (uninterpret "unit") (uninterpret "combine")
+-- END bookKeepingRun
+
+-- A concrete instance, with no algebraic assumptions left in the conclusion.
+bookKeepingSum :: TP (Proof (Forall "xss" [[Integer]] -> SBool))
+bookKeepingSum = do
+  law <- bookKeeping @Integer 0 (+)
+  lemma "bookKeepingSum"
+    (\(Forall xss) -> SL.sum (SL.concat xss) .== SL.sum (SL.map SL.sum xss))
+    [proofOf law]
+
+-- Dropping the left-unit premise is unsound, even for an associative operator
+-- with a right unit: left projection, with unit 0 and input [[], [1]].
+bookKeepingNeedsLeftUnit :: IO Bool
+bookKeepingNeedsLeftUnit = pure $
+  let f :: SInteger -> SInteger -> SInteger
+      f x _ = x
+      xss = literal [[], [1 :: Integer]]
+      reduce = SL.foldr f 0
+  in unliteral (reduce (SL.concat xss)) == Just 1
+     && unliteral (reduce (SL.map reduce xss)) == Just 0
+
+-- BEGIN closure
+shiftEach :: SInteger -> SList Integer -> SList Integer
+shiftEach k = SL.map Closure { closureEnv = k
+                            , closureFun = \env x -> x + env
+                            }
+-- END closure
+
+shiftLength :: TP (Proof (Forall "xs" [Integer] -> Forall "k" Integer -> SBool))
+shiftLength = induct "shiftLength"
+  (\(Forall xs) (Forall k) -> SL.length (shiftEach k xs) .== SL.length xs) $
+  \ih (x, xs) k -> [] |- SL.length (shiftEach k (x .: xs))
+                      =: 1 + SL.length (shiftEach k xs)
+                      ?? ih
+                      =: 1 + SL.length xs
+                      =: SL.length (x .: xs)
+                      =: qed
+
+-------------------------------------------------------------------------------
+-- Termination: a non-decreasing recursive call must be rejected before proving.
+-------------------------------------------------------------------------------
+
+badRecursion :: SInteger -> SInteger
+badRecursion = smtFunction "badRecursion" $ \n -> badRecursion n + 1
+
+badRecursionRejected :: IO Bool
+badRecursionRejected = do
+  let property :: Forall "n" Integer -> SBool
+      property (Forall n) = badRecursion n .== 0
+  r <- try (void (runTP $ lemma "badRecursionRejected"
+                     property []))
+         :: IO (Either ErrorCall ())
+  case r of
+    Left err -> do putStrLn (displayException err)
+                   pure $ "Cannot determine a termination measure" `isInfixOf` displayException err
+    Right () -> pure False
 
 -------------------------------------------------------------------------------
 -- Section: Kadane's algorithm
@@ -320,12 +545,19 @@ kadaneCorrect = do
                    =: qed
 -- END kadaneCorrect
 
--- Concrete sanity checks: symbolic functions evaluate on literal lists.
+-- BEGIN segmentOracle
+segmentOracle :: [Integer] -> Integer
+segmentOracle xs = maximum [sum segment | suffix <- tails xs, segment <- inits suffix]
+-- END segmentOracle
+
+-- Every contiguous segment is a prefix of a suffix, including the empty one.
+-- This oracle does not use either symbolic recurrence.
 kadaneConcrete :: IO Bool
 kadaneConcrete = pure $ and
-  [ unliteral (f xs) == Just e
-  | f <- [mss, kadane]
-  , (xs, e) <- [([1, -2, 3, 4, -1, 2], 8), ([-2, -3, -1], 0), ([1, 2, 3], 6)]
+  [ unliteral (f (literal xs)) == Just (segmentOracle xs)
+  | xs <- concatMap (\n -> replicateM n [-2 .. 2]) ([0 .. 5] :: [Int])
+          ++ [[1, -2, 3, 4, -1, 2], [-2, -3, -1], [1, 2, 3]]
+  , f <- [mss, kadane]
   ]
 
 -------------------------------------------------------------------------------
@@ -356,10 +588,6 @@ satSubSpec x y = sFromIntegral (satSub x y) .== ite (diff .< 0) 0 diff
 -------------------------------------------------------------------------------
 -- Driver
 -------------------------------------------------------------------------------
-
--- Run a TP script, reporting failure as False rather than an exception.
-tryTP :: forall a. IO a -> IO Bool
-tryTP act = either (const False) (const True) <$> (try act :: IO (Either SomeException a))
 
 check :: String -> IO Bool -> IO ()
 check name action = do
@@ -393,14 +621,33 @@ main = do
         print r
         pure $ sort (extractModels r) == ([0, 1] :: [Word8])
       check "production plan optimum is 17" productionOptimal
+      check "real bounds report epsilon and infinity (version-specific)" realBoundsChecked
       check "host-list sum of five nonnegatives" $ isTheorem (nonNegSum 5)
+      check "feasible assumptions and vacuous byte property" assumptionsChecked
+      check "bounded automatic sum attempt: unknown or proved, never refuted" $ do
+        r <- sumWithoutInduction
+        print r
+        pure $ case r of
+          ThmResult Unknown{}       -> True
+          ThmResult Unsatisfiable{} -> True
+          _                         -> False
       check "query descent finds 24" $ (== 24) <$> smallest
+      check "array writes commute at distinct addresses" $ isTheorem writesCommute
+      check "array aliasing counterexample checked with Haskell lookup" arrayAliasingRefuted
       check "datatype puzzle model re-evaluates to 42" puzzleChecked
       check "datatype first introduced during query" $ (== Sat) <$> lateDatatype
       check "sum of nonnegatives, by induction" $ void (runTP sumNonNeg) >> pure True
       check "non-generalized reversal proof fails" revWeakFails
       check "generalized accumulator reversal" $ void (runTP revAccCorrect) >> pure True
-      check "Kadane on literal lists" kadaneConcrete
+      check "reversal with empty initial accumulator" $ void (runTP reverseCorrect) >> pure True
+      check "polymorphic reverseLength at Integer" $ void (runTP (reverseLength @Integer)) >> pure True
+      check "polymorphic reverseLength at Word8" $ void (runTP (reverseLength @Word8)) >> pure True
+      check "bookkeeping for an uninterpreted integer operation" $ void bookKeepingAbstract >> pure True
+      check "bookkeeping specialized to integer sum" $ void (runTP bookKeepingSum) >> pure True
+      check "bookkeeping needs the left-unit premise" bookKeepingNeedsLeftUnit
+      check "closure environment preserves mapped list length" $ void (runTP shiftLength) >> pure True
+      check "non-decreasing recursion is rejected" badRecursionRejected
+      check "Kadane and specification against enumerated segments (3906 lists plus 3 cases)" kadaneConcrete
       check "Kadane correctness" $ void (runTP kadaneCorrect) >> pure True
       check "exercise 1: saturating subtraction" $ isTheorem satSubSpec
       check "exercise 2: largest below 100 is 94" $ (== 94) <$> largestBelow100

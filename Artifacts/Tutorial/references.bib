@@ -2,8 +2,29 @@
   author = {Levent Erk{\"o}k},
   title = {{SBV}: {SMT} Based Verification in {Haskell}},
   year = {2026},
-  howpublished = {Hackage package \texttt{sbv}},
-  url = {https://hackage.haskell.org/package/sbv}
+  howpublished = {Haskell library; tutorial checked with the 14.10 source tree},
+  url = {https://github.com/LeventErkok/sbv}
+}
+@misc{z3strictbounds,
+  author = {Levent Erk{\"o}k and Nikolaj Bj{\o}rner},
+  title = {Incorrect Real Optimization Results},
+  year = {2021},
+  howpublished = {{Z3} issue 5314 and discussion},
+  url = {https://github.com/Z3Prover/z3/issues/5314}
+}
+@misc{z3optimization,
+  author = {{Microsoft}},
+  title = {Online {Z3} Guide: Arithmetical Optimization},
+  year = {2026},
+  note = {Accessed 3 November 2026},
+  url = {https://microsoft.github.io/z3guide/docs/optimization/arithmeticaloptimization/}
+}
+@misc{z3arithmetic,
+  author = {{Microsoft}},
+  title = {Online {Z3} Guide: Arithmetic},
+  year = {2026},
+  note = {Accessed 3 November 2026},
+  url = {https://microsoft.github.io/z3guide/docs/theories/Arithmetic/}
 }
 @inproceedings{quickcheck,
   author = {Koen Claessen and John Hughes},
@@ -14,6 +35,17 @@
   publisher = {ACM},
   address = {New York, NY, USA},
   doi = {10.1145/351240.351266}
+}
+@inproceedings{fastloose,
+  author = {Nils Anders Danielsson and John Hughes and Patrik Jansson and Jeremy Gibbons},
+  title = {Fast and Loose Reasoning is Morally Correct},
+  booktitle = {Conference Record of the 33rd ACM SIGPLAN-SIGACT Symposium on Principles of Programming Languages},
+  year = {2006},
+  pages = {206--217},
+  publisher = {ACM},
+  address = {New York, NY, USA},
+  doi = {10.1145/1111037.1111056},
+  url = {https://www.cs.ox.ac.uk/jeremy.gibbons/publications/fast+loose.pdf}
 }
 @inproceedings{sharing,
   author = {Andy Gill},
@@ -26,12 +58,20 @@
   doi = {10.1145/1596638.1596653},
   url = {https://ku-fpg.github.io/files/Gill-09-TypeSafeReification.pdf}
 }
+@misc{smtarrays,
+  author = {Cesare Tinelli},
+  title = {{SMT-LIB}: Arrays with Extensionality},
+  year = {2024},
+  note = {Theory ArraysEx, SMT-LIB 2.7, release of 21 July 2024},
+  url = {https://smt-lib.org/theories-ArraysEx.shtml}
+}
 @techreport{smtlib,
   author = {Clark Barrett and Pascal Fontaine and Cesare Tinelli},
   title = {The {SMT-LIB} Standard: Version 2.7},
   institution = {Department of Computer Science, The University of Iowa},
   year = {2025},
-  url = {https://smt-lib.org/language.shtml}
+  note = {Release of 7 July 2025},
+  url = {https://smt-lib.org/papers/smt-lib-reference-v2.7-r2025-07-07.pdf}
 }
 @inproceedings{z3,
   author = {Leonardo de Moura and Nikolaj Bj{\o}rner},
@@ -43,6 +83,21 @@
   address = {Berlin, Heidelberg},
   doi = {10.1007/978-3-540-78800-3_24},
   url = {https://www.microsoft.com/en-us/research/publication/z3-an-efficient-smt-solver/}
+}
+@inproceedings{cvc5,
+  author = {Haniel Barbosa and Clark Barrett and Martin Brain and Gereon Kremer and
+            Hanna Lachnitt and Makai Mann and Abdalrhman Mohamed and Mudathir Mohamed and
+            Aina Niemetz and Andres N{\"o}tzli and Alex Ozdemir and Mathias Preiner and
+            Andrew Reynolds and Ying Sheng and Cesare Tinelli and Yoni Zohar},
+  title = {{cvc5}: A Versatile and Industrial-Strength {SMT} Solver},
+  booktitle = {Tools and Algorithms for the Construction and Analysis of Systems},
+  series = {Lecture Notes in Computer Science},
+  volume = {13243},
+  pages = {415--442},
+  year = {2022},
+  publisher = {Springer},
+  address = {Cham, Switzerland},
+  doi = {10.1007/978-3-030-99524-9_24}
 }
 @inproceedings{smten,
   author = {Richard Uhler and Nirav Dave},
@@ -105,12 +160,14 @@
   title = {A Computational Logic},
   publisher = {Academic Press},
   address = {New York},
-  year = {1979}
+  year = {1979},
+  url = {https://www.cs.utexas.edu/~boyer/acl.pdf}
 }
 @misc{imandraTautology,
   author = {Grant Passmore},
   title = {Tautology Checker Example for {ImandraX} (\texttt{tautology.iml})},
-  year = {2025},
+  year = {n.d.},
+  note = {Descriptive title; source file accessed 3 November 2026},
   howpublished = {Imandra examples repository},
   url = {https://github.com/imandra-ai/imandrax-examples/blob/main/src/tautology.iml}
 }

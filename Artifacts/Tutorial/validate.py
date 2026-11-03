@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """Run the tutorial's checks and keep a complete, dated execution log."""
 from datetime import datetime, timezone
+from hashlib import sha256
 from pathlib import Path
 import shlex
 import subprocess
@@ -40,6 +41,7 @@ with log_path.open("w") as log:
         if result.returncode:
             record("VALIDATION FAILED")
             raise SystemExit(result.returncode)
+        return result.stdout
 
     record("SBV tutorial companion validation")
     record("UTC: " + datetime.now(timezone.utc).isoformat())
@@ -48,12 +50,26 @@ with log_path.open("w") as log:
                     ["cabal", "--numeric-version"], ["z3", "--version"],
                     ["cvc5", "--version"], ["cc", "--version"]]:
         run(command)
+    record("\nLibrary source changes relative to the recorded revision (empty means clean):")
+    run(["git", "status", "--short", "--", "Data", "Documentation", "sbv.cabal"])
+    record("\nSHA-256 of validation inputs:")
+    for path in [tutorial / "examples/TutorialExamples.hs", tutorial / "examples/adder-check.c",
+                 tutorial / "validate.py", tutorial / "prepare.py", repo / "sbv.cabal",
+                 repo / "Documentation/SBV/Examples/TP/Lists.hs",
+                 repo / "Documentation/SBV/Examples/TP/TautologyChecker.hs"]:
+        record(f"{sha256(path.read_bytes()).hexdigest()}  {path.relative_to(repo)}")
+    record("\nLibrary package description:\n" + "\n".join(
+        line for line in (repo / "sbv.cabal").read_text().splitlines()
+        if line.startswith(("Name ", "Version "))))
     run([sys.executable, tutorial / "prepare.py"])
     run(["cabal", "exec", "--offline", "--", "ghc", "-O0", "-Wall", "-Werror",
          "-i", "-i" + str(tutorial / "examples"), "-package", "sbv",
          "-outputdir", build, "-o", build / "tutorial-examples",
          tutorial / "examples/TutorialExamples.hs"])
-    run([build / "tutorial-examples"])
+    output = run([build / "tutorial-examples"])
+    if "*** Failed to prove revWeak.2." not in output:
+        record("VALIDATION FAILED: expected failure at reversal step 2 was not observed")
+        raise SystemExit(1)
     run([build / "tutorial-examples", "--tautology"])
     (build / "c").mkdir(exist_ok=True)
     run([build / "tutorial-examples", "--generate", build / "c"])

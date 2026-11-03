@@ -1,22 +1,22 @@
 SBV tutorial companion validation
-UTC: 2026-11-03T04:35:36.725482+00:00
+UTC: 2026-11-03T17:04:21.387828+00:00
 Scope: tutorial examples only; not the full repository test suite.
 
 $ git rev-parse HEAD
-a233e0651d18a379d1e4aec9511d5d7cb5b54696
+fb2cdafe97a81c104951d0659ffe8815b4bbc27a
 Exit status: 0; elapsed: 0.02s
 
 $ ghc --numeric-version
 9.14.1
-Exit status: 0; elapsed: 0.35s
+Exit status: 0; elapsed: 0.26s
 
 $ cabal --numeric-version
 3.16.1.0
-Exit status: 0; elapsed: 0.11s
+Exit status: 0; elapsed: 0.04s
 
 $ z3 --version
 Z3 version 5.3.2 - 64 bit - build hashcode b411c90217766c924e6ea3d0b51f452a89fd8fc2
-Exit status: 0; elapsed: 0.09s
+Exit status: 0; elapsed: 0.02s
 
 $ cvc5 --version
 cvc5 1.4.2 [git 282d5e0 on branch HEAD]
@@ -78,26 +78,45 @@ See licenses/gpl-3.0.txt for more information.
 See the file COPYING (distributed with the source code, and with
 all binaries) for the full cvc5 copyright, licensing, and (lack of)
 warranty information.
-Exit status: 0; elapsed: 0.08s
+Exit status: 0; elapsed: 0.06s
 
 $ cc --version
 Apple clang version 21.0.0 (clang-2100.3.34.2)
 Target: arm64-apple-darwin25.6.0
 Thread model: posix
 InstalledDir: /Library/Developer/CommandLineTools/usr/bin
-Exit status: 0; elapsed: 0.15s
+Exit status: 0; elapsed: 0.11s
 
-$ /Library/Developer/CommandLineTools/usr/bin/python3 /Users/lerkok/Projects/sbv/Artifacts/ExperienceReport/prepare.py
-Extracted 19 listings (19 used by the manuscript)
-Exit status: 0; elapsed: 0.05s
+Library source changes relative to the recorded revision (empty means clean):
 
-$ cabal exec --offline -- ghc -O0 -Wall -Werror -i -i/Users/lerkok/Projects/sbv/Artifacts/ExperienceReport/examples -package sbv -outputdir /Users/lerkok/Projects/sbv/Artifacts/ExperienceReport/build -o /Users/lerkok/Projects/sbv/Artifacts/ExperienceReport/build/tutorial-examples /Users/lerkok/Projects/sbv/Artifacts/ExperienceReport/examples/TutorialExamples.hs
-Loaded package environment from /Users/lerkok/Projects/sbv/dist-newstyle/tmp/environment.-15029/.ghc.environment.aarch64-darwin-9.14.1
-[1 of 2] Compiling Main             ( /Users/lerkok/Projects/sbv/Artifacts/ExperienceReport/examples/TutorialExamples.hs, /Users/lerkok/Projects/sbv/Artifacts/ExperienceReport/build/Main.o )
-[2 of 2] Linking /Users/lerkok/Projects/sbv/Artifacts/ExperienceReport/build/tutorial-examples
-Exit status: 0; elapsed: 6.41s
+$ git status --short -- Data Documentation sbv.cabal
 
-$ /Users/lerkok/Projects/sbv/Artifacts/ExperienceReport/build/tutorial-examples
+Exit status: 0; elapsed: 0.02s
+
+SHA-256 of validation inputs:
+372d818282adc7f7b6b1043b765964a443046cc9918a88169ec598ff9fbe929c  Artifacts/Tutorial/examples/TutorialExamples.hs
+94bb964dbf0e9cb3d9ec1d8af6d4dc3a7f06b5399eae586c339fe061d4b92bc6  Artifacts/Tutorial/examples/adder-check.c
+6ab6706985b1e4b357adc9edd4ba7deff5f771417c54da962bb1d1c9ef586100  Artifacts/Tutorial/validate.py
+702c477c607a5d4179267d66ee7278d595469aa16c7e17490405a1218e4f89b4  Artifacts/Tutorial/prepare.py
+f346d68da03c07968a810eeb08610b9c2aa630324e7387ddf55a4af0a64888f9  sbv.cabal
+c98cbecdb053de678af3ad406d2b99b351eec190b6644fefc78f44934f40c1ef  Documentation/SBV/Examples/TP/Lists.hs
+fcacc8fc472fcac60dbf4a007b7b502fc86dc2b4d5d2cc3cc901905e02ae4ed8  Documentation/SBV/Examples/TP/TautologyChecker.hs
+
+Library package description:
+Name        : sbv
+Version     : 14.10
+
+$ /Library/Developer/CommandLineTools/usr/bin/python3 /Users/lerkok/Projects/sbv/Artifacts/Tutorial/prepare.py
+Extracted 31 listings (31 used by the manuscript)
+Exit status: 0; elapsed: 0.04s
+
+$ cabal exec --offline -- ghc -O0 -Wall -Werror -i -i/Users/lerkok/Projects/sbv/Artifacts/Tutorial/examples -package sbv -outputdir /Users/lerkok/Projects/sbv/Artifacts/Tutorial/build -o /Users/lerkok/Projects/sbv/Artifacts/Tutorial/build/tutorial-examples /Users/lerkok/Projects/sbv/Artifacts/Tutorial/examples/TutorialExamples.hs
+Loaded package environment from /Users/lerkok/Projects/sbv/dist-newstyle/tmp/environment.-57325/.ghc.environment.aarch64-darwin-9.14.1
+[1 of 2] Compiling Main             ( /Users/lerkok/Projects/sbv/Artifacts/Tutorial/examples/TutorialExamples.hs, /Users/lerkok/Projects/sbv/Artifacts/Tutorial/build/Main.o ) [Source file changed]
+[2 of 2] Linking /Users/lerkok/Projects/sbv/Artifacts/Tutorial/build/tutorial-examples [Objects changed]
+Exit status: 0; elapsed: 5.40s
+
+$ /Users/lerkok/Projects/sbv/Artifacts/Tutorial/build/tutorial-examples
 PASS integer absolute value is nonnegative
 Falsifiable. Counter-example:
   s0 = -128 :: Int8
@@ -121,8 +140,27 @@ Optimal model:
   y      =  3 :: Integer
   profit = 17 :: Integer
 PASS production plan optimum is 17
+Objective "lower": Optimal in an extension field:
+  lower = epsilon :: Real
+  upper =      oo :: Real
+Objective "upper": Optimal in an extension field:
+  lower = epsilon :: Real
+  upper =      oo :: Real
+PASS real bounds report epsilon and infinity (version-specific)
 PASS host-list sum of five nonnegatives
+PASS feasible assumptions and vacuous byte property
+Unknown.
+  Reason: timeout
+PASS bounded automatic sum attempt: unknown or proved, never refuted
 PASS query descent finds 24
+PASS array writes commute at distinct addresses
+Falsifiable. Counter-example:
+  a = ([], 2) :: Array Integer Integer
+  i =       5 :: Integer
+  j =       5 :: Integer
+  x =       3 :: Integer
+  y =       4 :: Integer
+PASS array aliasing counterexample checked with Haskell lookup
 Satisfiable. Model:
   s0 = Mul (Mul (Num 1) (Num (-1))) (Num (-42)) :: Expr
 PASS datatype puzzle model re-evaluates to 42
@@ -141,6 +179,7 @@ Inductive lemma: revWeak
 *** Failed to prove revWeak.2.
 
 *** Solver reported: canceled
+Failed
 PASS non-generalized reversal proof fails
 Inductive lemma: revAccCorrect
   Step: Base                      Q.E.D.
@@ -151,7 +190,104 @@ Inductive lemma: revAccCorrect
   Result:                         Q.E.D.
 Functions proven terminating: revAcc, sbv.reverse
 PASS generalized accumulator reversal
-PASS Kadane on literal lists
+Lemma: revAccCorrect              Q.E.D.
+Lemma: reverseCorrect             Q.E.D.
+Functions proven terminating: revAcc, sbv.reverse
+PASS reversal with empty initial accumulator
+Inductive lemma: reverseLength
+  Step: Base                      Q.E.D.
+  Step: 1                         Q.E.D.
+  Step: 2                         Q.E.D.
+  Step: 3                         Q.E.D.
+  Step: 4                         Q.E.D.
+  Result:                         Q.E.D.
+Functions proven terminating: sbv.reverse
+PASS polymorphic reverseLength at Integer
+Inductive lemma: reverseLength
+  Step: Base                      Q.E.D.
+  Step: 1                         Q.E.D.
+  Step: 2                         Q.E.D.
+  Step: 3                         Q.E.D.
+  Step: 4                         Q.E.D.
+  Result:                         Q.E.D.
+Functions proven terminating: sbv.reverse
+PASS polymorphic reverseLength at Word8
+Inductive lemma: foldBase
+  Step: Base                        Q.E.D.
+  Step: 1                           Q.E.D.
+  Step: 2                           Q.E.D.
+  Step: 3                           Q.E.D.
+  Step: 4                           Q.E.D.
+  Result:                           Q.E.D.
+Inductive lemma: foldrOverAppend
+  Step: Base                        Q.E.D.
+  Step: 1                           Q.E.D.
+  Step: 2                           Q.E.D.
+  Step: 3                           Q.E.D.
+  Step: 4                           Q.E.D.
+  Result:                           Q.E.D.
+Inductive lemma: bookKeeping
+  Step: Base                        Q.E.D.
+  Step: 1                           Q.E.D.
+  Step: 2                           Q.E.D.
+  Step: 3                           Q.E.D.
+  Step: 4                           Q.E.D.
+  Step: 5                           Q.E.D.
+  Step: 6                           Q.E.D.
+  Result:                           Q.E.D.
+Functions proven terminating: sbv.foldr, sbv.map
+PASS bookkeeping for an uninterpreted integer operation
+Inductive lemma: foldBase
+  Step: Base                        Q.E.D.
+  Step: 1                           Q.E.D.
+  Step: 2                           Q.E.D.
+  Step: 3                           Q.E.D.
+  Step: 4                           Q.E.D.
+  Result:                           Q.E.D.
+Inductive lemma: foldrOverAppend
+  Step: Base                        Q.E.D.
+  Step: 1                           Q.E.D.
+  Step: 2                           Q.E.D.
+  Step: 3                           Q.E.D.
+  Step: 4                           Q.E.D.
+  Result:                           Q.E.D.
+Inductive lemma: bookKeeping
+  Step: Base                        Q.E.D.
+  Step: 1                           Q.E.D.
+  Step: 2                           Q.E.D.
+  Step: 3                           Q.E.D.
+  Step: 4                           Q.E.D.
+  Step: 5                           Q.E.D.
+  Step: 6                           Q.E.D.
+  Result:                           Q.E.D.
+Lemma: bookKeepingSum               Q.E.D.
+Functions proven terminating: sbv.foldr, sbv.map
+PASS bookkeeping specialized to integer sum
+PASS bookkeeping needs the left-unit premise
+Inductive lemma: shiftLength
+  Step: Base                    Q.E.D.
+  Step: 1                       Q.E.D.
+  Step: 2                       Q.E.D.
+  Step: 3                       Q.E.D.
+  Result:                       Q.E.D.
+Functions proven terminating: sbv.closureMap
+PASS closure environment preserves mapped list length
+
+*** Data.SBV: Cannot determine a termination measure.
+***
+***   Function: badRecursion :: SBV Integer -> SBV Integer
+***
+***   Measures tried:
+***     abs arg1
+***     smax 0 arg1
+***     abs arg1 + smax 0 arg1
+***     (abs arg1, smax 0 arg1)
+***     (smax 0 arg1, abs arg1)
+***
+*** Please use 'smtFunctionWithMeasure' to provide an explicit measure.
+
+PASS non-decreasing recursion is rejected
+PASS Kadane and specification against enumerated segments (3906 lists plus 3 cases)
 Inductive lemma: kadaneInvariant
   Step: Base                        Q.E.D.
   Step: 1                           Q.E.D.
@@ -175,9 +311,9 @@ Inductive lemma: revAccLength
   Result:                        Q.E.D.
 Functions proven terminating: revAcc
 PASS exercise 3: revAcc length
-Exit status: 0; elapsed: 40.68s
+Exit status: 0; elapsed: 42.17s
 
-$ /Users/lerkok/Projects/sbv/Artifacts/ExperienceReport/build/tutorial-examples --tautology
+$ /Users/lerkok/Projects/sbv/Artifacts/Tutorial/build/tutorial-examples --tautology
 Lemma: tautologyImpliesEval                         Q.E.D.
 Lemma: normalizeRespectsTruth                       Q.E.D.
 Lemma: normalizeCorrect                             Q.E.D.
@@ -193,19 +329,19 @@ Lemma: completeness                                 Q.E.D.
 Functions proven terminating:
   eval, falsify', ifComplexity, ifDepth, isAssigned, isNormal, isTautology', lookUp, normalize
 PASS tautology checker completeness
-Exit status: 0; elapsed: 3.57s
+Exit status: 0; elapsed: 3.42s
 
-$ /Users/lerkok/Projects/sbv/Artifacts/ExperienceReport/build/tutorial-examples --generate /Users/lerkok/Projects/sbv/Artifacts/ExperienceReport/build/c
+$ /Users/lerkok/Projects/sbv/Artifacts/Tutorial/build/tutorial-examples --generate /Users/lerkok/Projects/sbv/Artifacts/Tutorial/build/c
 
-Exit status: 0; elapsed: 0.02s
+Exit status: 0; elapsed: 0.04s
 
-$ cc -std=c11 -Wall -Wextra -Werror -O2 -fsanitize=undefined -fno-sanitize-recover=all -I/Users/lerkok/Projects/sbv/Artifacts/ExperienceReport/build/c /Users/lerkok/Projects/sbv/Artifacts/ExperienceReport/build/c/sat_add.c /Users/lerkok/Projects/sbv/Artifacts/ExperienceReport/examples/adder-check.c -o /Users/lerkok/Projects/sbv/Artifacts/ExperienceReport/build/adder-check
+$ cc -std=c11 -Wall -Wextra -Werror -O2 -fsanitize=undefined -fno-sanitize-recover=all -I/Users/lerkok/Projects/sbv/Artifacts/Tutorial/build/c /Users/lerkok/Projects/sbv/Artifacts/Tutorial/build/c/sat_add.c /Users/lerkok/Projects/sbv/Artifacts/Tutorial/examples/adder-check.c -o /Users/lerkok/Projects/sbv/Artifacts/Tutorial/build/adder-check
 
-Exit status: 0; elapsed: 0.22s
+Exit status: 0; elapsed: 0.34s
 
-$ /Users/lerkok/Projects/sbv/Artifacts/ExperienceReport/build/adder-check
+$ /Users/lerkok/Projects/sbv/Artifacts/Tutorial/build/adder-check
 PASS generated C: all 65536 unsigned-byte input pairs
-Exit status: 0; elapsed: 0.25s
+Exit status: 0; elapsed: 3.17s
 
 VALIDATION PASSED: all tutorial checks (including exercise solutions), the
 tautology checker's soundness and completeness proofs, and exhaustive
