@@ -45,7 +45,7 @@ Build the library from the repository root, then run the companion:
 
 ```sh
 cabal build --offline lib:sbv
-python3 Artifacts/ExperienceReport/validate.py
+python3 Artifacts/Tutorial/validate.py
 ```
 
 Alternatively, after building SBV, run `make validate` from this directory. The
