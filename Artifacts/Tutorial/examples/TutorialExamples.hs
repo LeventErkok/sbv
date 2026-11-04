@@ -154,9 +154,12 @@ sumL = smtFunction "sumL" $ \xs -> [sCase| xs of
 -- END sumL
 
 -- BEGIN sumWithoutInduction
+z3Timeout5 :: SMTConfig
+z3Timeout5 = z3 { solverSetOptions = solverSetOptions z3 ++ [SetTimeOut 5000] }
+
 sumWithoutInduction :: IO ThmResult
 sumWithoutInduction =
-  proveWith (z3 { solverSetOptions = [SetTimeOut 5000] }) $
+  proveWith z3Timeout5 $
     \xs -> SL.all (.>= 0) xs .=> sumL xs .>= 0
 -- END sumWithoutInduction
 
@@ -319,8 +322,7 @@ revWeak = induct "revWeak"
 -- The weak attempt must fail; we bound each solver call so the failure is prompt.
 revWeakFails :: IO Bool
 revWeakFails = do
-  let cfg = z3 { solverSetOptions = solverSetOptions z3 ++ [SetTimeOut 5000] }
-  r <- try (void (runTPWith cfg revWeak)) :: IO (Either ErrorCall ())
+  r <- try (void (runTPWith z3Timeout5 revWeak)) :: IO (Either ErrorCall ())
   case r of
     Left err -> do putStrLn (displayException err)
                    pure $ takeWhile (/= '\n') (displayException err) == "Failed"
@@ -611,6 +613,7 @@ mirrorCorrect = do
               =: eval (sAdd a b)
               =: eval e
               =: qed
+      -- PAPER-ELIDE-BEGIN Mul a b -> -- as for Add, with (*) in place of (+)
       Mul a b -> eval (mirror (sMul a b))
               =: eval (mirror b) * eval (mirror a)
               ?? smaller `at` (Inst @"a" a, Inst @"b" b)
@@ -621,6 +624,7 @@ mirrorCorrect = do
               =: eval (sMul a b)
               =: eval e
               =: qed
+      -- PAPER-ELIDE-END
       |]
 -- END mirrorCorrect
 

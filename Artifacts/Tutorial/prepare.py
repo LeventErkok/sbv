@@ -5,7 +5,8 @@ Two sources are used:
   * examples/TutorialExamples.hs, delimited by '-- BEGIN name' / '-- END name';
   * declarations quoted verbatim from SBV's own documentation modules, taken
     from the declaration's first line up to the next top-level line.
-Every \\snippet{name} or \\libsnippet{name} used by the manuscript must resolve to an extracted file.
+PAPER-ELIDE-BEGIN/END comments replace checked code with a printed summary.
+Every \\snippet{name}, \\snippet*{name}, or \\libsnippet{name} must resolve to an extracted file.
 """
 from pathlib import Path
 import re
@@ -19,9 +20,30 @@ for stale in destination.glob("*.hs"):
 
 snippets = {}
 
+def paper_listing(name, body):
+    """Elide only explicitly marked spans, rejecting malformed markers."""
+    output = []
+    eliding = False
+    for line in body.splitlines(keepends=True):
+        start = re.fullmatch(r"(\s*)-- PAPER-ELIDE-BEGIN (.+)\n?", line)
+        if start:
+            if eliding:
+                raise SystemExit(f"{name}: nested paper elision")
+            output.append(start[1] + start[2] + "\n")
+            eliding = True
+        elif line.strip() == "-- PAPER-ELIDE-END":
+            if not eliding:
+                raise SystemExit(f"{name}: unmatched paper elision end")
+            eliding = False
+        elif not eliding:
+            output.append(line)
+    if eliding:
+        raise SystemExit(f"{name}: unclosed paper elision")
+    return "".join(output)
+
 companion = (root / "examples" / "TutorialExamples.hs").read_text()
 for name, body in re.findall(r"^-- BEGIN (\w+)\n(.*?)^-- END \1$", companion, re.M | re.S):
-    snippets[name] = body
+    snippets[name] = paper_listing(name, body)
 
 # (snippet name, library module, regex matching the declaration's first line)
 library = [
@@ -42,7 +64,7 @@ for name, module, start in library:
         last -= 1
     snippets[name] = "\n".join(lines[first:last]) + "\n"
 
-used = set(re.findall(r"\\(?:lib)?snippet\{(\w+)\}", (root / "sbv-tutorial.tex").read_text()))
+used = set(re.findall(r"\\(?:lib)?snippet\*?\{(\w+)\}", (root / "sbv-tutorial.tex").read_text()))
 missing = sorted(used - snippets.keys())
 if missing:
     raise SystemExit(f"Manuscript uses listings with no source: {', '.join(missing)}")

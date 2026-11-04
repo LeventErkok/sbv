@@ -28,7 +28,7 @@ remove it and insert the assigned metadata for publication.
 | 9 Arrays and symbolic memory | Functional updates, extensional equality, aliasing, bounds, infinite index domains | `writesCommute` |
 | 10 Proofs by induction | `induct`, proof types, calculations, hints, generalization | `sumNonNeg`, `revAcc`, `revWeak`, `revAccCorrect`, `reverseCorrect` |
 | 11 Kadane (detailed) | Independent segment oracle, spec, implementation, finding the invariant, proof | `mss`, `segmentOracle`, `kadane`, `kadaneCorrect` |
-| 12 Induction over datatypes | Size measure, smaller-child lemmas, all constructor cases, both child hypotheses | `exprMirror`, `mirrorCorrect` |
+| 12 Induction over datatypes | Size measure, smaller-child lemmas, both child hypotheses; analogous multiplication case abbreviated | `exprMirror`, `mirrorCorrect` |
 | 13 Polymorphic and higher-order proofs | Monomorphic instances, bookkeeping law, uninterpreted operations, conditional algebraic laws, explicit closure environments | `reverseLength`, `listProofImports`, `bookKeeping`, `bookKeepingRun`, `closure` |
 | 14 Tautology checker (overview) | Lexicographic measures, strong induction beyond children, proof architecture | library quotes |
 | 15 C generation | `compileToC`, validating the translation boundary | `codegen` |
@@ -109,9 +109,15 @@ teaching examples from successful proofs.
   generated datatype induction principle for `exprSizePos`; guided calculations
   use `sInduct` with `exprSize`, `exprSizePos`, and
   `exprSizeSmaller`, following the pattern in `Documentation/SBV/Examples/TP/Tree.hs`.
-  Show all three constructor cases and explicitly instantiate both child
+  Check all three constructor cases and explicitly instantiate both child
   hypotheses in each binary case, followed by a separate commutativity step.
-  The section fits about one page. Listing pagination remains for the layout pass.
+  Print the addition case in full and elide the analogous multiplication case
+  through explicit extraction markers. The section fits about one page.
+  Starred snippets allow longer listings to break across pages; short listings
+  and transcripts stay together. The manuscript remains 26 pages after this pass.
+- Share `z3Timeout5` between the automatic sum attempt and weak reversal proof.
+  Append its five-second per-call timeout to the default solver start options;
+  the paper's reversal command uses the same checked configuration.
 - Put Kadane directly after accumulator generalization, keep it a separate
   section, then introduce datatype induction. Group polymorphic scripts with
   higher-order proofs. Keep one full TP transcript and abbreviate the others.

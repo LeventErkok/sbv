@@ -20,10 +20,12 @@
 \BeforeBeginEnvironment{lstlisting}{\par\noindent\begin{minipage}{\linewidth}}
 \AfterEndEnvironment{lstlisting}{\end{minipage}\par}
 \newcommand{\code}[1]{\texttt{#1}}
-\newcommand{\snippet}[1]{\par\noindent
-  \begin{minipage}{\linewidth}
-  \lstinputlisting{build/snippets/#1.hs}
-  \end{minipage}\par}
+% Starred snippets may break across pages; short listings stay together.
+\NewDocumentCommand{\snippet}{s m}{\par\noindent
+  \IfBooleanTF{#1}{\lstinputlisting{build/snippets/#2.hs}}{
+    \begin{minipage}{\linewidth}
+    \lstinputlisting{build/snippets/#2.hs}
+    \end{minipage}}\par}
 % Listings quoted verbatim from SBV's documentation modules, which use wider lines.
 \newcommand{\libsnippet}[1]{\par\noindent
   \begin{minipage}{\linewidth}
@@ -448,8 +450,9 @@ the definition admissible; it does not prove arbitrary properties of it.
 Now try the obvious generalization of \code{nonNegSum}:
 \snippet{sumWithoutInduction}
 The property is true, but ordinary SMT reasoning about recursive definitions
-does not reliably establish it. The timeout above limits each solver call to
-five seconds; an unknown answer is expected with the tested configuration.
+does not reliably establish it. The configuration preserves Z3's default options
+and limits each solver call to five seconds; an unknown answer is expected
+with the tested configuration.
 It says nothing about the truth of the property. Section~\ref{sec:induction}
 supplies an induction argument that works for lists of every finite length.
 
@@ -469,7 +472,7 @@ answer, and ask a refined question. SBV's \code{query} mode hands control of a
 live solver session to a Haskell program. The following function finds the
 smallest integer greater than 10 that leaves remainder 3 when divided by 7 and
 remainder 4 when divided by 5:
-\snippet{descent}
+\snippet*{descent}
 \begin{lstlisting}[style=output]
 ghci> smallest
 24
@@ -512,7 +515,7 @@ is 94.)
 
 User-defined algebraic datatypes become symbolic with one line of Template
 Haskell. Here is a tiny expression language and its evaluator:
-\snippet{expr}
+\snippet*{expr}
 The call \code{mkSymbolic [''Expr]} generates the type \code{SExpr}, symbolic
 constructors (\code{sNum}, \code{sAdd}, \code{sMul}), recognizers (\code{isNum},
 \code{isAdd}, \code{isMul}), and field accessors such as \code{getMul\_1}. The
@@ -670,7 +673,7 @@ is instructive:
 \snippet{revWeak}
 Run it with a five-second per-call timeout (intermediate output omitted):
 \begin{lstlisting}[style=output]
-ghci> runTPWith z3{solverSetOptions = [SetTimeOut 5000]} revWeak
+ghci> runTPWith z3Timeout5 revWeak
 ...
 *** Failed to prove revWeak.2.
 \end{lstlisting}
@@ -683,7 +686,7 @@ refute reversal correctness.
 The fix is the oldest trick in inductive proofs: prove a more general statement.
 The theorem must describe \code{revAcc} for \emph{every} accumulator, so that the
 hypothesis can be used at whatever accumulator the recursion produces:
-\snippet{revAccCorrect}
+\snippet*{revAccCorrect}
 Here \code{acc} is universally quantified, and the induction hypothesis
 \code{ih} holds for all accumulators. When it is supplied as a hint, the solver
 instantiates it with \code{x .: acc}. The remaining steps use ordinary laws of
@@ -715,7 +718,7 @@ proving an invariant.
 \subsection{Specification}
 
 We specify the problem by its most direct recursive reading:
-\snippet{mss}
+\snippet*{mss}
 \code{mssBegin xs} is the best sum of a segment that starts at the beginning of
 \code{xs}: either the empty segment (0), just the head, or the head followed by
 the best segment starting at the tail. \code{mss xs} is the best of
@@ -742,7 +745,7 @@ every finite integer list.
 Kadane's algorithm maintains two accumulators while it scans the list:
 \code{meh}, the maximum sum of a segment ending at the current position, and
 \code{msf}, the maximum found so far:
-\snippet{kadane}
+\snippet*{kadane}
 At each element \code{h}, the best segment ending here either extends the best
 segment ending at the previous position or is empty, so the new \code{meh} is
 \code{0 `smax` (h + meh)}. The best so far is updated if that value is larger.
@@ -787,7 +790,7 @@ exceeds $\mathit{msf}$.
 \subsection{The proof}
 
 Once the invariant is written down, the proof is short:
-\snippet{kadaneCorrect}
+\snippet*{kadaneCorrect}
 The inductive step unfolds \code{kadaneHelper} once and applies the hypothesis
 at the new accumulators. Here the hint is more specific than in the earlier
 proofs: \code{ih `at` (Inst @"meh" meh', Inst @"msf" msf')} instantiates the
@@ -833,15 +836,18 @@ explains this step?''
 Return to \code{Expr}: mirroring swaps the children at every addition and
 multiplication node, preserving evaluation because both operations commute.
 \snippet{exprMirror}
-\code{inductiveLemma} uses the generated datatype induction principle when
-no guidance is needed. The calculational \code{induct} interface supports
-integers and lists; for a guided datatype proof, we use \code{sInduct} with a
-size measure. Define \code{exprSize} to be zero at \code{Num} and one plus the
+We guide this proof by applying the hypotheses before using commutativity.
+The calculational \code{induct} interface supports integers and lists, so for
+this datatype we use \code{sInduct} with a size measure.
+Define \code{exprSize} to be zero at \code{Num} and one plus the
 two child sizes at \code{Add} or \code{Mul}. The companion proves nonnegativity
-as \code{exprSizePos}, using \code{inductiveLemma}. Then
+as \code{exprSizePos}, using \code{inductiveLemma}: it applies the generated
+datatype induction principle without further guidance. Then
 \code{exprSizeSmaller} uses this fact to show that each child is smaller than
-its parent. These facts justify applying the hypothesis to each child:
-\snippet{mirrorCorrect}
+its parent. These facts justify applying the hypothesis to each child.
+The listing abbreviates the identical multiplication case; the companion
+checks all three cases in full:
+\snippet*{mirrorCorrect}
 The hypothesis supplied by \code{sInduct} is conditional: it proves the result
 for an expression only if its measure is smaller than that of the current
 \code{e}. Each \code{smaller} hint discharges these conditions; the two
@@ -867,7 +873,7 @@ The next examples show what each form of reuse establishes.
 
 Reversal preserves length regardless of the element type. We can express the
 proof once, using Haskell polymorphism:
-\snippet{reverseLength}
+\snippet*{reverseLength}
 The Haskell \code{forall a} makes the \emph{script} polymorphic; \code{SymVal a}
 provides the symbolic representation of its elements. Before running it, we
 choose a monotype. For example, in GHCi:
@@ -921,7 +927,7 @@ The first needs no assumptions on $f$. The second requires associativity and
 the left-identity law. Its empty-list case uses
 $f\ e\ y=y$; its inductive step uses associativity to move $y$ past the head.
 These lemmas expose exactly the two transformations the main induction needs:
-\snippet{bookKeeping}
+\snippet*{bookKeeping}
 \code{quantifiedBool} packages a quantified property as an \code{SBool}, so the
 algebraic laws can appear as assumptions in the calculation and as the premise
 of the theorem. They are not unconditionally added as user axioms. Induction

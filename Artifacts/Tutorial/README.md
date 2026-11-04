@@ -44,8 +44,11 @@ latexmk -pdf sbv-tutorial.tex
 `prepare.py` extracts listings into `build/snippets/` from two places: blocks
 between `-- BEGIN name` and `-- END name` in the companion, and a few
 declarations quoted verbatim from `Documentation/SBV/Examples/TP/TautologyChecker.hs`.
-It fails if the manuscript refers to a listing that has no source. Edit the
-Haskell sources, never the generated snippets. Short `ghci` transcripts and the
+It fails if the manuscript refers to a listing that has no source, including
+the breakable `\snippet*` form. `PAPER-ELIDE-BEGIN summary` and
+`PAPER-ELIDE-END` comments replace a span only in the printed listing; the full
+Haskell source is checked. The mirror proof uses this for its analogous `Mul`
+case. Edit the Haskell sources, never the generated snippets. Short `ghci` transcripts and the
 abbreviated `normalize` and internal-representation listings are typed directly
 in the manuscript; the behavior they show is exercised by the companion.
 
@@ -119,6 +122,7 @@ validation failure. Two teaching examples intentionally use a five-second
 solver timeout: the automatic sum attempt may return unknown, and the weak
 reversal attempt demonstrates an unsuccessful proof. Neither outcome is counted
 as a proof; the corresponding inductive proofs must succeed separately.
+Both use `z3Timeout5`, which appends the timeout to Z3's default start options.
 Running the script replaces `results/validation.txt`.
 The complete SBV regression suite is outside this validation.
 
