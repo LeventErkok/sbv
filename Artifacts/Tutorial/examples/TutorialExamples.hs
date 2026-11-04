@@ -561,6 +561,70 @@ kadaneConcrete = pure $ and
   ]
 
 -------------------------------------------------------------------------------
+-- Section: Induction over datatypes
+-------------------------------------------------------------------------------
+
+-- BEGIN exprMirror
+mirror :: SExpr -> SExpr
+mirror = smtFunction "mirror" $ \e -> [sCase| e of
+  Num n   -> sNum n
+  Add a b -> sAdd (mirror b) (mirror a)
+  Mul a b -> sMul (mirror b) (mirror a)
+  |]
+-- END exprMirror
+
+exprSize :: SExpr -> SInteger
+exprSize = smtFunction "exprSize" $ \e -> [sCase| e of
+  Num _   -> 0
+  Add a b -> 1 + exprSize a + exprSize b
+  Mul a b -> 1 + exprSize a + exprSize b
+  |]
+
+exprSizePos :: TP (Proof (Forall "e" Expr -> SBool))
+exprSizePos = inductiveLemma "exprSizePos"
+  (\(Forall e) -> exprSize e .>= 0) []
+
+exprSizeSmaller :: TP (Proof (Forall "a" Expr -> Forall "b" Expr -> SBool))
+exprSizeSmaller = do
+  pos <- recall exprSizePos
+  lemma "exprSizeSmaller"
+    (\(Forall a) (Forall b) ->
+      let smaller parent = exprSize a .< exprSize parent .&&
+                           exprSize b .< exprSize parent
+      in smaller (sAdd a b) .&& smaller (sMul a b)) [proofOf pos]
+
+-- BEGIN mirrorCorrect
+mirrorCorrect :: TP (Proof (Forall "e" Expr -> SBool))
+mirrorCorrect = do
+  pos <- recall exprSizePos
+  smaller <- recall exprSizeSmaller
+  sInduct "mirrorCorrect" (\(Forall e) -> eval (mirror e) .== eval e)
+    (exprSize, [proofOf pos]) $ \ih e -> [] |- [pCase| e of
+      Num n -> eval (mirror (sNum n)) =: eval (sNum n) =: qed
+      Add a b -> eval (mirror (sAdd a b))
+              =: eval (mirror b) + eval (mirror a)
+              ?? smaller `at` (Inst @"a" a, Inst @"b" b)
+              ?? ih `at` Inst @"e" a
+              ?? ih `at` Inst @"e" b
+              =: eval b + eval a
+              =: eval a + eval b
+              =: eval (sAdd a b)
+              =: eval e
+              =: qed
+      Mul a b -> eval (mirror (sMul a b))
+              =: eval (mirror b) * eval (mirror a)
+              ?? smaller `at` (Inst @"a" a, Inst @"b" b)
+              ?? ih `at` Inst @"e" a
+              ?? ih `at` Inst @"e" b
+              =: eval b * eval a
+              =: eval a * eval b
+              =: eval (sMul a b)
+              =: eval e
+              =: qed
+      |]
+-- END mirrorCorrect
+
+-------------------------------------------------------------------------------
 -- Section: Generating C
 -------------------------------------------------------------------------------
 
@@ -649,6 +713,7 @@ main = do
       check "non-decreasing recursion is rejected" badRecursionRejected
       check "Kadane and specification against enumerated segments (3906 lists plus 3 cases)" kadaneConcrete
       check "Kadane correctness" $ void (runTP kadaneCorrect) >> pure True
+      check "mirroring Expr preserves evaluation" $ void (runTP mirrorCorrect) >> pure True
       check "exercise 1: saturating subtraction" $ isTheorem satSubSpec
       check "exercise 2: largest below 100 is 94" $ (== 94) <$> largestBelow100
       check "exercise 3: revAcc length" $ void (runTP revAccLength) >> pure True

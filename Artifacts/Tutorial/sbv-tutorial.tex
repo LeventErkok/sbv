@@ -10,7 +10,7 @@
 \settopmatter{printacmref=false}
 \setcopyright{none}
 \citestyle{acmauthoryear}
-\lstset{language=Haskell,basicstyle=\small\ttfamily,
+\lstset{language=Haskell,deletekeywords={Num},basicstyle=\small\ttfamily,
   columns=fullflexible,keepspaces=true,showstringspaces=false,
   commentstyle=\normalfont\ttfamily,breaklines=true,frame=single,
   xleftmargin=0.4em,xrightmargin=0.4em,aboveskip=0.7em,belowskip=0.7em}
@@ -86,7 +86,7 @@ The two properties differ only in a type. Over mathematical integers, absolute
 values are nonnegative. Over signed bytes, 128 is not representable, so
 \code{abs (-128)} is $-128$. The solver did not test this value by luck: it
 solved a constraint whose domain contains all 256 inputs and reported a value
-that fails. This does not require enumerating those inputs.
+that fails.
 
 This tutorial is for Haskell programmers who want to use solvers in that way and
 then go further. It assumes familiarity with type classes and monads but no
@@ -97,14 +97,14 @@ builds on the previous ones:
   specifications, constraint solving, and optimization with multiple objectives.
 \item Section~\ref{sec:host} explains the boundary between Haskell evaluation and
   symbolic reasoning, which governs how recursion and data structures behave.
-\item Section~\ref{sec:arrays} models memory with symbolic arrays and shows why
-  aliasing matters when reasoning about updates.
 \item Sections~\ref{sec:queries}--\ref{sec:datatypes} program a live solver
   session and introduce symbolic algebraic datatypes.
+\item Section~\ref{sec:arrays} models memory with symbolic arrays and shows why
+  aliasing matters when reasoning about updates.
 \item Sections~\ref{sec:induction}--\ref{sec:tautology} prove properties of
-  recursive functions with SBV's theorem-proving layer, TP, including polymorphic
-  and higher-order proofs, and ending with a detailed
-  proof of Kadane's algorithm and an overview of a verified tautology checker.
+  recursive functions with SBV's theorem-proving layer, TP: list induction,
+  Kadane's algorithm, datatype induction, polymorphic and higher-order proofs,
+  and an overview of a verified tautology checker.
 \item Section~\ref{sec:codegen} compiles a verified function to C, and
   Section~\ref{sec:hood} explains enough of the implementation to make SBV's
   behavior predictable.
@@ -198,7 +198,7 @@ For the same reason, Haskell's \code{if-then-else} cannot branch on an
 builds a symbolic choice that the solver resolves. This distinction between
 \emph{Haskell control} and \emph{symbolic control} recurs throughout the
 tutorial. When all arguments are known, symbolic operations simply compute:
-\code{ite ((3 :: SInteger) .> 2) 10 20 :: SInteger} evaluates to the literal \code{10} without involving a
+\code{ite sTrue 10 20 :: SInteger} evaluates to the literal \code{10} without involving a
 solver.
 
 \subsection{What \texttt{prove} does}
@@ -269,6 +269,7 @@ way. Consider addition on unsigned bytes that saturates at 255 instead of
 wrapping. An implementation can avoid overflow by testing before it adds, while
 the specification can use unbounded integers, where overflow cannot happen:
 \snippet{saturating}
+On concrete inputs, \code{satAdd 250 10} evaluates to \code{255} without a solver.
 The guard \code{x .> 255 - y} cannot overflow, because \code{255 - y} is
 representable for every byte \code{y}, and on the other branch \code{x + y} does
 not wrap. In the specification, \code{sFromIntegral} converts each byte to an
@@ -381,13 +382,10 @@ for extension-field expressions.
 Changing \code{sReal} to \code{sInteger} in this example makes the minimum 1,
 while the maximum remains \code{oo}.
 
-\emph{Strict-bound pitfall.} This output is version-specific. Z3 does not
-guarantee correct infinitesimal results for optimization with strict inequalities
-such as \code{x .> 0}, especially when theories are mixed. Issue~5314 reports
-this very minimization returning 1 instead of an infinitesimal, without an
-unknown result~\citep{z3strictbounds}. Check open-bound behavior for the solver
-and formulation in use; a feasible model or a successful solver status alone
-does not establish optimality. Replacing $>$ by $\geq$ changes the problem.
+\emph{Strict-bound pitfall.} Infinitesimal results are not reliable for every
+formulation or Z3 version: issue~5314 reports this minimization returning 1
+without an unknown result~\citep{z3strictbounds}. Check strict-bound behavior;
+replacing $>$ by $\geq$ changes the problem.
 
 \paragraph{Solver support and arithmetic limits.}
 Z3 is currently the only optimization backend supported by SBV. SMT-LIB has
@@ -395,16 +393,12 @@ not standardized optimization commands; SBV uses Z3's extensions for objectives
 and priorities~\citep{z3optimization}. Optimization is therefore less portable
 across solvers than ordinary satisfiability checking.
 
-Nonlinear arithmetic is difficult in both optimization and SMT solving generally.
-Multiplying unknowns, as in \code{x * y}, leaves linear arithmetic;
-\code{3 * y} remains linear.
-Nonlinear integer satisfiability is undecidable, and Z3 may return unknown or
-fail to finish~\citep{z3arithmetic}. Optimization must also establish that no
-better solution exists. Z3 has specialized polynomial real procedures,
-including improved optimization support since 5.3, but this gives no general
-guarantee for nonlinear integer, mixed, or quantified problems~\citep{z3optimization}.
-Prefer linear formulations where faithful to the problem, set resource limits,
-and distinguish a feasible candidate from an established optimum.
+Products of unknowns, such as \code{x * y}, introduce nonlinear arithmetic,
+which can be difficult even without optimization; over integers, satisfiability
+is undecidable~\citep{z3arithmetic}. Z3's polynomial real procedures include
+optimization support since 5.3, but do not provide a general solution for
+nonlinear integer or mixed problems~\citep{z3optimization}. Prefer faithful
+linear formulations and distinguish feasible candidates from established optima.
 
 %==============================================================================
 \section{Haskell Structure and Symbolic Structure}
@@ -464,56 +458,6 @@ the problem; recursion through \code{smtFunction} becomes part of the problem}.
 The former fixes the amount of unfolding before solving; the latter allows
 statements about structures of unbounded size. Neither representation guarantees
 that the resulting solver query will be easy.
-
-%==============================================================================
-\section{Arrays and Symbolic Memory}
-\label{sec:arrays}
-
-An \code{SArray Integer Integer} is a total mapping from integer addresses to
-integer values. Use \code{sArray "mem"} to create an unknown array and
-\code{readArray mem i} to read a symbolic address. Updates are functional:
-\code{writeArray mem i v} returns an updated array, preserving \code{mem} as
-the previous state.
-
-The array theory supplies read-after-write laws: the updated address returns
-the new value; all other addresses retain their values. Equality is
-\emph{extensional}: equal arrays agree at every address, and
-conversely~\citep{smtarrays}. Thus writes to distinct addresses commute:
-\snippet{writesCommute}
-\begin{lstlisting}[style=output]
-ghci> prove writesCommute
-Q.E.D.
-\end{lstlisting}
-The proof covers every initial array, both addresses, and both values. The solver
-establishes equality of entire arrays directly, without traversal or induction.
-
-Omit \code{i ./= j} and the property is false: the addresses may \emph{alias}.
-For example, with $i=j=0$, $x=1$, and $y=2$, the left side stores 2 at address
-0 while the right side stores 1. The last write wins, regardless of the initial
-contents. The companion obtains a counterexample from the solver and checks
-its updates independently using Haskell association-list lookup.
-
-\paragraph{Bounds and the modeling domain.}
-An SMT array has no built-in length, allocation status, or out-of-bounds error.
-To model a buffer of length \code{n}, require \code{0 .<= i .\&\& i .< n} for a
-valid access; to verify safety, prove that the program establishes this condition
-before accessing the buffer. Merely assuming it would exclude invalid accesses
-from the proof. \code{constArray v} initializes every address to \code{v}; a free
-array has arbitrary but consistent contents.
-
-An integer-indexed array has an infinite index domain. This does not contradict
-the finite-list and recursive-datatype restriction discussed in
-Section~\ref{sec:finite-lists}: an array is a total mapping, not a recursively
-constructed sequence. The domain follows the index type: \code{SArray Word8 Integer}
-has 256 addresses, whereas \code{SArray Integer Integer} has infinitely many.
-Neither represents a partial or infinite Haskell list.
-
-\paragraph{Bulk updates.}
-The function \code{lambdaArray} describes an array by its value at each index.
-The library example \code{Documentation.SBV.Examples.Misc.LambdaArray} uses it
-to model range initialization: return the new value within the chosen interval
-and \code{readArray mem i} outside it. This expresses both the changed region
-and preservation of the remaining memory without enumerating addresses.
 
 %==============================================================================
 \section{Programming the Solver}
@@ -596,7 +540,58 @@ to terminate for arbitrary constraints.
 The same datatype can be the subject of proofs: a property of \code{eval} over
 all expressions concerns finite expression trees of unbounded size, and may
 need induction. Infinite or partial trees are outside the model
-(Section~\ref{sec:finite-lists}). Induction is the topic of the next section.
+(Section~\ref{sec:finite-lists}). Section~\ref{sec:datatype-induction} returns to
+\code{Expr} with a proof that a recursive transformation preserves evaluation.
+
+%==============================================================================
+\section{Arrays and Symbolic Memory}
+\label{sec:arrays}
+
+An \code{SArray Integer Integer} is a total mapping from integer addresses to
+integer values. Use \code{sArray "mem"} to create an unknown array and
+\code{readArray mem i} to read a symbolic address. Updates are functional:
+\code{writeArray mem i v} returns an updated array, preserving \code{mem} as
+the previous state.
+
+The array theory supplies read-after-write laws: the updated address returns
+the new value; all other addresses retain their values. Equality is
+\emph{extensional}: equal arrays agree at every address, and
+conversely~\citep{smtarrays}. Thus writes to distinct addresses commute:
+\snippet{writesCommute}
+\begin{lstlisting}[style=output]
+ghci> prove writesCommute
+Q.E.D.
+\end{lstlisting}
+The proof covers every initial array, both addresses, and both values. The solver
+establishes equality of entire arrays directly, without traversal or induction.
+
+Omit \code{i ./= j} and the property is false: the addresses may \emph{alias}.
+For example, with $i=j=0$, $x=1$, and $y=2$, the left side stores 2 at address
+0 while the right side stores 1. The last write wins, regardless of the initial
+contents. The companion obtains a counterexample from the solver and checks
+its updates independently using Haskell association-list lookup.
+
+\paragraph{Bounds and the modeling domain.}
+An SMT array has no built-in length, allocation status, or out-of-bounds error.
+To model a buffer of length \code{n}, require \code{0 .<= i .\&\& i .< n} for a
+valid access; to verify safety, prove that the program establishes this condition
+before accessing the buffer. Merely assuming it would exclude invalid accesses
+from the proof. \code{constArray v} initializes every address to \code{v}; a free
+array has arbitrary but consistent contents.
+
+An integer-indexed array has an infinite index domain. This does not contradict
+the finite-list and recursive-datatype restriction discussed in
+Section~\ref{sec:finite-lists}: an array is a total mapping, not a recursively
+constructed sequence. The domain follows the index type: \code{SArray Word8 Integer}
+has 256 addresses, whereas \code{SArray Integer Integer} has infinitely many.
+Neither represents a partial or infinite Haskell list.
+
+\paragraph{Bulk updates.}
+The function \code{lambdaArray} describes an array by its value at each index.
+The library example \code{Documentation.SBV.Examples.Misc.LambdaArray} uses it
+to model range initialization: return the new value within the chosen interval
+and \code{readArray mem i} outside it. This expresses both the changed region
+and preservation of the remaining memory without enumerating addresses.
 
 %==============================================================================
 \section{Proofs by Induction}
@@ -613,23 +608,16 @@ whether each step is valid.
 
 We return to the property that eluded \code{prove} in Section~\ref{sec:host}:
 \snippet{sumNonNeg}
-The type \code{Proof (Forall "xs" [Integer] -> SBool)} records the
-\emph{quantifier shape}: a property of every finite integer list \code{xs}. The actual
-predicate is the first function argument to \code{induct}, stored in the proof
-value; it is not encoded in this Haskell type. Two different properties can
-therefore have the same \code{Proof} type. The name in \code{Forall} identifies
-the quantified variable for output and instantiation. \code{TP} is the monad in
-which proof scripts are built, and \code{runTP} executes a script and returns its
-proof object. Typechecking the script alone does not check the theorem.
+The type \code{Proof (Forall "xs" [Integer] -> SBool)} records quantification
+over integer lists; the predicate is supplied to \code{induct}. The name
+\code{xs} identifies the variable for output and instantiation. Scripts live in
+the \code{TP} monad: \code{runTP} checks their obligations and returns a proof
+object; Haskell typechecking alone does not establish the theorem.
 
 The function \code{induct} applies list induction: SBV checks the
-base case (the empty list) automatically and gives the user the inductive step.
-In that step, \code{ih} is the induction hypothesis, a proof of the property for
-\code{xs}, and the goal is to show it for \code{x .: xs}. These cases cover
-lists built by finitely many cons operations from the empty list. They do not
-establish the property for infinite Haskell lists. Section~\ref{sec:finite-lists}
-discusses infinite lists and explains why this restriction also applies to
-recursive algebraic datatypes.
+base case automatically, then supplies the hypothesis \code{ih} for \code{xs}
+to prove the property for \code{x .: xs}. This covers finite lists; the scope
+for lists and recursive datatypes is discussed in Section~\ref{sec:finite-lists}.
 
 The step is a \emph{calculation}. Its first line lists the assumptions, here the
 precondition for the longer list, and \code{|-} starts a chain of expressions
@@ -680,21 +668,17 @@ Reversing a list with an accumulator is a standard optimization:
 We expect \code{revAcc [] xs} to equal \code{SL.reverse xs}. The direct attempt
 is instructive:
 \snippet{revWeak}
+Run it with a five-second per-call timeout (intermediate output omitted):
 \begin{lstlisting}[style=output]
-ghci> runTP revWeak
-Inductive lemma: revWeak
-  Step: Base                Q.E.D.
-  Step: 1                   Q.E.D.
-  Step: 2
+ghci> runTPWith z3{solverSetOptions = [SetTimeOut 5000]} revWeak
+...
 *** Failed to prove revWeak.2.
 \end{lstlisting}
 Step~2 tries to use the induction hypothesis, but the hypothesis is about
 \code{revAcc [] xs}, while the expression contains \code{revAcc [x] xs}. After
 one step of recursion, the accumulator is no longer empty, and the hypothesis says
-nothing about it. The displayed failure comes from a five-second timeout on
-each solver call in the companion. It is a failure to complete this proof
-attempt, not a counterexample to reversal correctness. An unrestricted solver
-search might continue indefinitely.
+nothing about it. The timeout leaves the statement unresolved; it does not
+refute reversal correctness.
 
 The fix is the oldest trick in inductive proofs: prove a more general statement.
 The theorem must describe \code{revAcc} for \emph{every} accumulator, so that the
@@ -716,121 +700,6 @@ Prove that \code{SL.length (revAcc acc xs) .== SL.length xs + SL.length acc}.
 Why must the accumulator remain universally quantified in the induction
 hypothesis, even when the intended caller starts with \code{[]}?
 \end{exercise}
-
-%==============================================================================
-\subsection{Polymorphic scripts, monomorphic proofs}
-\label{sec:polymorphic}
-
-Reversal preserves length regardless of the element type. We can express the
-proof once, using Haskell polymorphism:
-\snippet{reverseLength}
-The Haskell \code{forall a} makes the \emph{script} polymorphic; \code{SymVal a}
-provides the symbolic representation of its elements. Before running it, we
-choose a monotype. For example, in GHCi:
-\begin{lstlisting}
-runTP (reverseLength @Integer)
-runTP (reverseLength @Word8)
-\end{lstlisting}
-Each invocation checks a separate theorem over that type's solver sort. The
-companion runs both.
-
-This differs from \code{Forall "xs" [a]}, which quantifies over \emph{values}
-inside the theorem after \code{a} has been chosen. A successful integer instance
-does not by itself certify every type instance of the script: SBV is not
-quantifying over Haskell types. Polymorphism lets us reuse the argument and its
-implementation, while each proof run establishes a monomorphic result. This
-distinction matters especially for arithmetic laws, whose truth may change
-between \code{Integer} and \code{Word8}.
-
-%==============================================================================
-\section{Higher-Order Proofs}
-\label{sec:higherorder}
-
-Many useful list laws concern an operation supplied by the caller. The
-\emph{bookkeeping law}, adapted here from
-\code{Documentation.SBV.Examples.TP.Lists}, says that reducing a concatenation
-equals reducing each chunk and then reducing those results:
-\[
- \mathit{reduce}(\mathit{concat}\ xss)
- = \mathit{reduce}(\mathit{map}\ \mathit{reduce}\ xss),
- \qquad \mathit{reduce}=\mathit{foldr}\ f\ e.
-\]
-Associativity of $f$ and a two-sided identity $e$ suffice. For integer addition
-with identity 0, this is ``sum the elements'' versus ``sum the chunk sums.''
-Commutativity is not assumed: the order of elements is preserved.
-Both the outer list \code{xss} and every chunk are finite; the law makes no
-claim about consuming an infinite stream of chunks.
-
-\subsection{Proving the bookkeeping law}
-
-We reuse a library lemma with the following import:
-\snippet{listProofImports}
-The proof has two dependencies: \code{foldrOverAppend}, and a helper
-\code{foldBase} proved in the companion. Their conclusions are, respectively,
-\[
-\begin{aligned}
- \mathit{foldr}\ f\ e\ (xs \mathbin{++} ys)
-   &= \mathit{foldr}\ f\ (\mathit{foldr}\ f\ e\ ys)\ xs,\\
- \mathit{foldr}\ f\ y\ xs &= f\ (\mathit{foldr}\ f\ e\ xs)\ y.
-\end{aligned}
-\]
-The first needs no assumptions on $f$. The second requires associativity and
-the left-identity law. Its empty-list case uses
-$f\ e\ y=y$; its inductive step uses associativity to move $y$ past the head.
-These lemmas expose exactly the two transformations the main induction needs:
-\snippet{bookKeeping}
-\code{quantifiedBool} packages a quantified property as an \code{SBool}, so the
-algebraic laws can appear as assumptions in the calculation and as the premise
-of the theorem. They are not unconditionally added as user axioms. Induction
-is over the outer list of chunks: unfold \code{concat}, move the fold across
-append, use the induction hypothesis on the remaining chunks, then use
-\code{foldBase} to combine their result with that of the first chunk.
-
-The left-identity assumption has a concrete purpose. Take $f\ x\ y=x$ and
-$e=0$. This operation is associative and has right identity 0, but for
-\code{xss = [[],[1]]}, the two sides of the bookkeeping law are 1 and 0.
-The empty first chunk contributes an identity that must work on the left.
-The companion checks this counterexample as well as the proof.
-
-\subsection{An arbitrary operation at a fixed type}
-
-The parameters \code{e} and \code{f} are Haskell arguments to the proof script.
-To prove the law without choosing an implementation of the operation, give
-them fresh uninterpreted names:
-\snippet{bookKeepingRun}
-With \code{uninterpret}, a logical constant or function has no defining equations.
-Here \code{combine} is a total function on integers; the proof must
-work for every interpretation satisfying the stated algebraic laws. The solver
-does not enumerate implementations of \code{combine}. SBV specializes its list
-operations to this logical operation and reasons about the resulting
-definitions. The higher-order Haskell interface thus supports a proof about an
-arbitrary operation at a fixed type. We do not pass a Haskell function as an
-ordinary \code{Forall} argument of the theorem.
-
-Passing \code{0} and \code{(+)} instead gives a concrete instance. The companion
-also checks that instance and derives the unconditional sum-of-chunk-sums law.
-An uninterpreted operation represents a total mathematical function; it does
-not model divergence or exceptions in a Haskell callback.
-
-\subsection{Closures and higher-order functions}
-\label{sec:closures}
-
-A callback may also depend on data from its surrounding scope. Ordinary Haskell
-allows \code{map (+k) xs}, but \code{SL.map (+k) xs} cannot capture a symbolic
-unknown \code{k} from the enclosing solver context in the callback's definition.
-Use an explicit \code{Closure} to pass that environment:
-\snippet{closure}
-The environment \code{k} is symbolic data; \code{closureFun} is closed with
-respect to it because it receives \code{env} as an argument. SBV carries the
-environment through the generated recursive definition alongside the list.
-The companion proves that \code{shiftEach} preserves length for every offset
-and every finite integer list.
-
-This restriction concerns captured symbolic unknowns, not literals or globally
-named logical symbols. For example, \code{SL.map (+1)} needs no explicit closure.
-The uninterpreted names above also need no captured environment: they belong
-to the logical signature. Higher-order arguments describe which operation to use; a
-\code{Closure} additionally supplies the changing symbolic data it needs.
 
 %==============================================================================
 \section{Case Study: Kadane's Algorithm}
@@ -935,26 +804,16 @@ The main theorem then follows by a calculation without induction. With both
 accumulators 0, the invariant gives
 $\max(0, \mathit{mss}(xs), \mathit{mssBegin}(xs))$, and the solver discharges the
 last two steps: \code{mss} is nonnegative and at least \code{mssBegin} by its
-definition.
+definition. Abbreviated output shows the two results:
 \begin{lstlisting}[style=output]
 ghci> runTP kadaneCorrect
 Inductive lemma: kadaneInvariant
-  Step: Base                        Q.E.D.
-  Step: 1                           Q.E.D.
-  Step: 2                           Q.E.D.
+  ...
   Result:                           Q.E.D.
 Lemma: kadaneCorrect
-  Step: 1                           Q.E.D.
-  Step: 2                           Q.E.D.
-  Step: 3                           Q.E.D.
-  Step: 4                           Q.E.D.
+  ...
   Result:                           Q.E.D.
-Functions proven terminating: kadaneHelper, mss, mssBegin
 \end{lstlisting}
-The proof establishes equality of the two functions. The linear traversal of
-\code{kadaneHelper} follows separately from its one recursive call on the tail
-per element; the theorem does not establish a running-time or space bound for
-Haskell evaluation, and integer arithmetic itself is not constant-cost in general.
 
 \subsection{Lessons}
 
@@ -966,6 +825,152 @@ and case analysis on \code{smax}; the human supplies generalizations and
 intermediate statements. When a proof gets stuck, the useful question is
 rarely ``which tactic is missing?'' and usually ``what is the statement that
 explains this step?''
+
+%==============================================================================
+\section{Induction over Datatypes}
+\label{sec:datatype-induction}
+
+Return to \code{Expr}: mirroring swaps the children at every addition and
+multiplication node, preserving evaluation because both operations commute.
+\snippet{exprMirror}
+\code{inductiveLemma} uses the generated datatype induction principle when
+no guidance is needed. The calculational \code{induct} interface supports
+integers and lists; for a guided datatype proof, we use \code{sInduct} with a
+size measure. Define \code{exprSize} to be zero at \code{Num} and one plus the
+two child sizes at \code{Add} or \code{Mul}. The companion proves nonnegativity
+as \code{exprSizePos}, using \code{inductiveLemma}. Then
+\code{exprSizeSmaller} uses this fact to show that each child is smaller than
+its parent. These facts justify applying the hypothesis to each child:
+\snippet{mirrorCorrect}
+The hypothesis supplied by \code{sInduct} is conditional: it proves the result
+for an expression only if its measure is smaller than that of the current
+\code{e}. Each \code{smaller} hint discharges these conditions; the two
+\code{ih} hints instantiate the hypothesis separately at \code{a} and \code{b}.
+After substituting their evaluations, commutativity finishes the case.
+The final \code{eval e} reconnects each binary case to the theorem's goal.
+The \code{pCase} quasi-quoter splits the \emph{proof} by constructor and checks
+that the cases cover the datatype; \code{sCase} defines symbolic functions.
+The \code{Num} case has no recursive children and needs no hypothesis.
+Running \code{runTP mirrorCorrect} checks all three cases and returns
+\code{Proven}. The size argument is structural induction expressed through
+\code{sInduct}'s more general principle of induction on a decreasing measure.
+
+%==============================================================================
+\section{Polymorphic and Higher-Order Proofs}
+\label{sec:higherorder}
+
+Proof scripts can be reused across types and parameterized by operations.
+The next examples show what each form of reuse establishes.
+
+\subsection{Polymorphic scripts, monomorphic proofs}
+\label{sec:polymorphic}
+
+Reversal preserves length regardless of the element type. We can express the
+proof once, using Haskell polymorphism:
+\snippet{reverseLength}
+The Haskell \code{forall a} makes the \emph{script} polymorphic; \code{SymVal a}
+provides the symbolic representation of its elements. Before running it, we
+choose a monotype. For example, in GHCi:
+\begin{lstlisting}
+runTP (reverseLength @Integer)
+runTP (reverseLength @Word8)
+\end{lstlisting}
+Each invocation checks a separate theorem over that type's solver sort. The
+companion runs both.
+
+This differs from \code{Forall "xs" [a]}, which quantifies over \emph{values}
+inside the theorem after \code{a} has been chosen. A successful integer instance
+does not by itself certify every type instance of the script: SBV is not
+quantifying over Haskell types. Polymorphism lets us reuse the argument and its
+implementation, while each proof run establishes a monomorphic result. This
+distinction matters especially for arithmetic laws, whose truth may change
+between \code{Integer} and \code{Word8}.
+
+%==============================================================================
+\subsection{The bookkeeping law}
+
+Many useful list laws concern an operation supplied by the caller. The
+\emph{bookkeeping law}, adapted here from
+\code{Documentation.SBV.Examples.TP.Lists}, says that reducing a concatenation
+equals reducing each chunk and then reducing those results:
+\[
+ \mathit{reduce}(\mathit{concat}\ xss)
+ = \mathit{reduce}(\mathit{map}\ \mathit{reduce}\ xss),
+ \qquad \mathit{reduce}=\mathit{foldr}\ f\ e.
+\]
+Associativity of $f$ and a two-sided identity $e$ suffice. For integer addition
+with identity 0, this is ``sum the elements'' versus ``sum the chunk sums.''
+Commutativity is not assumed: the order of elements is preserved.
+Both the outer list \code{xss} and every chunk are finite; the law makes no
+claim about consuming an infinite stream of chunks.
+
+
+
+We reuse a library lemma with the following import:
+\snippet{listProofImports}
+The proof has two dependencies: \code{foldrOverAppend}, and a helper
+\code{foldBase} proved in the companion. Their conclusions are, respectively,
+\[
+\begin{aligned}
+ \mathit{foldr}\ f\ e\ (xs \mathbin{++} ys)
+   &= \mathit{foldr}\ f\ (\mathit{foldr}\ f\ e\ ys)\ xs,\\
+ \mathit{foldr}\ f\ y\ xs &= f\ (\mathit{foldr}\ f\ e\ xs)\ y.
+\end{aligned}
+\]
+The first needs no assumptions on $f$. The second requires associativity and
+the left-identity law. Its empty-list case uses
+$f\ e\ y=y$; its inductive step uses associativity to move $y$ past the head.
+These lemmas expose exactly the two transformations the main induction needs:
+\snippet{bookKeeping}
+\code{quantifiedBool} packages a quantified property as an \code{SBool}, so the
+algebraic laws can appear as assumptions in the calculation and as the premise
+of the theorem. They are not unconditionally added as user axioms. Induction
+is over the outer list of chunks: unfold \code{concat}, move the fold across
+append, use the induction hypothesis on the remaining chunks, then use
+\code{foldBase} to combine their result with that of the first chunk.
+
+The left-identity assumption has a concrete purpose. Take $f\ x\ y=x$ and
+$e=0$. This operation is associative and has right identity 0, but for
+\code{xss = [[],[1]]}, the two sides of the bookkeeping law are 1 and 0.
+The empty first chunk contributes an identity that must work on the left.
+The companion checks this counterexample as well as the proof.
+
+\subsection{An arbitrary operation at a fixed type}
+
+The parameters \code{e} and \code{f} are Haskell arguments to the proof script.
+To prove the law without choosing an implementation of the operation, give
+them fresh uninterpreted names:
+\snippet{bookKeepingRun}
+With \code{uninterpret}, a logical constant or function has no defining equations.
+Here \code{combine} is a total function on integers; the proof must
+work for every interpretation satisfying the stated algebraic laws. The solver
+does not enumerate implementations of \code{combine}. SBV specializes its list
+operations to this logical operation and reasons about the resulting
+definitions. The higher-order Haskell interface thus supports a proof about an
+arbitrary operation at a fixed type. We do not pass a Haskell function as an
+ordinary \code{Forall} argument of the theorem.
+
+Passing \code{0} and \code{(+)} instead gives a concrete instance. The companion
+also checks that instance and derives the unconditional sum-of-chunk-sums law.
+An uninterpreted operation represents a total mathematical function; it does
+not model divergence or exceptions in a Haskell callback.
+
+\subsection{Closures and higher-order functions}
+\label{sec:closures}
+
+A callback may also depend on data from its surrounding scope. Ordinary Haskell
+allows \code{map (+k) xs}, but \code{SL.map (+k) xs} cannot capture a symbolic
+unknown \code{k} from the enclosing solver context in the callback's definition.
+Use an explicit \code{Closure} to pass that environment:
+\snippet{closure}
+The environment \code{k} is symbolic data; \code{closureFun} is closed with
+respect to it because it receives \code{env} as an argument. SBV carries the
+environment through the generated recursive definition alongside the list.
+The companion proves that \code{shiftEach} preserves length for every offset
+and every finite integer list.
+
+Literals such as the 1 in \code{SL.map (+1)} and globally named logical symbols
+need no explicit closure; only captured symbolic unknowns require an environment.
 
 %==============================================================================
 \section{Case Study Overview: A Verified Tautology Checker}
@@ -1037,16 +1042,16 @@ normal formula and preserves meaning. The central inductive lemmas, such as
 the hypothesis is available for every formula with a smaller measure, not only
 for immediate subformulas, which matches the shape of the recursion in
 \code{isTautology'}. The lemmas use \code{recall} to reuse previously proved
-results and, in a few places, select CVC5 instead of Z3 for steps where it
-performs better. The companion checks both top-level theorems, including their
-dependencies; its log records timings as diagnostics rather than benchmarks.
+results; some obligations use CVC5. The companion checks both top-level
+theorems and their dependencies.
 
 \paragraph{What to take away.}
 The development reuses every technique from the earlier sections at larger
 scale. Generalization appears again: the central lemma \code{tautologyImpliesEval} is
 stated for arbitrary variable assignments, not only for the empty list of
-assumptions with which \code{isTautology} starts. New
-techniques are explicit termination measures and strong induction. The structure
+assumptions with which \code{isTautology} starts. Here strong induction extends
+beyond immediate children, and termination uses an explicit lexicographic measure.
+The structure
 of the proof follows the structure of the program: one group of lemmas per
 auxiliary function, and top-level theorems assembled from them by short
 calculations. SBV's documentation contains about forty further TP developments,
@@ -1067,16 +1072,11 @@ rewrite in which the two could drift apart. For this adder, the generated header
 maps \code{SWord8} to \code{uint8\_t}, and the arithmetic helpers implement
 8-bit modular addition and subtraction using unsigned intermediates and masks.
 
-Code generation is not a verified compiler, and it is worth being precise about
-what is known. The proof establishes a property of the \emph{symbolic} function.
-The C program is a separate artifact, produced by a translation that must
-implement each operation faithfully. For a function with a small input domain we
-can check the compiled artifact exhaustively: the companion compiles the generated adder with
-undefined-behavior sanitization and compares it on all 65,536 inputs with an
-independent oracle written directly in C. The proof and the exhaustive test
-make different claims, about the model and about this compiled code. Exhaustive
-agreement covers the tested executable and input domain; it is not a proof of
-the backend for all programs, compilers, or target platforms.
+The companion checks the compiled artifact exhaustively: it compiles the
+generated adder with undefined-behavior sanitization and compares all 65,536
+inputs with an independent oracle written directly in C. This checks the
+translation and compilation boundary for the generated executable;
+Section~\ref{sec:pitfalls} explains the remaining trust assumptions.
 
 Not all of SBV's vocabulary is executable. Quantifiers and uninterpreted sorts,
 for example, have no operational meaning, and the code generator rejects programs
@@ -1166,108 +1166,35 @@ with two fresh values of a parameterized datatype created by \code{freshVar}.
 \subsection{Termination is a proof obligation}
 \label{sec:termination}
 
-The \code{Functions proven terminating} line in TP output records a check that
-is separate from the theorem's induction. SMT functions denote total functions.
-An arbitrary recursive equation need not define one: for example,
-$b(n)=b(n)+1$ has no integer-valued solution. Admitting that equation as a
-definition would make the logical context inconsistent, allowing unrelated
-claims to be proved. Haskell's willingness to accept a recursive definition is
-therefore insufficient for using it in a proof.
+SMT functions denote total functions. An equation such as $b(n)=b(n)+1$ has
+no integer-valued solution; admitting it as a definition would make the logical
+context inconsistent and allow unrelated claims to be proved. TP therefore
+checks termination of the symbolic functions used in a proof, separately from
+checking the theorem itself.
 
-When SBV registers a recursive \code{smtFunction}, it records a deferred
-termination check along with the definition. Automatic checks try measures
-suggested by the argument types, such as list length or datatype size. For a
-measure $m$ and each recursive call from arguments $\vec{x}$ to $\vec{x}'$,
-the obligations have the form
-\[
- m(\vec{x})\geq 0,
- \qquad C(\vec{x})\Longrightarrow m(\vec{x}')<m(\vec{x}),
-\]
-where $C$ is the condition under which that call is reached. The ordering must
-be well founded: nonnegative integers cannot decrease forever. For
-\code{sumL}, a recursive call is reached only in the nonempty-list branch,
-where the tail is one element shorter. Checking a proper datatype subterm can
-also be done structurally, without a solver query. Mutual recursion is checked
-across calls between members of the recursive group, not just self-calls.
+SBV tries automatic measures such as list length or datatype size. For recursion
+on a list's tail, length decreases at each call and is bounded below by zero,
+so the calls cannot continue indefinitely. The
+\code{Functions proven terminating} line reports these checks. If the automatic
+check fails, supply a measure with \code{smtFunctionWithMeasure}; the normalizer
+in Section~\ref{sec:tautology} illustrates a lexicographic measure. An unknown
+solver result does not establish termination. Explicitly bypassing a check with
+\code{smtFunctionNoTermination} leaves a dependency reported as \code{Modulo}
+the function's termination. The companion checks that $b(n)=b(n)+1$ is rejected.
 
-TP gathers these checks from the definitions encountered while constructing a
-lemma or calculation, including functions used by its dependencies. Before
-checking the proof, it verifies newly encountered measures and remembers the
-successful checks within that TP run. At the end, \code{runTP} audits that no
-encountered check was left outstanding and reports the verified functions.
-This is why \code{sumNonNeg} reports both \code{sumL} and the library fold
-used to express its premise. These checks concern the symbolic definitions
-actually encountered, not every Haskell function in the source module.
-
-If an automatic measure cannot be established, SBV rejects the definition and
-requests an explicit one via \code{smtFunctionWithMeasure}; an unknown solver
-answer does not establish termination. The normalizer in
-Section~\ref{sec:tautology} illustrates a lexicographic measure and proved helper
-lemmas. The companion also checks that a definition with the equation
-$b(n)=b(n)+1$ is rejected. Explicitly choosing
-\code{smtFunctionNoTermination} bypasses the check, but TP records that
-assumption in the proof's dependencies and reports the result as
-\code{Modulo} the function's termination. Such a result is conditional, not
-evidence that the function terminates. Productivity checks for corecursive
-definitions are a separate facility, outside this tutorial's finite-list setting.
-
-\subsection{Why finite lists and datatypes?}
+\subsection{Finite lists and datatypes}
 \label{sec:finite-lists}
 
-SBV's \code{SList a} denotes finite SMT sequences, excluding Haskell's bottom,
-$\bot$, in both spine and elements. Thus \code{[undefined]},
-\code{1 : undefined}, and \code{repeat 0} are outside the model. Every
-symbolic-list proof has this restriction, including at all levels of nested
-lists. ``Arbitrary length'' means no finite bound is imposed; infinity is not
-another possible length.
-
-Finiteness is not specific to lists. SBV supports algebraic datatypes with
-recursive fields, but their SMT interpretations likewise contain only finite,
-total constructor trees, including with mutual or nested recursion.
-\code{SExpr} from Section~\ref{sec:datatypes} admits finite trees of arbitrary
-size; the cyclic Haskell value \code{e = Add (Num 1) e} has no counterpart.
-All fields must be defined and recursive structure must terminate. Datatype
-proofs therefore have the same finite, total scope as list proofs.
-This restriction concerns recursive constructor structure. Arrays instead use
-the total-mapping semantics of Section~\ref{sec:arrays}, with potentially
-infinite index domains.
-
-The distinction matters even for familiar equations. Reversing twice is the
-identity on finite lists, but consider the ordinary Haskell value
-\code{xs = repeat 0}. The expression \code{take 1 xs} produces \code{[0]},
-whereas \code{take 1 (reverse (reverse xs))} diverges: the first reversal never
-reaches the end. A finite-list theorem therefore cannot justify this rewrite
-for an arbitrary lazy Haskell list. Likewise, a termination argument based on
-decreasing length presupposes a finite length; it does not establish productivity
-on infinite input.
-
-We choose this boundary because it aligns reasoning with the solver's finite
-sequences and inductive datatypes, giving TP a direct structural induction principle and a
-natural termination measure. It covers the folds, accumulator algorithms, and
-transformations of finite data developed here. Extending the domain would require
-additional semantics and proof rules: reasoning about partial approximations
-must account for definedness and strictness, while infinite streams require a
-suitable representation and coinductive reasoning. Merely adding a bottom case
-to list induction cannot create infinite values in the SMT sequence sort.
-Keeping these concerns outside the sequence and inductive datatype models limits
-the machinery whose soundness these proofs depend on.
-
-This choice is consistent with the motivation of
-\citet{fastloose}. For their specified languages, equality proved in a total
-semantics yields a relation between values in a partial semantics. For their
-example on lists of natural numbers, this recovers equality on total, finite
-inputs; at function types,
-the relation compares behavior on related inputs. Their result explains how
-total reasoning can avoid repeatedly propagating definedness conditions. It is
-not a transfer theorem for SBV or all of Haskell: applying an SBV result to a
-Haskell implementation still requires matching its operations and input domain
-to the symbolic model.
-
-When a problem concerns streams, a separate model may suffice. For example,
-representing a stream by an index function $s : \mathbb{N}\to A$ turns equality
-into pointwise equality and suits uniform operations such as map and zip.
-That is a different specification, not an extension of a theorem over
-\code{SList}; operations such as filtering require further reasoning.
+Symbolic lists and recursive algebraic datatypes contain finite, total values:
+no undefined elements, partial tails, or infinite constructor trees. Sizes are
+unbounded, but each value is finite. For example, double reversal is the identity
+on finite lists, while for \code{xs = repeat 0}, \code{take 1 xs} returns
+\code{[0]} and \code{take 1 (reverse (reverse xs))} diverges. This domain makes
+structural induction and decreasing-size arguments available; total reasoning
+and its relationship to partial languages are studied by
+\citet{fastloose}. Arrays instead denote total mappings over possibly infinite
+index domains (Section~\ref{sec:arrays}); they do not introduce infinite recursive
+constructor structure.
 
 %==============================================================================
 \section{Pitfalls and What to Trust}
@@ -1303,9 +1230,10 @@ any axioms the user introduces and on any functions whose termination checks
 were explicitly bypassed. SBV tracks these dependencies: a proof that rests on an
 axiom, or on an unfinished step marked with \code{sorry}, is reported as
 \code{Modulo} the offending lemmas rather than as \code{Proven}. TP does not replay solver certificates in an independent proof
-kernel, so its guarantees are those of the underlying solver. For generated C, the C compiler
-and the code generator join the trusted base, which is why
-Section~\ref{sec:codegen} validates the generated code separately.
+kernel. Functional correctness does not establish running-time or space bounds.
+For generated C, the C compiler and code generator join the trusted base:
+Section~\ref{sec:codegen}'s exhaustive check covers the tested executable and
+input domain, rather than verifying either compiler in general.
 
 %==============================================================================
 \section{Related Tools and Further Reading}

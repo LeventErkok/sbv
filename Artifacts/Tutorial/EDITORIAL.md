@@ -6,10 +6,10 @@ Haskell Symposium 2027, tutorial category. The [2026 call](https://icfp26.sigpla
 whether they explain an aspect of Haskell or its ecosystem in a generally useful
 way; they need not report original research. Tutorials are limited to 25 pages
 in single-column `acmsmall`, must be labeled as such in the subtitle, and are
-reviewed lightweight double-blind. The revised draft is 27 pages
+reviewed lightweight double-blind. The revised draft is 26 pages
 including references. Re-check all of this against the 2027 call when it appears.
-Further content additions may exceed the target during drafting; the author has
-asked to defer trimming until the coverage is settled.
+Pass 1 reduced the draft from 27 pages while adding datatype induction. Review
+this structure before adding teaching aids or using the proposed reserve cuts.
 The `nonacm` class option suppresses dummy DOI, price, and publication metadata;
 remove it and insert the assigned metadata for publication.
 
@@ -23,19 +23,20 @@ remove it and insert the assigned metadata for publication.
 | 4 Finding values | `allSat` | `idempotent` |
 | 5 Optimization | Objective measures, lexicographic/box/Pareto modes, extension-field bounds, strict-bound and nonlinear limitations | `production`, `realBounds` |
 | 6 Haskell vs symbolic structure | Host lists, `SList`, `smtFunction`, bounded automatic attempt | `hostSum`, `sumL`, `sumWithoutInduction` |
-| 7 Arrays and symbolic memory | Functional updates, extensional equality, aliasing, bounds, infinite index domains | `writesCommute` |
-| 8 Programming the solver | `query` descent loop, dependency synchronization | `descent` |
-| 9 Symbolic datatypes | `mkSymbolic`, `sCase`, synthesis by `sat` | `expr` |
-| 10 Proofs by induction | `induct`, proof types, calculations, hints, generalization, monomorphic instances of polymorphic scripts | `sumNonNeg`, `revAcc`, `revWeak`, `revAccCorrect`, `reverseCorrect`, `reverseLength` |
-| 11 Higher-order proofs | Bookkeeping law, uninterpreted operations, conditional algebraic laws, explicit closure environments | `listProofImports`, `bookKeeping`, `bookKeepingRun`, `closure` |
-| 12 Kadane (detailed) | Independent segment oracle, spec, implementation, finding the invariant, proof | `mss`, `segmentOracle`, `kadane`, `kadaneCorrect` |
-| 13 Tautology checker (overview) | Measures, strong induction, proof architecture | library quotes |
-| 14 C generation | `compileToC`, validating the translation boundary | `codegen` |
-| 15 Under the hood | Deferred nodes, sharing, run contexts, synchronization, termination obligations, finite-list and recursive-ADT semantics and rationale | (inline) |
-| 16 Pitfalls and trust | Checklist and trusted base | — |
-| 17 Related tools | QuickCheck, Rosette, Grisette, Smten, what4, Liquid Haskell, Dafny | — |
+| 7 Programming the solver | `query` descent loop, dependency synchronization | `descent` |
+| 8 Symbolic datatypes | `mkSymbolic`, `sCase`, synthesis by `sat` | `expr` |
+| 9 Arrays and symbolic memory | Functional updates, extensional equality, aliasing, bounds, infinite index domains | `writesCommute` |
+| 10 Proofs by induction | `induct`, proof types, calculations, hints, generalization | `sumNonNeg`, `revAcc`, `revWeak`, `revAccCorrect`, `reverseCorrect` |
+| 11 Kadane (detailed) | Independent segment oracle, spec, implementation, finding the invariant, proof | `mss`, `segmentOracle`, `kadane`, `kadaneCorrect` |
+| 12 Induction over datatypes | Size measure, smaller-child lemmas, all constructor cases, both child hypotheses | `exprMirror`, `mirrorCorrect` |
+| 13 Polymorphic and higher-order proofs | Monomorphic instances, bookkeeping law, uninterpreted operations, conditional algebraic laws, explicit closure environments | `reverseLength`, `listProofImports`, `bookKeeping`, `bookKeepingRun`, `closure` |
+| 14 Tautology checker (overview) | Lexicographic measures, strong induction beyond children, proof architecture | library quotes |
+| 15 C generation | `compileToC`, validating the translation boundary | `codegen` |
+| 16 Under the hood | Deferred nodes, sharing, run contexts, synchronization, termination obligations, finite-data semantics | (inline) |
+| 17 Pitfalls and trust | Checklist and trusted base | — |
+| 18 Related tools | QuickCheck, Rosette, Grisette, Smten, what4, Liquid Haskell, Dafny | — |
 
-Three exercises (Sections 3, 8, 10) have checked solutions in the companion.
+Three exercises (Sections 3, 7, 10) have checked solutions in the companion.
 
 ## Evidence for implementation claims
 
@@ -68,7 +69,7 @@ teaching examples from successful proofs.
 
 ## Revision rationale
 
-- Add a compact arrays section between symbolic lists and query programming.
+- Place the arrays section after symbolic datatypes.
   Prove that distinct-address writes commute; remove the premise to obtain an
   aliasing counterexample, checked independently with association-list lookup.
   Explain functional updates, extensional equality, explicit bounds, and bulk
@@ -101,10 +102,19 @@ teaching examples from successful proofs.
 - Separate termination of recursive definitions, functional correctness, and
   algorithmic cost. Explain the tautology normalizer's lexicographic measure
   algebraically rather than referring only to unnamed complexity measures.
-- Explain the termination mechanism in the implementation section: deferred
-  checks discovered through symbolic definitions, well-founded descent under
-  recursive-call conditions, checks across mutual recursion, reuse of verified
-  checks, and TP's final audit. Explicit bypasses remain visible in dependencies.
+- Keep the user-facing termination obligations: inconsistent recursive equations,
+  automatic decreasing measures, explicit measures, and visible `Modulo`
+  dependencies for bypasses. Omit registration, caching, and audit internals.
+- Prototype datatype induction before adding prose. `inductiveLemma` uses the
+  generated datatype induction principle for `exprSizePos`; guided calculations
+  use `sInduct` with `exprSize`, `exprSizePos`, and
+  `exprSizeSmaller`, following the pattern in `Documentation/SBV/Examples/TP/Tree.hs`.
+  Show all three constructor cases and explicitly instantiate both child
+  hypotheses in each binary case, followed by a separate commutativity step.
+  The section fits about one page. Listing pagination remains for the layout pass.
+- Put Kadane directly after accumulator generalization, keep it a separate
+  section, then introduce datatype induction. Group polymorphic scripts with
+  higher-order proofs. Keep one full TP transcript and abbreviate the others.
 - Distinguish Haskell type polymorphism from value quantification in a theorem.
   `reverseLength` is checked independently at `Integer` and `Word8`.
 - Adapt the bookkeeping proof from `Documentation.SBV.Examples.TP.Lists`, with
@@ -119,12 +129,10 @@ teaching examples from successful proofs.
   ADTs, including mutual and nested recursion, and distinguish unbounded size
   from infinite values in the expression-tree example. Add a forward reference
   from list induction to the later discussion of infinite lists.
-  Explain the choice in the implementation section, with a reversal
-  counterexample for infinite Haskell lists and a cyclic expression tree. The design
-  note motivates keeping partiality and coinduction outside the sequence model;
-  its exploratory solver observations are not presented as benchmark results.
-  Cite Danielsson et al. for the connection between total and partial reasoning,
-  while explicitly avoiding a claim that their transfer theorem verifies SBV.
+  Condense the later explanation to one paragraph with the infinite-list
+  reversal counterexample, the reason finite structure supports induction,
+  the Fast and Loose citation, and the distinction from arrays' index domains.
+  The fuller design rationale remains in the design exploration.
 - Make the evidence for Kadane's specification independent of its recurrence:
   enumerate contiguous segments using ordinary Haskell, and compare on 3,906
   short lists plus three examples. Likewise independently check the production

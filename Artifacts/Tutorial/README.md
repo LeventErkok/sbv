@@ -4,9 +4,10 @@ A tutorial submission for the Haskell Symposium 2027. It takes a Haskell
 programmer with no automated-reasoning background from one-line theorems to
 inductive proofs: specifications, `sat`/`allSat`, a dedicated optimization section
 covering measures, lexicographic/box/Pareto modes, real bounds with epsilon and
-infinity, and solver limitations, arrays and symbolic memory, programmable
-queries, symbolic datatypes, polymorphic and higher-order TP proofs, closures,
-a detailed proof of Kadane's algorithm, an overview of the verified tautology
+infinity, and solver limitations, programmable queries, symbolic datatypes,
+arrays and symbolic memory, list induction, a detailed proof of Kadane's
+algorithm, induction over expression trees, polymorphic and higher-order TP
+proofs, closures, an overview of the verified tautology
 checker, and C generation. The implementation discussion explains how TP
 checks termination of the symbolic functions used in its proofs.
 Proofs over symbolic lists and recursive ADTs concern finite, total values. The manuscript explains
@@ -83,6 +84,7 @@ runTP sumNonNeg
 runTP (reverseLength @Word8)
 bookKeepingAbstract
 runTP kadaneCorrect
+runTP mirrorCorrect
 ```
 
 Validation compiles the companion with `-Wall -Werror` and exercises the paper's
@@ -99,6 +101,9 @@ and for integer addition, and list-length preservation with a symbolic closure
 environment. A concrete counterexample demonstrates why the bookkeeping law's
 left-identity premise matters. A deliberately non-decreasing recursive definition
 must be rejected by the termination checker.
+The expression-tree proof checks all three constructors, using a size measure
+and both child hypotheses to prove that mirroring preserves evaluation. Its
+nonnegativity and smaller-child lemmas are also proved during validation.
 Array checks prove that writes to distinct addresses commute and independently
 recheck an aliasing counterexample using ordinary Haskell association-list lookup.
 The real-bound example checks the tested solver's `ExtendedCV` results for
