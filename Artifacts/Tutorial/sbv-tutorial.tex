@@ -43,23 +43,18 @@
 \begin{document}
 \raggedbottom
 \begin{abstract}
-SBV is a Haskell library for reasoning about programs with SMT solvers. This
-tutorial is a guided path through it for Haskell programmers with no prior
-background in automated reasoning. We begin with one-line theorems and
-counterexamples, write specifications that are independent of the code they
-check, search for satisfying or optimal values, and program a live solver
-session from Haskell. We then define symbolic algebraic datatypes and recursive
-functions, and use induction and equational reasoning, expressed as ordinary
-Haskell code, to establish properties of recursive programs. We show how proof
-scripts can be reused at different element types and parameterized by operations. A
-detailed proof of Kadane's maximum-segment-sum algorithm shows how to find the
-right invariant, and an overview of a verified tautology checker shows how such
-proofs scale. Finally, we compile a verified function to C. Along the way we
-explain the boundary between Haskell evaluation and symbolic reasoning, which
-often determines how a problem must be expressed. Executable listings are
-extracted from checked Haskell sources; a companion validates solver results,
-runs the proofs and exercise solutions, and exhaustively tests the generated
-byte adder.
+This tutorial teaches Haskell programmers to specify functions, diagnose errors
+with counterexamples, and prove properties of recursive programs using SBV and
+SMT solvers. No background in automated reasoning is assumed. Starting with
+arithmetic properties, readers learn to choose symbolic domains, find satisfying
+or optimal values, and express data structures and solver interactions in Haskell.
+Equational calculations and induction then lead to a proof of Kadane's
+maximum-segment-sum algorithm, illustrating how generalizing a statement reveals
+its invariant. Datatype induction, polymorphic and higher-order proof scripts,
+and a verified tautology checker extend the method. Throughout, we explain how
+Haskell evaluation, symbolic computation, and termination checks fit together.
+A standalone companion supplies executable listings, checked exercise solutions,
+and validation commands.
 \end{abstract}
 
 \keywords{Haskell, SMT, symbolic programming, theorem proving, induction, tutorial}
@@ -141,6 +136,12 @@ Each exercise names its checked solution in the companion.
 Listings are extracted from checked sources; transcripts and elisions are marked
 separately. Model values and their order can vary between solver versions, so
 validation checks their meaning rather than their printed form.
+
+\paragraph{Preparation.}
+Codex assisted with drafting and revising prose, constructing the teaching
+figures, developing companion examples and proof scripts, and implementing
+packaging and validation. The accompanying log records the solver checks and
+tests used to validate the resulting examples.
 
 %==============================================================================
 \section{First Proofs and Counterexamples}
@@ -387,9 +388,10 @@ nonlinear integer or mixed problems~\citep{z3optimization}. Prefer faithful
 linear formulations and distinguish feasible candidates from established optima.
 
 \begin{exercise}
-Keep \code{production}'s constraints, but maximize \code{x + 2*y}, then minimize
-\code{x + y} lexicographically. What changes if the priorities are reversed?
-\par\noindent Solutions: \code{productionLex} and \code{productionLexReversed}.
+With \code{production}'s constraints, maximize \code{x + 2*y}, then minimize
+\code{x + y} lexicographically. Compare with the opposite priority order.
+Solutions: \code{productionLex} for the original order and
+\code{productionLexReversed} for the reverse.
 \end{exercise}
 
 %==============================================================================
@@ -1288,20 +1290,19 @@ about their functions. SBV's TP scripts instead prove properties of symbolic
 models in separate Haskell programs. Dafny~\citep{dafny} combines user-supplied
 invariants and automatic verification in a dedicated language.
 
-Further SBV examples appear under
-\code{Documentation.\allowbreak SBV.\allowbreak Examples}, covering puzzles,
-cryptography, code generation, optimization, and theorem proving.
-The TP developments in Section~\ref{sec:tautology} are useful next steps.
-
 %==============================================================================
 \section{Conclusion}
 
-SBV connects constraint solving, optimization, and inductive proofs through one
-vocabulary of symbolic values. Effective use depends on choosing the right
-semantic domain, writing independent specifications, separating Haskell from
-symbolic control, and generalizing induction hypotheses. The companion provides
-executable models and checked calculations that readers can adapt to their own
-programs.
+The examples suggest a repeatable method: choose the symbolic domain, write an
+independent specification, and use counterexamples to check both the code and
+its intended behavior. When automation stalls, expose intermediate equalities
+and generalize the induction hypothesis to cover changing accumulators.
+Check termination separately, and read each theorem within its modeled domain.
+For further practice, the modules under
+\code{Documentation.\allowbreak SBV.\allowbreak Examples.\allowbreak TP}
+include \code{ConstFold}, which proves that constant folding preserves
+expression meaning; \code{InsertionSort}, which combines ordering and permutation
+properties; and \code{VM}, which verifies compilation to a stack machine.
 
 \bibliographystyle{ACM-Reference-Format}
 \bibliography{references}

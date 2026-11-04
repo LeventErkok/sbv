@@ -1,11 +1,11 @@
 SBV tutorial companion validation
-UTC: 2026-11-04T18:12:06.787828+00:00
+UTC: 2026-11-04T18:40:44.302151+00:00
 Scope: tutorial examples only; not the full repository test suite.
 Companion directory is not a Git checkout; input hashes identify its sources.
 
 $ ghc --numeric-version
 9.14.1
-Exit status: 0; elapsed: 0.04s
+Exit status: 0; elapsed: 0.05s
 
 $ cabal --numeric-version
 3.16.1.0
@@ -13,7 +13,7 @@ Exit status: 0; elapsed: 0.02s
 
 $ z3 --version
 Z3 version 5.3.2 - 64 bit - build hashcode b411c90217766c924e6ea3d0b51f452a89fd8fc2
-Exit status: 0; elapsed: 0.01s
+Exit status: 0; elapsed: 0.05s
 
 $ cvc5 --version
 cvc5 1.4.2 [git 282d5e0 on branch HEAD]
@@ -75,20 +75,20 @@ See licenses/gpl-3.0.txt for more information.
 See the file COPYING (distributed with the source code, and with
 all binaries) for the full cvc5 copyright, licensing, and (lack of)
 warranty information.
-Exit status: 0; elapsed: 0.07s
+Exit status: 0; elapsed: 0.04s
 
 $ cc --version
 Apple clang version 21.0.0 (clang-2100.3.34.2)
 Target: arm64-apple-darwin25.6.0
 Thread model: posix
 InstalledDir: /Library/Developer/CommandLineTools/usr/bin
-Exit status: 0; elapsed: 0.01s
+Exit status: 0; elapsed: 0.02s
 
 $ cabal build --offline tutorial-examples
 Warning: --offline was specified, skipping sync of repositories:
 Warning: https://github.com/LeventErkok/sbv.git
 Up to date
-Exit status: 0; elapsed: 0.65s
+Exit status: 0; elapsed: 0.79s
 
 SBV source revision: ef9b2c0daeabb0e378eae9c584bb8bdbd815ddc3
 SBV source package SHA-256: 4c0a04fbbef477df74f1e6771d8660b3abb6173593bc5ad41a755e9b9f6ca5fc
@@ -96,7 +96,7 @@ Library source changes relative to that revision (empty means clean):
 
 $ git status --short -- Data Documentation sbv.cabal
 
-Exit status: 0; elapsed: 0.03s
+Exit status: 0; elapsed: 0.04s
 
 SHA-256 of validation inputs:
 33b1ff484fd8f44927fa72e9a48d7b14f5f5a8eca735ba44484f2eff65331971  examples/TutorialExamples.hs
@@ -115,15 +115,15 @@ Library package description:
 Name        : sbv
 Version     : 14.10
 
-$ /Library/Developer/CommandLineTools/usr/bin/python3 /private/tmp/sbv-exercises-vp08roes/sbv-tutorial-0.1.0.0/prepare.py
+$ /Library/Developer/CommandLineTools/usr/bin/python3 /private/tmp/sbv-final-3qymfzl0/sbv-tutorial-0.1.0.0/prepare.py
 Extracted 35 listings (31 used by the manuscript)
 Exit status: 0; elapsed: 0.05s
 
 $ cabal list-bin tutorial-examples -v0
-/private/tmp/sbv-exercises-vp08roes/sbv-tutorial-0.1.0.0/dist-newstyle/build/aarch64-osx/ghc-9.14.1/sbv-tutorial-0.1.0.0/x/tutorial-examples/noopt/build/tutorial-examples/tutorial-examples
+/private/tmp/sbv-final-3qymfzl0/sbv-tutorial-0.1.0.0/dist-newstyle/build/aarch64-osx/ghc-9.14.1/sbv-tutorial-0.1.0.0/x/tutorial-examples/noopt/build/tutorial-examples/tutorial-examples
 Exit status: 0; elapsed: 0.06s
 
-$ /private/tmp/sbv-exercises-vp08roes/sbv-tutorial-0.1.0.0/dist-newstyle/build/aarch64-osx/ghc-9.14.1/sbv-tutorial-0.1.0.0/x/tutorial-examples/noopt/build/tutorial-examples/tutorial-examples
+$ /private/tmp/sbv-final-3qymfzl0/sbv-tutorial-0.1.0.0/dist-newstyle/build/aarch64-osx/ghc-9.14.1/sbv-tutorial-0.1.0.0/x/tutorial-examples/noopt/build/tutorial-examples/tutorial-examples
 PASS integer absolute value is nonnegative
 Falsifiable. Counter-example:
   s0 = -128 :: Int8
@@ -366,9 +366,9 @@ Lemma: kadaneNonEmptyCorrect
   Result:                                   Q.E.D.
 Functions proven terminating: kadaneNonEmpty, kadaneNonEmptyHelper, mssBegin, mssNonEmpty
 PASS exercise 6: nonempty Kadane correctness
-Exit status: 0; elapsed: 33.61s
+Exit status: 0; elapsed: 33.34s
 
-$ /private/tmp/sbv-exercises-vp08roes/sbv-tutorial-0.1.0.0/dist-newstyle/build/aarch64-osx/ghc-9.14.1/sbv-tutorial-0.1.0.0/x/tutorial-examples/noopt/build/tutorial-examples/tutorial-examples --tautology
+$ /private/tmp/sbv-final-3qymfzl0/sbv-tutorial-0.1.0.0/dist-newstyle/build/aarch64-osx/ghc-9.14.1/sbv-tutorial-0.1.0.0/x/tutorial-examples/noopt/build/tutorial-examples/tutorial-examples --tautology
 Lemma: tautologyImpliesEval                         Q.E.D.
 Lemma: normalizeRespectsTruth                       Q.E.D.
 Lemma: normalizeCorrect                             Q.E.D.
@@ -384,9 +384,9 @@ Lemma: completeness                                 Q.E.D.
 Functions proven terminating:
   eval, falsify', ifComplexity, ifDepth, isAssigned, isNormal, isTautology', lookUp, normalize
 PASS tautology checker completeness
-Exit status: 0; elapsed: 2.49s
+Exit status: 0; elapsed: 2.42s
 
-$ /private/tmp/sbv-exercises-vp08roes/sbv-tutorial-0.1.0.0/dist-newstyle/build/aarch64-osx/ghc-9.14.1/sbv-tutorial-0.1.0.0/x/tutorial-examples/noopt/build/tutorial-examples/tutorial-examples --diagnostics /private/tmp/sbv-exercises-vp08roes/sbv-tutorial-0.1.0.0/build/sat-add.smt2
+$ /private/tmp/sbv-final-3qymfzl0/sbv-tutorial-0.1.0.0/dist-newstyle/build/aarch64-osx/ghc-9.14.1/sbv-tutorial-0.1.0.0/x/tutorial-examples/noopt/build/tutorial-examples/tutorial-examples --diagnostics /private/tmp/sbv-final-3qymfzl0/sbv-tutorial-0.1.0.0/build/sat-add.smt2
 ** Calling: z3 -nw -in -smt2
 [GOOD] ; Automatically generated by SBV. Do not edit.
 [GOOD] (set-option :print-success true)
@@ -427,9 +427,9 @@ $ /private/tmp/sbv-exercises-vp08roes/sbv-tutorial-0.1.0.0/dist-newstyle/build/a
 *** Solver   : Z3
 *** Exit code: ExitSuccess
 PASS verbose proof with replayable transcript
-Exit status: 0; elapsed: 0.75s
+Exit status: 0; elapsed: 0.74s
 
-$ z3 /private/tmp/sbv-exercises-vp08roes/sbv-tutorial-0.1.0.0/build/sat-add.smt2
+$ z3 /private/tmp/sbv-final-3qymfzl0/sbv-tutorial-0.1.0.0/build/sat-add.smt2
 success
 success
 success
@@ -453,19 +453,19 @@ success
 success
 success
 unsat
-Exit status: 0; elapsed: 0.67s
+Exit status: 0; elapsed: 0.65s
 
-$ /private/tmp/sbv-exercises-vp08roes/sbv-tutorial-0.1.0.0/dist-newstyle/build/aarch64-osx/ghc-9.14.1/sbv-tutorial-0.1.0.0/x/tutorial-examples/noopt/build/tutorial-examples/tutorial-examples --generate /private/tmp/sbv-exercises-vp08roes/sbv-tutorial-0.1.0.0/build/c
+$ /private/tmp/sbv-final-3qymfzl0/sbv-tutorial-0.1.0.0/dist-newstyle/build/aarch64-osx/ghc-9.14.1/sbv-tutorial-0.1.0.0/x/tutorial-examples/noopt/build/tutorial-examples/tutorial-examples --generate /private/tmp/sbv-final-3qymfzl0/sbv-tutorial-0.1.0.0/build/c
 
 Exit status: 0; elapsed: 0.02s
 
-$ cc -std=c11 -Wall -Wextra -Werror -O2 -fsanitize=undefined -fno-sanitize-recover=all -I/private/tmp/sbv-exercises-vp08roes/sbv-tutorial-0.1.0.0/build/c /private/tmp/sbv-exercises-vp08roes/sbv-tutorial-0.1.0.0/build/c/sat_add.c /private/tmp/sbv-exercises-vp08roes/sbv-tutorial-0.1.0.0/examples/adder-check.c -o /private/tmp/sbv-exercises-vp08roes/sbv-tutorial-0.1.0.0/build/adder-check
+$ cc -std=c11 -Wall -Wextra -Werror -O2 -fsanitize=undefined -fno-sanitize-recover=all -I/private/tmp/sbv-final-3qymfzl0/sbv-tutorial-0.1.0.0/build/c /private/tmp/sbv-final-3qymfzl0/sbv-tutorial-0.1.0.0/build/c/sat_add.c /private/tmp/sbv-final-3qymfzl0/sbv-tutorial-0.1.0.0/examples/adder-check.c -o /private/tmp/sbv-final-3qymfzl0/sbv-tutorial-0.1.0.0/build/adder-check
 
-Exit status: 0; elapsed: 0.09s
+Exit status: 0; elapsed: 0.11s
 
-$ /private/tmp/sbv-exercises-vp08roes/sbv-tutorial-0.1.0.0/build/adder-check
+$ /private/tmp/sbv-final-3qymfzl0/sbv-tutorial-0.1.0.0/build/adder-check
 PASS generated C: all 65536 unsigned-byte input pairs
-Exit status: 0; elapsed: 3.13s
+Exit status: 0; elapsed: 0.22s
 
 VALIDATION PASSED: all tutorial checks (including random tests and exercise
 solutions), verbose diagnostics and SMT-LIB transcript replay, the

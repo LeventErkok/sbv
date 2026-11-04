@@ -18,10 +18,16 @@ The completeness listing, closures, and related-tools reserve cuts are already
 included in that count. The standalone package now lets "Following along" use
 two Cabal commands instead of repository instructions, imports, and extension
 setup, freeing space for Pass 3. With all six exercises now included, the paper
-remains 25 pages including references, with little margin for the final revision.
+remains 25 pages including references. The final prose pass retains that count,
+with little remaining margin.
 All previously listed reserve cuts have now been used.
 The `nonacm` class option suppresses dummy DOI, price, and publication metadata;
-remove it and insert the assigned metadata for publication.
+remove it and insert the assigned metadata for publication. The 2026 call
+explicitly recommends `review` and specifies `[acmsmall,screen]`; it says
+nothing about `nonacm`. Its acceptability for review remains unconfirmed.
+Re-check all three points (references, `review`, `nonacm`) against the 2027 call.
+The 2026 call requires supplementary material to be uploaded separately at
+submission time, rather than linked from the paper to an external repository.
 
 ## Structure
 
@@ -79,6 +85,15 @@ teaching examples from successful proofs.
 
 ## Revision rationale
 
+- The final prose pass leads the abstract with what readers learn and shortens
+  its topic list. The conclusion recaps the method and names `ConstFold`,
+  `InsertionSort`, and `VM` as next examples. Exercise solutions consistently
+  run inline. The introduction discloses Codex's assistance with prose, figures,
+  companion code and proofs, packaging, and validation; the disclosure remains
+  visible in anonymous review mode. Removing the general further-reading
+  paragraph avoids duplicating the conclusion's specific pointers. The rebuilt
+  paper remains 25 pages including references; the final TeX pass has no
+  overfull boxes or undefined references, and the last page was checked visually.
 - Pass 3 adds lexicographic optimization with reversed priorities, array
   last-write-wins, and a nonempty Kadane challenge. The latter has an explicit
   nonempty-input precondition, a proved accumulator invariant, and an independent
@@ -212,9 +227,14 @@ than a changing landing page. The [Imandra source](https://github.com/imandra-ai
 credits G. Passmore but states no publication date; the previous unverified 2025
 date was replaced by “n.d.” and an access date. The title is explicitly descriptive.
 The Boyer–Moore book, Liquid Haskell paper, Dafny paper, and what4 package were
-checked against author, publisher, or package pages. Bentley's metadata is
-retained; the ACM endpoint was inaccessible during this pass, so that item
-remains for a final publisher-record check.
+checked against author, publisher, or package pages. On 4 November 2026,
+Bentley's citation was checked against
+[ACM's deposited Crossref metadata](https://api.crossref.org/works/10.1145/358234.381162):
+Jon Bentley, *Programming pearls*, CACM 27(9), September 1984, pp. 865–873,
+DOI 10.1145/358234.381162. The bibliography now uses that title, without the
+unverified subtitle. The ACM Digital Library landing page still returns HTTP
+403; the check uses the publisher's metadata deposit, not a successful view of
+that page.
 The *Fast and Loose* paper was read from the author's PDF, particularly
 Sections 2, 7, 9, 10, and 13. Its author order follows that PDF and the
 [Chalmers record](https://research.chalmers.se/publication/23040); pages and DOI
@@ -224,20 +244,28 @@ transfer theorem from SBV to Haskell.
 
 ## Open items for the author
 
-- Verify `bentley` directly against the publisher's record (CACM 27(9),
-  pages 865–873, DOI 10.1145/358234.381162).
+- Re-check the 2027 Haskell Symposium call when published: tutorial page limit,
+  reference counting, class options, disclosure placement, and supplement rules.
 - Finish the anonymized supplement from the standalone source package. Its
   validation log contains identifying local paths that should be removed for
   anonymous review. Restore the companion copyright holder and TeX author for
   camera-ready.
-- After SBV 14.10 is released on Hackage, retain `sbv ==14.10`, remove the Git
-  source stanza, update
-  source discovery for extraction/validation, regenerate the freeze file, and
-  revalidate against the release. Then remove the Git prerequisite and the
-  paper's and bibliography's source-snapshot wording. The Git URL currently
-  identifies SBV's owner.
+- SBV 14.10 release-day changes: retain `sbv ==14.10`; remove the
+  `source-repository-package` stanza from `cabal.project`, including the
+  identifying `https://github.com/LeventErkok/sbv.git` URL; update source
+  discovery for extraction/validation; regenerate the freeze file; and
+  revalidate against the Hackage release. Then remove the Git prerequisite and
+  the paper's and bibliography's source-snapshot wording, and regenerate the
+  supplement. The current Git pin stays until that migration is validated.
 - Decide whether the tutorial should mention Cryptol/SAW or other users of SBV.
   The text currently makes no adoption claims.
-- Confirm acknowledgments and any AI-assistance disclosure required by the venue.
-  The initial draft and this revision were prepared with AI assistance at the
-  author's request.
+- Confirm any people/funding to acknowledge and whether other AI tools assisted
+  before this session. The manuscript's Preparation paragraph discloses the
+  Codex assistance documented here. Check the final wording against the 2027
+  venue rules. ACM's authorship-policy page returned HTTP 403 on 4 November
+  2026; the [official SIGCSE TS 2027 policy page](https://2027.sigcse-ts.acm.org/info/policies-ai)
+  quotes ACM's updated distinction: writing assistance alone needs no disclosure,
+  while AI used in substantive research work and artifact development must be
+  described in the methods. Our visible preparation paragraph records both;
+  this tutorial has no separate methods section. This is not a claim that the
+  Haskell Symposium has adopted SIGCSE-specific rules.

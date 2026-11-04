@@ -184,13 +184,21 @@ acmsmall, lightweight double-blind, 25 pages for tutorials, labeled by subtitle.
 That call does not explicitly exempt references; counting them is a working
 assumption pending the 2027 call. No Haskell Symposium call was found on the
 ICFP 2027 site or by search on 4 November 2026.
-The `nonacm` option suppresses placeholder publication metadata in this draft.
+The 2026 call explicitly recommends `review`; it does not address `nonacm`,
+which suppresses placeholder publication metadata here. Confirm that option
+alongside reference counting when the 2027 call is published. Supplementary
+material must be uploaded separately under the 2026 rules, not linked from
+the paper to an external repository.
 The companion's review license names "the authors"; restore the author's name
 in that license and the TeX author field for camera-ready. The Git source pin
 still exposes the SBV repository owner. Once the tested SBV 14.10 release is on
-Hackage, replace the Git stanza with the pinned release, update source lookup
+Hackage, remove the `source-repository-package` stanza and its identifying
+`https://github.com/LeventErkok/sbv.git` URL, use the pinned release, update source lookup
 for validation/extraction, and remove the Git prerequisite and "source snapshot"
-wording after revalidation.
+wording after revalidation, and regenerate the supplement.
+The paper's Preparation paragraph discloses Codex assistance with prose,
+figures, companion code and proofs, packaging, and validation. Final personal
+acknowledgments and any additional tool disclosures require author input.
 For the camera-ready version, remove `anonymous`, `review`, and `nonacm`, then
 supply the publisher's actual metadata. `results/validation.txt` records local
 paths and the git revision; anonymize it before uploading the companion as
