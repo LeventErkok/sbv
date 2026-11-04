@@ -715,7 +715,7 @@ Solution: \code{revAccLength}.
 The maximum segment sum problem asks for the largest sum of a contiguous segment
 of a list, where the empty segment has sum 0. For
 \code{[1, -2, 3, 4, -1, 2]}, the answer is 8, from \code{[3, 4, -1, 2]}.
-Kadane's algorithm~\citep{bentley} solves it in a single left-to-right pass.
+Kadane's algorithm~\citep[Algorithm~4]{bentley} solves it in a single left-to-right pass.
 Its correctness is not obvious, which makes it a good example of finding and
 proving an invariant.
 
@@ -1017,7 +1017,7 @@ finite integer list.
 
 Larger developments are built from the same ingredients. SBV's documentation
 includes a verified tautology checker for propositional formulas in
-if-then-else form, after a classic development by \citet{boyermoore} that was
+if-then-else form, after a classic development by \citet[Chapter~4]{boyermoore} that was
 later formalized in Imandra~\citep{imandraTautology}. We sketch its structure
 rather than its proofs; the full development is in the module
 \code{Documentation.\allowbreak SBV.\allowbreak Examples.\allowbreak TP.\allowbreak TautologyChecker}. The listings in this
