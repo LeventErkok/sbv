@@ -244,6 +244,11 @@ transfer theorem from SBV to Haskell.
 
 ## Open items for the author
 
+The approved personal acknowledgments thank Joel Burget, Iavor Diatchki,
+Brian Huffman, John Matthews, Brian Schroeder, Jeffrey Young, and the wider SBV
+community. They are in `acks`, hidden in the anonymous PDF; omit that environment
+from the anonymized review source archive and retain it for camera-ready.
+
 - Re-check the 2027 Haskell Symposium call when published: tutorial page limit,
   reference counting, class options, disclosure placement, and supplement rules.
 - Finish the anonymized supplement from the standalone source package. Its
@@ -259,8 +264,8 @@ transfer theorem from SBV to Haskell.
   supplement. The current Git pin stays until that migration is validated.
 - Decide whether the tutorial should mention Cryptol/SAW or other users of SBV.
   The text currently makes no adoption claims.
-- Confirm any people/funding to acknowledge and whether other AI tools assisted
-  before this session. The manuscript's Preparation paragraph discloses the
+- AI-disclosure work is deferred at the author's request.
+  The manuscript's Preparation paragraph currently discloses the
   Codex assistance documented here. Check the final wording against the 2027
   venue rules. ACM's authorship-policy page returned HTTP 403 on 4 November
   2026; the [official SIGCSE TS 2027 policy page](https://2027.sigcse-ts.acm.org/info/policies-ai)

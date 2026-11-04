@@ -197,8 +197,10 @@ Hackage, remove the `source-repository-package` stanza and its identifying
 for validation/extraction, and remove the Git prerequisite and "source snapshot"
 wording after revalidation, and regenerate the supplement.
 The paper's Preparation paragraph discloses Codex assistance with prose,
-figures, companion code and proofs, packaging, and validation. Final personal
-acknowledgments and any additional tool disclosures require author input.
+figures, companion code and proofs, packaging, and validation; further disclosure
+work is deferred. The approved personal acknowledgments are in the `acks`
+environment, which `anonymous` suppresses in the PDF. Omit them from the
+anonymized review source archive as well.
 For the camera-ready version, remove `anonymous`, `review`, and `nonacm`, then
 supply the publisher's actual metadata. `results/validation.txt` records local
 paths and the git revision; anonymize it before uploading the companion as
