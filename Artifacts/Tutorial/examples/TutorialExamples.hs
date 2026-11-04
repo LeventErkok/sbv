@@ -44,6 +44,17 @@ satAddSpec x y = sFromIntegral (satAdd x y) .== ite (total .> 255) 255 total
   where total = sFromIntegral x + sFromIntegral y :: SInteger
 -- END saturating
 
+-- BEGIN randomSatAdd
+testSatAdd :: IO Bool
+testSatAdd = sbvQuickCheck $ satAddSpec <$> sWord8 "x" <*> sWord8 "y"
+-- END randomSatAdd
+
+-- BEGIN inspectSatAdd
+inspectSatAdd :: FilePath -> IO ThmResult
+inspectSatAdd path = proveWith
+  z3{verbose = True, transcript = Just path} satAddSpec
+-- END inspectSatAdd
+
 -- BEGIN wrongAdd
 wrongAdd :: SWord8 -> SWord8 -> SWord8
 wrongAdd x y = ite (x + y .> 255) 255 (x + y)
@@ -668,6 +679,12 @@ main = do
   args <- getArgs
   case args of
     ["--generate", dir] -> generateAdder dir
+    ["--diagnostics", path] ->
+      check "verbose proof with replayable transcript" $ do
+        result <- inspectSatAdd path
+        pure $ case result of
+          ThmResult Unsatisfiable{} -> True
+          _                        -> False
     ["--tautology"] -> do
       check "tautology checker soundness"    $ void (runTP Taut.soundness)              >> pure True
       check "tautology checker completeness" $ void (runTPWith cvc5 Taut.completeness)  >> pure True
@@ -682,6 +699,7 @@ main = do
         r <- prove $ \(x :: SFloat) -> x .== x
         print r
         pure $ maybe False isNaN (getModelValue "s0" r :: Maybe Float)
+      check "random testing of saturating addition" testSatAdd
       check "saturating addition theorem" $ isTheorem satAddSpec
       check "incorrect overflow guard is refuted, checked by an oracle" wrongAddRefuted
       check "idempotent bytes are exactly 0 and 1" $ do
@@ -721,6 +739,6 @@ main = do
       check "exercise 1: saturating subtraction" $ isTheorem satSubSpec
       check "exercise 2: largest below 100 is 94" $ (== 94) <$> largestBelow100
       check "exercise 3: revAcc length" $ void (runTP revAccLength) >> pure True
-    _ -> fail "Usage: tutorial-examples [--tautology | --generate DIR]"
+    _ -> fail "Usage: tutorial-examples [--tautology | --generate DIR | --diagnostics FILE]"
 
 {- HLint ignore shiftEach "Avoid lambda" -}

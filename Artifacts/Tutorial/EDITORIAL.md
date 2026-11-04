@@ -6,10 +6,14 @@ Haskell Symposium 2027, tutorial category. The [2026 call](https://icfp26.sigpla
 whether they explain an aspect of Haskell or its ecosystem in a generally useful
 way; they need not report original research. Tutorials are limited to 25 pages
 in single-column `acmsmall`, must be labeled as such in the subtitle, and are
-reviewed lightweight double-blind. The revised draft is 26 pages
-including references. Re-check all of this against the 2027 call when it appears.
-Pass 1 reduced the draft from 27 pages while adding datatype induction. Review
-this structure before adding teaching aids or using the proposed reserve cuts.
+reviewed lightweight double-blind. The 2026 call does not explicitly exempt
+references: counting them toward the limit is our working assumption, not a
+confirmed 2027 rule. On 4 November 2026, the [ICFP 2027 site](https://icfp27.sigplan.org/)
+listed no Haskell Symposium call, and a search found none. Re-check the tutorial
+limit and treatment of references when that call appears.
+Pass 1 reduced the draft from 27 to 26 pages while adding datatype induction.
+Pass 2 adds troubleshooting and two teaching figures, with reserve cuts bringing
+the draft to 25 pages including references. There is little room for additions.
 The `nonacm` class option suppresses dummy DOI, price, and publication metadata;
 remove it and insert the assigned metadata for publication.
 
@@ -27,13 +31,13 @@ remove it and insert the assigned metadata for publication.
 | 8 Symbolic datatypes | `mkSymbolic`, `sCase`, synthesis by `sat` | `expr` |
 | 9 Arrays and symbolic memory | Functional updates, extensional equality, aliasing, bounds, infinite index domains | `writesCommute` |
 | 10 Proofs by induction | `induct`, proof types, calculations, hints, generalization | `sumNonNeg`, `revAcc`, `revWeak`, `revAccCorrect`, `reverseCorrect` |
-| 11 Kadane (detailed) | Independent segment oracle, spec, implementation, finding the invariant, proof | `mss`, `segmentOracle`, `kadane`, `kadaneCorrect` |
+| 11 Kadane (detailed) | Independent segment oracle, spec, implementation, three-case invariant figure, proof | `mss`, `segmentOracle`, `kadane`, `kadaneCorrect` |
 | 12 Induction over datatypes | Size measure, smaller-child lemmas, both child hypotheses; analogous multiplication case abbreviated | `exprMirror`, `mirrorCorrect` |
 | 13 Polymorphic and higher-order proofs | Monomorphic instances, bookkeeping law, uninterpreted operations, conditional algebraic laws, explicit closure environments | `reverseLength`, `listProofImports`, `bookKeeping`, `bookKeepingRun`, `closure` |
 | 14 Tautology checker (overview) | Lexicographic measures, strong induction beyond children, proof architecture | library quotes |
 | 15 C generation | `compileToC`, validating the translation boundary | `codegen` |
 | 16 Under the hood | Deferred nodes, sharing, run contexts, synchronization, termination obligations, finite-data semantics | (inline) |
-| 17 Pitfalls and trust | Checklist and trusted base | — |
+| 17 Pitfalls and trust | Troubleshooting by outcome, diagnostics and replay, random testing, trusted base | `inspectSatAdd`, `randomSatAdd` |
 | 18 Related tools | QuickCheck, Rosette, Grisette, Smten, what4, Liquid Haskell, Dafny | — |
 
 Three exercises (Sections 3, 7, 10) have checked solutions in the companion.
@@ -68,6 +72,18 @@ hashes as well as the revision, and distinguishes the intentionally inconclusive
 teaching examples from successful proofs.
 
 ## Revision rationale
+
+- Pass 2 adds troubleshooting to the pitfalls section, distinguishing startup
+  failure, unknown/timeout, counterexample, and a stalled TP step. The companion
+  runs random tests of `satAddSpec` before proving it, and validates verbose
+  diagnostics, transcript creation, and replay through Z3.
+- Replace the architecture figure with two teaching figures: Kadane's three
+  segment locations and the correspondence between calculation hints and solver
+  queries. The latter replaces the formula and most of the old §10.2 explanation.
+  Retain the four implementation paragraphs without the architecture diagram.
+- Use reserve cuts in arrays, the tautology overview (omit the completeness
+  listing while still validating its proof), closures, and related tools.
+  Exercises and standalone setup remain for the later passes.
 
 - Place the arrays section after symbolic datatypes.
   Prove that distinct-address writes commute; remove the premise to obtain an
@@ -114,7 +130,7 @@ teaching examples from successful proofs.
   Print the addition case in full and elide the analogous multiplication case
   through explicit extraction markers. The section fits about one page.
   Starred snippets allow longer listings to break across pages; short listings
-  and transcripts stay together. The manuscript remains 26 pages after this pass.
+  and transcripts stay together. This completed Pass 1 at 26 pages.
 - Share `z3Timeout5` between the automatic sum attempt and weak reversal proof.
   Append its five-second per-call timeout to the default solver start options;
   the paper's reversal command uses the same checked configuration.

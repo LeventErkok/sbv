@@ -15,6 +15,10 @@ this modeling choice, its limits for lazy Haskell programs, and its relation to
 *Fast and Loose Reasoning is Morally Correct*.
 The arrays section distinguishes total mappings over potentially infinite index
 domains from the finite constructor structure of lists and recursive ADTs.
+Two figures explain Kadane's invariant and how calculation hints become solver
+queries. Troubleshooting covers solver startup, inconclusive results,
+counterexamples, and stalled proof steps, with checked random-testing and
+transcript-replay examples.
 
 - `sbv-tutorial.pdf`: rendered manuscript.
 - `sbv-tutorial.tex`: manuscript in ACM `acmsmall` format (`review,anonymous,nonacm`).
@@ -115,7 +119,9 @@ that Z3 reliably handles every strict-bound optimization problem; the manuscript
 discusses issue #5314 beside the example.
 
 Validation also runs the exercise solutions, the tautology checker's soundness
-and completeness proofs, and an exhaustive check of the generated C adder against
+and completeness proofs, random tests of saturating addition, and a verbose
+proof whose SMT-LIB transcript is replayed with Z3. It exhaustively checks the
+generated C adder against
 a C oracle built with `-O2`, warnings as errors, and undefined-behavior
 sanitization. Each Haskell check has a 120-second outer timeout, which is a
 validation failure. Two teaching examples intentionally use a five-second
@@ -131,6 +137,9 @@ The complete SBV regression suite is outside this validation.
 The 2027 requirements still need checking when the call is available. The format
 follows the [2026 call](https://icfp26.sigplan.org/home/haskellsymp-2026#Call-for-Papers-and-Talks):
 acmsmall, lightweight double-blind, 25 pages for tutorials, labeled by subtitle.
+That call does not explicitly exempt references; counting them is a working
+assumption pending the 2027 call. No Haskell Symposium call was found on the
+ICFP 2027 site or by search on 4 November 2026.
 The `nonacm` option suppresses placeholder publication metadata in this draft.
 For the camera-ready version, remove `anonymous`, `review`, and `nonacm`, then
 supply the publisher's actual metadata. `results/validation.txt` records local

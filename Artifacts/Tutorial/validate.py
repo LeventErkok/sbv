@@ -71,6 +71,12 @@ with log_path.open("w") as log:
         record("VALIDATION FAILED: expected failure at reversal step 2 was not observed")
         raise SystemExit(1)
     run([build / "tutorial-examples", "--tautology"])
+    transcript = build / "sat-add.smt2"
+    run([build / "tutorial-examples", "--diagnostics", transcript])
+    replay = run(["z3", transcript])
+    if "unsat" not in replay.splitlines() or "(error" in replay:
+        record("VALIDATION FAILED: solver transcript did not replay successfully")
+        raise SystemExit(1)
     (build / "c").mkdir(exist_ok=True)
     run([build / "tutorial-examples", "--generate", build / "c"])
     run(["cc", "-std=c11", "-Wall", "-Wextra", "-Werror", "-O2",
@@ -78,6 +84,7 @@ with log_path.open("w") as log:
          build / "c/sat_add.c", tutorial / "examples/adder-check.c",
          "-o", build / "adder-check"])
     run([build / "adder-check"])
-    record("\nVALIDATION PASSED: all tutorial checks (including exercise solutions), the")
+    record("\nVALIDATION PASSED: all tutorial checks (including random tests and exercise")
+    record("solutions), verbose diagnostics and SMT-LIB transcript replay, the")
     record("tautology checker's soundness and completeness proofs, and exhaustive")
     record("generated-C checking. Timings are single-run diagnostics, not benchmarks.")

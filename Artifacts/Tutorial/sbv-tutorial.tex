@@ -574,27 +574,14 @@ For example, with $i=j=0$, $x=1$, and $y=2$, the left side stores 2 at address
 contents. The companion obtains a counterexample from the solver and checks
 its updates independently using Haskell association-list lookup.
 
-\paragraph{Bounds and the modeling domain.}
-An SMT array has no built-in length, allocation status, or out-of-bounds error.
-To model a buffer of length \code{n}, require \code{0 .<= i .\&\& i .< n} for a
-valid access; to verify safety, prove that the program establishes this condition
-before accessing the buffer. Merely assuming it would exclude invalid accesses
-from the proof. \code{constArray v} initializes every address to \code{v}; a free
-array has arbitrary but consistent contents.
-
-An integer-indexed array has an infinite index domain. This does not contradict
-the finite-list and recursive-datatype restriction discussed in
-Section~\ref{sec:finite-lists}: an array is a total mapping, not a recursively
-constructed sequence. The domain follows the index type: \code{SArray Word8 Integer}
-has 256 addresses, whereas \code{SArray Integer Integer} has infinitely many.
-Neither represents a partial or infinite Haskell list.
-
-\paragraph{Bulk updates.}
-The function \code{lambdaArray} describes an array by its value at each index.
-The library example \code{Documentation.SBV.Examples.Misc.LambdaArray} uses it
-to model range initialization: return the new value within the chosen interval
-and \code{readArray mem i} outside it. This expresses both the changed region
-and preservation of the remaining memory without enumerating addresses.
+SMT arrays have no built-in length or out-of-bounds error. For a buffer of length
+\code{n}, prove \code{0 .<= i .\&\& i .< n} at each access; assuming the bound
+would exclude unsafe accesses. \code{constArray v} initializes every address to
+\code{v}, while \code{lambdaArray} defines values by index, for example to update
+an interval and preserve \code{readArray mem i} elsewhere.
+The index type determines the domain: \code{Word8} has 256 addresses and
+\code{Integer} infinitely many. These total mappings differ from the finite
+recursive structure of lists and datatypes (Section~\ref{sec:finite-lists}).
 
 %==============================================================================
 \section{Proofs by Induction}
@@ -650,19 +637,37 @@ termination. Section~\ref{sec:termination} explains how TP enforces this require
 
 \subsection{What the solver checks}
 
-A calculation $e_0 = e_1 = \cdots = e_n$ under assumptions $A$, with hints
-$H_i$ attached to step $i$, generates one solver query per step:
-\[
-  A \land H_i \land \neg(e_i = e_{i+1}) \quad\text{must be unsatisfiable.}
-\]
-The function definitions are available in these queries, and SBV separately
-checks that the calculation establishes the stated result under its
-precondition. Thus writing an unrelated true equality does not prove the
-theorem. Breaking a proof into local obligations often makes it easier to solve,
-although any individual obligation can still be hard. If a step fails, inspect
-whether the solver found a counterexample or returned unknown. Then check the
-assumptions and hint instantiations, or split the step with intermediate
-expressions.
+Figure~\ref{fig:calculation} shows the queries under assumptions $A$, with
+facts $H_i$ supplied by hints $h_i$. Definitions are available in every query.
+SBV also checks that the chain establishes the stated theorem under its
+precondition. For failed steps, see Section~\ref{sec:troubleshooting}.
+
+\begin{figure}[htbp]
+\centering
+\begin{tikzpicture}[x=1cm,y=1cm,font=\small,
+    arr/.style={-{Stealth[length=1.5mm]}}]
+\node (e0) at (0,0.8) {$e_0$};
+\node (s0) at (1.9,0.8) {\code{=:}};
+\node (e1) at (3.8,0.8) {$e_1$};
+\node (s1) at (5.7,0.8) {\code{=:}};
+\node (e2) at (7.6,0.8) {$e_2$};
+\node at (9.2,0.8) {$\cdots$};
+\node at (10.6,0.8) {\code{=: qed}};
+\node (h0) at (1.9,1.4) {\code{??} $h_0$};
+\node (h1) at (5.7,1.4) {\code{??} $h_1$};
+\draw[arr] (h0) -- (s0);
+\draw[arr] (h1) -- (s1);
+\node (q0) at (1.9,0) {$A\land H_0\land\neg(e_0=e_1)$};
+\node (q1) at (5.7,0) {$A\land H_1\land\neg(e_1=e_2)$};
+\draw[arr] (s0) -- (q0);
+\draw[arr] (s1) -- (q1);
+\end{tikzpicture}
+\caption{Each hint supplies a fact for the next equality; its query must be unsatisfiable.}
+\Description{Two links in a calculation, from e0 to e1 and from e1 to e2.
+Each hint points to the equality it justifies. Each equality points to a query
+conjoining the assumptions, that hint's fact, and the negation of the equality.}
+\label{fig:calculation}
+\end{figure}
 
 \subsection{Generalizing the statement}
 
@@ -761,16 +766,39 @@ initial accumulators \code{0} and \code{0}. An inductive proof will reach
 \code{kadaneHelper xs meh msf} computes for \emph{any} sensible \code{meh} and
 \code{msf}.
 
-Think of the list as split into a prefix that has been processed and a suffix
-\code{xs} that has not. The best segment of the whole list lies in one of three
-places:
-\begin{enumerate}
-\item entirely within the prefix: its sum is \code{msf};
-\item entirely within the suffix: its sum is \code{mss xs};
-\item across the boundary: it is a segment ending at the boundary, whose best sum
-  is \code{meh}, followed by a segment starting at the boundary, whose best sum is
-  \code{mssBegin xs}.
-\end{enumerate}
+Split the list into a processed prefix and the remaining suffix \code{xs}.
+Figure~\ref{fig:kadane} shows the three possible locations of the best segment.
+The crossing candidate combines the best suffix of the processed prefix
+(\code{meh}) with the best prefix of \code{xs} (\code{mssBegin xs}).
+
+\begin{figure}[htbp]
+\centering
+\begin{tikzpicture}[x=1cm,y=1cm,font=\small]
+\node at (1.8,0.6) {processed prefix};
+\node at (5.4,0.6) {remaining \code{xs}};
+\foreach \y in {0,-0.65,-1.3} {
+  \fill[black!6] (0,\y-0.12) rectangle (7.2,\y+0.12);
+  \draw[black!40] (0,\y-0.12) rectangle (7.2,\y+0.12);
+}
+\draw[dashed] (3.6,0.35) -- (3.6,-1.65);
+\draw[line width=2pt] (0.7,0) -- (2.9,0);
+\node[anchor=west] at (7.5,0) {$\mathit{msf}$};
+\draw[line width=2pt] (4.3,-0.65) -- (6.6,-0.65);
+\node[anchor=west] at (7.5,-0.65) {$\mathit{mss}(xs)$};
+\draw[line width=2pt] (2,-1.3) -- (5.6,-1.3);
+\node[anchor=west] at (7.5,-1.3) {$\mathit{meh}+\mathit{mssBegin}(xs)$};
+\node at (2.8,-1.8) {$\mathit{meh}$};
+\node at (4.8,-1.8) {$\mathit{mssBegin}(xs)$};
+\end{tikzpicture}
+\caption{Three candidates for the maximum segment sum: within the processed
+prefix, within the remaining suffix, or across the boundary. Segments may be
+empty; each label gives the best sum for that case.}
+\Description{Three copies of a list split at the same boundary. A highlighted
+segment lies in the processed prefix, in the remaining suffix, or crosses the
+boundary. The corresponding best sums are msf, mss xs, and meh plus mssBegin xs.}
+\label{fig:kadane}
+\end{figure}
+
 For example, split \code{[1,-2,3,4,-1,2]} after the 4. The processed prefix has
 $\mathit{meh}=7$ and $\mathit{msf}=7$, while the suffix has
 $\mathit{mss}=2$ and $\mathit{mssBegin}=1$. The three candidates are 7, 2, and
@@ -836,7 +864,7 @@ explains this step?''
 Return to \code{Expr}: mirroring swaps the children at every addition and
 multiplication node, preserving evaluation because both operations commute.
 \snippet{exprMirror}
-We guide this proof by applying the hypotheses before using commutativity.
+Each binary case needs the hypothesis for both children before commutativity applies.
 The calculational \code{induct} interface supports integers and lists, so for
 this datatype we use \code{sInduct} with a size measure.
 Define \code{exprSize} to be zero at \code{Num} and one plus the
@@ -964,19 +992,14 @@ not model divergence or exceptions in a Haskell callback.
 \subsection{Closures and higher-order functions}
 \label{sec:closures}
 
-A callback may also depend on data from its surrounding scope. Ordinary Haskell
-allows \code{map (+k) xs}, but \code{SL.map (+k) xs} cannot capture a symbolic
-unknown \code{k} from the enclosing solver context in the callback's definition.
-Use an explicit \code{Closure} to pass that environment:
+Ordinary Haskell allows \code{map (+k) xs}; \code{SL.map (+k) xs} needs an
+explicit \code{Closure} when \code{k} is a symbolic unknown from the enclosing
+solver context:
 \snippet{closure}
-The environment \code{k} is symbolic data; \code{closureFun} is closed with
-respect to it because it receives \code{env} as an argument. SBV carries the
-environment through the generated recursive definition alongside the list.
-The companion proves that \code{shiftEach} preserves length for every offset
-and every finite integer list.
-
-Literals such as the 1 in \code{SL.map (+1)} and globally named logical symbols
-need no explicit closure; only captured symbolic unknowns require an environment.
+SBV passes \code{k} through the recursion as \code{env}, so \code{closureFun}
+need not capture it. Literals and globally named logical symbols need no such
+environment. The companion proves length preservation for every offset and
+finite integer list.
 
 %==============================================================================
 \section{Case Study Overview: A Verified Tautology Checker}
@@ -1038,8 +1061,7 @@ Soundness says that a formula accepted by the checker evaluates to true under
 every assignment:
 \libsnippet{tautSoundness}
 Completeness says that if the checker rejects a formula, a companion function
-\code{falsify} produces an assignment under which the formula is false:
-\libsnippet{tautCompleteness}
+\code{falsify} produces an assignment under which the formula is false.
 Both top-level proofs are short because the work is in their lemmas. The
 development contains 21 TP lemmas. Several prove properties of variable lookup
 when assignments are extended; others establish that normalization produces a
@@ -1094,36 +1116,7 @@ to C functions that the user provides, which then join the trusted code.
 \label{sec:hood}
 
 This section explains enough of SBV's implementation to make its behavior
-predictable. Figure~\ref{fig:architecture} shows the overall flow.
-
-\begin{figure}[t]
-\centering
-\begin{tikzpicture}[node distance=6mm and 8mm,
-    box/.style={draw,rounded corners,align=center,inner sep=4pt,font=\small},
-    arr/.style={-{Stealth[length=2mm]}}]
-\node[box] (hs) {Haskell program over \code{SBV a}};
-\node[box,below=of hs] (graph) {Shared symbolic graph\\(nodes, kinds, constraints, definitions)};
-\node[box,below left=8mm and -10mm of graph] (smt) {SMT-LIB};
-\node[box,below right=8mm and -10mm of graph] (c) {C code};
-\node[box,below=of smt] (solver) {Solver session};
-\node[box,below left=6mm and -4mm of solver] (q) {\code{query} programs};
-\node[box,below right=6mm and -4mm of solver] (tp) {TP proofs};
-\node[box,below=of c] (exe) {Executable};
-\draw[arr] (hs) -- node[right,font=\footnotesize]{Haskell evaluation} (graph);
-\draw[arr] (graph) -- (smt);
-\draw[arr] (graph) -- (c);
-\draw[arr] (smt) -- (solver);
-\draw[arr] (c) -- node[right,font=\footnotesize]{C compiler} (exe);
-\draw[arr,<->] (q) -- (solver);
-\draw[arr] (tp) -- node[right,font=\footnotesize]{obligations} (solver);
-\end{tikzpicture}
-\caption{Haskell evaluation builds a shared graph, which is translated to SMT-LIB
-for the solver or to C for execution. Queries and proofs drive the solver.}
-\Description{A Haskell program over symbolic values is evaluated into a shared
-symbolic graph. The graph is translated either to SMT-LIB, feeding a solver
-session that query programs and TP proofs interact with, or to C code.}
-\label{fig:architecture}
-\end{figure}
+predictable.
 
 \paragraph{Symbolic values are deferred graph nodes.}
 Internally, a value of type \code{SBV a} is either a concrete constant or a
@@ -1206,6 +1199,35 @@ constructor structure.
 \section{Pitfalls and What to Trust}
 \label{sec:pitfalls}
 
+\subsection{When a check does not succeed}
+\label{sec:troubleshooting}
+
+\begin{description}
+\item[The solver cannot start.] Run \code{z3 --version} in the same shell and
+  check that the executable is on \code{PATH}. Installing SBV does not install
+  Z3. Once it starts, inspect a proof with this helper:
+\snippet{inspectSatAdd}
+  Run \code{inspectSatAdd} with \code{"sat-add.smt2"} as its argument.
+  \code{verbose} prints abbreviated diagnostics; \code{transcript} records
+  SMT-LIB for replay with \code{z3 sat-add.smt2} outside GHCi.
+\item[The solver returns unknown or times out.] No conclusion follows.
+  Simplify the obligation and check whether its theories suit the solver;
+  nonlinear arithmetic is a common obstacle. Use \code{z3Timeout5} from
+  Section~\ref{sec:host} to bound each solver call to 5,000 milliseconds.
+  \code{SetTimeOut} does not limit the whole TP run, which may make many calls.
+\item[A counterexample is found.] Recheck types, assumptions, and the
+  specification on that input. Run \code{testSatAdd} for an early random check
+  without a solver:
+\snippet{randomSatAdd}
+  The companion runs this check before proving the property. Passing random
+  tests is evidence about the sampled inputs, not a proof.
+\item[A TP calculation stalls.] Find the failed step and distinguish a
+  counterexample from unknown. Check its assumptions and the \code{??} hints
+  on that equality, instantiate hypotheses explicitly, or split the step with
+  an intermediate expression. If the recursive call changes an accumulator,
+  generalize the statement as in Sections~\ref{sec:induction} and~\ref{sec:kadane}.
+\end{description}
+
 \paragraph{Common pitfalls.}
 \begin{itemize}
 \item \emph{Wrong domain.} A property proved over \code{SInteger} says nothing
@@ -1220,11 +1242,6 @@ constructor structure.
 \item \emph{Contradictory assumptions.} If \code{constrain}ed assumptions are
   unsatisfiable, everything is provable. A quick \code{sat} on the assumptions
   alone detects this.
-\item \emph{Treating unknown as an answer.} A timeout or unknown result is
-  neither a proof nor a counterexample.
-\item \emph{Too specific an induction statement.} If a proof step involving the
-  induction hypothesis fails, the statement probably needs generalizing
-  (Sections~\ref{sec:induction} and~\ref{sec:kadane}).
 \item \emph{Mixing runs.} Unknowns belong to the run that created
 them; move concrete values instead (Section~\ref{sec:hood}).
 \end{itemize}
@@ -1245,35 +1262,27 @@ input domain, rather than verifying either compiler in general.
 \section{Related Tools and Further Reading}
 \label{sec:related}
 
-QuickCheck~\citep{quickcheck} and SBV ask similar questions with different
-evidence: a passing test campaign samples the input space, while an
-unsatisfiability result covers it. The two combine well, and SBV's own test
-suite compares concrete evaluation with solver results using QuickCheck.
+QuickCheck~\citep{quickcheck} samples the input space; SBV uses
+unsatisfiability to establish properties for every input in the modeled domain.
+Section~\ref{sec:troubleshooting} combines testing and proof on one specification.
 
-Several systems embed solver-aided programming in a host language.
-Rosette~\citep{rosette} provides a symbolic virtual machine for Racket that
-lifts ordinary host constructs to symbolic values. Grisette~\citep{grisette} is
-a Haskell library for symbolic compilation that focuses on efficient symbolic
-evaluation of programs with state merging. Smten~\citep{smten} translated
-high-level Haskell-like symbolic computations into SMT queries. The what4
-library~\citep{what4} offers a typed Haskell interface to many solvers and is
-used inside verification tools. SBV makes the boundary between Haskell and
-symbolic control explicit through its types and operators, and adds the TP proof
-layer and C generation on the same representation.
+Rosette~\citep{rosette} embeds symbolic execution in Racket, while
+Grisette~\citep{grisette} provides symbolic evaluation with state merging in
+Haskell. Smten~\citep{smten} translated Haskell-like computations into SMT
+queries. The what4 library~\citep{what4} supplies a typed interface to solvers
+for verification tools. SBV exposes symbolic control through its types and
+operators, with TP proofs and C generation over the same representation.
 
-For proofs about Haskell programs, Liquid Haskell~\citep{liquidhaskell} checks
-refinement types with an SMT solver, and refinement reflection~\citep{reflection}
-extends it to equational proofs about user-defined functions. There, specifications
-are refinement types on the program itself and proofs are Haskell terms checked
-against them; SBV's TP proofs are instead separate Haskell programs about
-symbolic models. Dafny~\citep{dafny} shows
-how far the combination of user-supplied invariants and automatic
-verification-condition discharge can go in a dedicated language.
+Liquid Haskell~\citep{liquidhaskell} checks refinement types on Haskell
+programs; refinement reflection~\citep{reflection} supports equational proofs
+about their functions. SBV's TP scripts instead prove properties of symbolic
+models in separate Haskell programs. Dafny~\citep{dafny} combines user-supplied
+invariants and automatic verification in a dedicated language.
 
-The SBV distribution contains a large collection of documented examples under
-\code{Documentation.\allowbreak SBV.\allowbreak Examples}, covering puzzles, cryptography, code
-generation, optimization, and theorem proving. The TP examples mentioned in
-Section~\ref{sec:tautology} are a good next step after this tutorial.
+Further SBV examples appear under
+\code{Documentation.\allowbreak SBV.\allowbreak Examples}, covering puzzles,
+cryptography, code generation, optimization, and theorem proving.
+The TP developments in Section~\ref{sec:tautology} are useful next steps.
 
 %==============================================================================
 \section{Conclusion}
