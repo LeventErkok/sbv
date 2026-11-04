@@ -24,13 +24,16 @@ transcript-replay examples.
 - `sbv-tutorial.tex`: manuscript in ACM `acmsmall` format (`review,anonymous,nonacm`).
 - `references.bib`: bibliography.
 - `EDITORIAL.md`: submission notes, evidence map, and open items for the author.
+- `sbv-tutorial.cabal`, `cabal.project`, `cabal.project.freeze`: standalone package,
+  pinned SBV revision, dependency versions, and language extensions.
 - `examples/TutorialExamples.hs`: executable companion; source of the listings.
 - `examples/adder-check.c`: independent exhaustive oracle for generated C.
 - `results/validation.txt`: execution record, source revision, input hashes, and tool versions.
 
 ## Build the PDF
 
-From this directory, with Tectonic installed:
+First run `cabal build tutorial-examples` to fetch the pinned SBV sources used
+for library listings. Then, from this directory with Tectonic installed:
 
 ```sh
 make pdf
@@ -47,7 +50,9 @@ latexmk -pdf sbv-tutorial.tex
 
 `prepare.py` extracts listings into `build/snippets/` from two places: blocks
 between `-- BEGIN name` and `-- END name` in the companion, and a few
-declarations quoted verbatim from `Documentation/SBV/Examples/TP/TautologyChecker.hs`.
+declarations quoted verbatim from `Documentation/SBV/Examples/TP/TautologyChecker.hs`
+in Cabal's pinned source checkout. `companion.py` locates that checkout from the
+build plan; neither extraction nor validation needs a surrounding SBV repository.
 It fails if the manuscript refers to a listing that has no source, including
 the breakable `\snippet*` form. `PAPER-ELIDE-BEGIN summary` and
 `PAPER-ELIDE-END` comments replace a span only in the printed listing; the full
@@ -58,34 +63,25 @@ in the manuscript; the behavior they show is exercised by the companion.
 
 ## Reproduce the examples
 
-The checked environment uses the SBV 14.10 source tree, GHC 9.14.1,
-Cabal 3.16.1.0, Z3 5.3.2, and CVC5 1.4.2. This identifies a tested source
-snapshot, not a claim that an arbitrary Hackage release has the same API.
-The exact repository revision and source hashes are in `results/validation.txt`.
+Use GHC 9.14.1 and Cabal 3.16.1.0, with Git, Z3 5.3.2, and CVC5 1.4.2
+on `PATH`. Full validation also needs Python 3 and a C compiler named `cc`.
+Cabal does not install solver executables. The project pins SBV's 14.10 source
+snapshot to published revision `ef9b2c0daeabb0e378eae9c584bb8bdbd815ddc3`;
+`cabal.project.freeze` pins the dependency versions and Hackage index state.
+This uses the development API rather than assuming a matching Hackage release.
+The direct `base` dependency and freeze file target GHC 9.14.1 specifically.
 
-Build the library from the repository root, then run the companion:
-
-```sh
-cabal build --offline lib:sbv
-python3 Artifacts/Tutorial/validate.py
-```
-
-Alternatively, after building SBV, run `make validate` from this directory. The
-script requires `ghc`, `cabal`, `z3`, `cvc5`, and a C compiler named `cc`.
-The Haskell package does not install the solver executables.
-
-For interactive use, after building SBV, start from the repository root:
+From the companion directory:
 
 ```sh
-cabal exec --offline -- ghci -ignore-dot-ghci -i -package sbv \
-  Artifacts/Tutorial/examples/TutorialExamples.hs
+cabal update
+cabal build tutorial-examples
+cabal repl tutorial-examples
 ```
 
-Then enable the extensions used in interactive expressions:
+Cabal enables the declared extensions in GHCi, so no `:set` commands are needed:
 
 ```haskell
-:set -XOverloadedLists -XScopedTypeVariables
-:set -XDataKinds -XTypeApplications
 prove satAddSpec
 runTP sumNonNeg
 runTP (reverseLength @Word8)
@@ -94,9 +90,35 @@ runTP kadaneCorrect
 runTP mirrorCorrect
 ```
 
+Run the examples or the complete validation:
+
+```sh
+cabal run tutorial-examples
+python3 validate.py
+```
+
+`make validate` runs the same script. After the initial build, validation uses
+`cabal build --offline`, the Cabal-built executable, and the pinned SBV sources.
+It records the companion's Git revision when available, the SBV revision and
+source-package hash, and hashes of the validation inputs. It also works outside
+a Git checkout, where input hashes identify the companion.
+
+To create a source package that works outside this repository:
+
+```sh
+cabal sdist sbv-tutorial --output-directory build/package
+```
+
+Unpack the resulting archive and use the same commands from its directory.
+The archive contains the project and freeze files, checked examples, validation
+scripts, and paper sources. Cabal fetches SBV independently; it does not use the
+author's checkout. This is the reproducible source package, not yet the final
+anonymized submission supplement.
+
 Validation compiles the companion with `-Wall -Werror` and exercises the paper's
 examples, checking results independently where possible. Counterexamples are
-re-checked with Haskell arithmetic, the production optimum is compared with all
+re-checked with Haskell arithmetic; the printed `(223,124)` overflow example is
+checked explicitly. The production optimum is compared with all
 feasible plans, and the synthesized expression is re-evaluated by a plain Haskell
 interpreter. Kadane's algorithm and its recursive specification are compared with
 an oracle that enumerates contiguous segments on all 3,906 lists of length at most

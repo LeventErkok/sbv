@@ -1,10 +1,7 @@
 SBV tutorial companion validation
-UTC: 2026-11-04T17:10:19.534730+00:00
+UTC: 2026-11-04T17:53:21.382534+00:00
 Scope: tutorial examples only; not the full repository test suite.
-
-$ git rev-parse HEAD
-ae80cbdd7651d3692fa20b45f676e6fccbc8bc85
-Exit status: 0; elapsed: 0.01s
+Companion directory is not a Git checkout; input hashes identify its sources.
 
 $ ghc --numeric-version
 9.14.1
@@ -16,7 +13,7 @@ Exit status: 0; elapsed: 0.02s
 
 $ z3 --version
 Z3 version 5.3.2 - 64 bit - build hashcode b411c90217766c924e6ea3d0b51f452a89fd8fc2
-Exit status: 0; elapsed: 0.01s
+Exit status: 0; elapsed: 0.04s
 
 $ cvc5 --version
 cvc5 1.4.2 [git 282d5e0 on branch HEAD]
@@ -78,7 +75,7 @@ See licenses/gpl-3.0.txt for more information.
 See the file COPYING (distributed with the source code, and with
 all binaries) for the full cvc5 copyright, licensing, and (lack of)
 warranty information.
-Exit status: 0; elapsed: 0.01s
+Exit status: 0; elapsed: 0.03s
 
 $ cc --version
 Apple clang version 21.0.0 (clang-2100.3.34.2)
@@ -87,36 +84,46 @@ Thread model: posix
 InstalledDir: /Library/Developer/CommandLineTools/usr/bin
 Exit status: 0; elapsed: 0.01s
 
-Library source changes relative to the recorded revision (empty means clean):
+$ cabal build --offline tutorial-examples
+Warning: --offline was specified, skipping sync of repositories:
+Warning: https://github.com/LeventErkok/sbv.git
+Up to date
+Exit status: 0; elapsed: 0.81s
+
+SBV source revision: ef9b2c0daeabb0e378eae9c584bb8bdbd815ddc3
+SBV source package SHA-256: 4c0a04fbbef477df74f1e6771d8660b3abb6173593bc5ad41a755e9b9f6ca5fc
+Library source changes relative to that revision (empty means clean):
 
 $ git status --short -- Data Documentation sbv.cabal
 
-Exit status: 0; elapsed: 0.01s
+Exit status: 0; elapsed: 0.07s
 
 SHA-256 of validation inputs:
-f7f1cf4e8b6f2bb27cadfd9362becbe208cd612aae3ad0dbd361bcefd08d5629  Artifacts/Tutorial/examples/TutorialExamples.hs
-94bb964dbf0e9cb3d9ec1d8af6d4dc3a7f06b5399eae586c339fe061d4b92bc6  Artifacts/Tutorial/examples/adder-check.c
-2fccc983bf4a96dc19b4a3f4b1300770698426d858fe89ae28eedc237eb1f868  Artifacts/Tutorial/validate.py
-f1507302da325784a3ee538d76f5df7d3662f31fd6f488b0717b30d44acb5360  Artifacts/Tutorial/prepare.py
-f346d68da03c07968a810eeb08610b9c2aa630324e7387ddf55a4af0a64888f9  sbv.cabal
-c98cbecdb053de678af3ad406d2b99b351eec190b6644fefc78f44934f40c1ef  Documentation/SBV/Examples/TP/Lists.hs
-fcacc8fc472fcac60dbf4a007b7b502fc86dc2b4d5d2cc3cc901905e02ae4ed8  Documentation/SBV/Examples/TP/TautologyChecker.hs
+5e86bdd67dab004d78c86a772015165614de8870919170e7c014de49ae7eddb6  examples/TutorialExamples.hs
+94bb964dbf0e9cb3d9ec1d8af6d4dc3a7f06b5399eae586c339fe061d4b92bc6  examples/adder-check.c
+4608cff39fafbf494996659d5f5909913661392ab85739383ce0891b66e60903  validate.py
+62e3aa166fb8bc970e3a87fda7af0811f67a1ae0c0132163924363650bbc6b1a  prepare.py
+85c0157065210a129d02ea0fca51d8f79c6d888f89c029c9a8840811827de8d2  companion.py
+f16e651b54797bedb7ab308a7e47797647dd76f6caee2444132b6ccc22d9329f  sbv-tutorial.cabal
+d12b672fc2acd78c7a513e61c42f162aeab2d0e1c6056f6dd2d12e45a6200dea  cabal.project
+47a76c93961f585a55e006fdb698b089101e2813618bae0d98abcc7e3ca9254e  cabal.project.freeze
+f346d68da03c07968a810eeb08610b9c2aa630324e7387ddf55a4af0a64888f9  SBV/sbv.cabal
+c98cbecdb053de678af3ad406d2b99b351eec190b6644fefc78f44934f40c1ef  SBV/Documentation/SBV/Examples/TP/Lists.hs
+fcacc8fc472fcac60dbf4a007b7b502fc86dc2b4d5d2cc3cc901905e02ae4ed8  SBV/Documentation/SBV/Examples/TP/TautologyChecker.hs
 
 Library package description:
 Name        : sbv
 Version     : 14.10
 
-$ /Library/Developer/CommandLineTools/usr/bin/python3 /Users/lerkok/Projects/sbv/Artifacts/Tutorial/prepare.py
-Extracted 35 listings (34 used by the manuscript)
-Exit status: 0; elapsed: 0.03s
+$ /Library/Developer/CommandLineTools/usr/bin/python3 /private/tmp/sbv-companion-dln2x4m9/sbv-tutorial-0.1.0.0/prepare.py
+Extracted 35 listings (31 used by the manuscript)
+Exit status: 0; elapsed: 0.05s
 
-$ cabal exec --offline -- ghc -O0 -Wall -Werror -i -i/Users/lerkok/Projects/sbv/Artifacts/Tutorial/examples -package sbv -outputdir /Users/lerkok/Projects/sbv/Artifacts/Tutorial/build -o /Users/lerkok/Projects/sbv/Artifacts/Tutorial/build/tutorial-examples /Users/lerkok/Projects/sbv/Artifacts/Tutorial/examples/TutorialExamples.hs
-Loaded package environment from /Users/lerkok/Projects/sbv/dist-newstyle/tmp/environment.-83040/.ghc.environment.aarch64-darwin-9.14.1
-[1 of 2] Compiling Main             ( /Users/lerkok/Projects/sbv/Artifacts/Tutorial/examples/TutorialExamples.hs, /Users/lerkok/Projects/sbv/Artifacts/Tutorial/build/Main.o ) [Source file changed]
-[2 of 2] Linking /Users/lerkok/Projects/sbv/Artifacts/Tutorial/build/tutorial-examples [Objects changed]
-Exit status: 0; elapsed: 3.96s
+$ cabal list-bin tutorial-examples -v0
+/private/tmp/sbv-companion-dln2x4m9/sbv-tutorial-0.1.0.0/dist-newstyle/build/aarch64-osx/ghc-9.14.1/sbv-tutorial-0.1.0.0/x/tutorial-examples/noopt/build/tutorial-examples/tutorial-examples
+Exit status: 0; elapsed: 0.06s
 
-$ /Users/lerkok/Projects/sbv/Artifacts/Tutorial/build/tutorial-examples
+$ /private/tmp/sbv-companion-dln2x4m9/sbv-tutorial-0.1.0.0/dist-newstyle/build/aarch64-osx/ghc-9.14.1/sbv-tutorial-0.1.0.0/x/tutorial-examples/noopt/build/tutorial-examples/tutorial-examples
 PASS integer absolute value is nonnegative
 Falsifiable. Counter-example:
   s0 = -128 :: Int8
@@ -127,6 +134,7 @@ PASS float reflexivity counterexample is NaN
 +++ OK, passed 100 tests.
 PASS random testing of saturating addition
 PASS saturating addition theorem
+PASS printed overflow example: wrong result 91, specified result 255
 Falsifiable. Counter-example:
   x = 223 :: Word8
   y = 124 :: Word8
@@ -333,9 +341,9 @@ Inductive lemma: revAccLength
   Result:                        Q.E.D.
 Functions proven terminating: revAcc
 PASS exercise 3: revAcc length
-Exit status: 0; elapsed: 31.23s
+Exit status: 0; elapsed: 32.48s
 
-$ /Users/lerkok/Projects/sbv/Artifacts/Tutorial/build/tutorial-examples --tautology
+$ /private/tmp/sbv-companion-dln2x4m9/sbv-tutorial-0.1.0.0/dist-newstyle/build/aarch64-osx/ghc-9.14.1/sbv-tutorial-0.1.0.0/x/tutorial-examples/noopt/build/tutorial-examples/tutorial-examples --tautology
 Lemma: tautologyImpliesEval                         Q.E.D.
 Lemma: normalizeRespectsTruth                       Q.E.D.
 Lemma: normalizeCorrect                             Q.E.D.
@@ -351,9 +359,9 @@ Lemma: completeness                                 Q.E.D.
 Functions proven terminating:
   eval, falsify', ifComplexity, ifDepth, isAssigned, isNormal, isTautology', lookUp, normalize
 PASS tautology checker completeness
-Exit status: 0; elapsed: 2.36s
+Exit status: 0; elapsed: 2.43s
 
-$ /Users/lerkok/Projects/sbv/Artifacts/Tutorial/build/tutorial-examples --diagnostics /Users/lerkok/Projects/sbv/Artifacts/Tutorial/build/sat-add.smt2
+$ /private/tmp/sbv-companion-dln2x4m9/sbv-tutorial-0.1.0.0/dist-newstyle/build/aarch64-osx/ghc-9.14.1/sbv-tutorial-0.1.0.0/x/tutorial-examples/noopt/build/tutorial-examples/tutorial-examples --diagnostics /private/tmp/sbv-companion-dln2x4m9/sbv-tutorial-0.1.0.0/build/sat-add.smt2
 ** Calling: z3 -nw -in -smt2
 [GOOD] ; Automatically generated by SBV. Do not edit.
 [GOOD] (set-option :print-success true)
@@ -394,9 +402,9 @@ $ /Users/lerkok/Projects/sbv/Artifacts/Tutorial/build/tutorial-examples --diagno
 *** Solver   : Z3
 *** Exit code: ExitSuccess
 PASS verbose proof with replayable transcript
-Exit status: 0; elapsed: 0.74s
+Exit status: 0; elapsed: 0.76s
 
-$ z3 /Users/lerkok/Projects/sbv/Artifacts/Tutorial/build/sat-add.smt2
+$ z3 /private/tmp/sbv-companion-dln2x4m9/sbv-tutorial-0.1.0.0/build/sat-add.smt2
 success
 success
 success
@@ -422,17 +430,17 @@ success
 unsat
 Exit status: 0; elapsed: 0.65s
 
-$ /Users/lerkok/Projects/sbv/Artifacts/Tutorial/build/tutorial-examples --generate /Users/lerkok/Projects/sbv/Artifacts/Tutorial/build/c
+$ /private/tmp/sbv-companion-dln2x4m9/sbv-tutorial-0.1.0.0/dist-newstyle/build/aarch64-osx/ghc-9.14.1/sbv-tutorial-0.1.0.0/x/tutorial-examples/noopt/build/tutorial-examples/tutorial-examples --generate /private/tmp/sbv-companion-dln2x4m9/sbv-tutorial-0.1.0.0/build/c
 
 Exit status: 0; elapsed: 0.02s
 
-$ cc -std=c11 -Wall -Wextra -Werror -O2 -fsanitize=undefined -fno-sanitize-recover=all -I/Users/lerkok/Projects/sbv/Artifacts/Tutorial/build/c /Users/lerkok/Projects/sbv/Artifacts/Tutorial/build/c/sat_add.c /Users/lerkok/Projects/sbv/Artifacts/Tutorial/examples/adder-check.c -o /Users/lerkok/Projects/sbv/Artifacts/Tutorial/build/adder-check
+$ cc -std=c11 -Wall -Wextra -Werror -O2 -fsanitize=undefined -fno-sanitize-recover=all -I/private/tmp/sbv-companion-dln2x4m9/sbv-tutorial-0.1.0.0/build/c /private/tmp/sbv-companion-dln2x4m9/sbv-tutorial-0.1.0.0/build/c/sat_add.c /private/tmp/sbv-companion-dln2x4m9/sbv-tutorial-0.1.0.0/examples/adder-check.c -o /private/tmp/sbv-companion-dln2x4m9/sbv-tutorial-0.1.0.0/build/adder-check
 
 Exit status: 0; elapsed: 0.08s
 
-$ /Users/lerkok/Projects/sbv/Artifacts/Tutorial/build/adder-check
+$ /private/tmp/sbv-companion-dln2x4m9/sbv-tutorial-0.1.0.0/build/adder-check
 PASS generated C: all 65536 unsigned-byte input pairs
-Exit status: 0; elapsed: 0.31s
+Exit status: 0; elapsed: 3.14s
 
 VALIDATION PASSED: all tutorial checks (including random tests and exercise
 solutions), verbose diagnostics and SMT-LIB transcript replay, the

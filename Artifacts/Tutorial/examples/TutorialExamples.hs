@@ -669,10 +669,10 @@ satSubSpec x y = sFromIntegral (satSub x y) .== ite (diff .< 0) 0 diff
 -------------------------------------------------------------------------------
 
 check :: String -> IO Bool -> IO ()
-check name action = do
+check testName action = do
   result <- Timeout.timeout (120 * 1000000) action
-  unless (result == Just True) $ fail (name ++ ": failed or timed out")
-  putStrLn $ "PASS " ++ name
+  unless (result == Just True) $ fail (testName ++ ": failed or timed out")
+  putStrLn $ "PASS " ++ testName
 
 main :: IO ()
 main = do
@@ -701,6 +701,9 @@ main = do
         pure $ maybe False isNaN (getModelValue "s0" r :: Maybe Float)
       check "random testing of saturating addition" testSatAdd
       check "saturating addition theorem" $ isTheorem satAddSpec
+      check "printed overflow example: wrong result 91, specified result 255" $ pure $
+        unliteral (wrongAdd 223 124) == Just 91 && unliteral (satAdd 223 124) == Just 255
+        && min 255 (223 + 124 :: Integer) == 255
       check "incorrect overflow guard is refuted, checked by an oracle" wrongAddRefuted
       check "idempotent bytes are exactly 0 and 1" $ do
         r <- idempotentBytes

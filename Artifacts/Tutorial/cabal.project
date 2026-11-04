@@ -1,0 +1,11 @@
+-- Pin the SBV development API used by the paper to a published source snapshot.
+packages: .
+
+source-repository-package
+  type: git
+  location: https://github.com/LeventErkok/sbv.git
+  tag: ef9b2c0daeabb0e378eae9c584bb8bdbd815ddc3
+
+package sbv-tutorial
+  optimization: False
+  flags: +strict

@@ -1,4 +1,8 @@
 /build/
+/dist-newstyle/
+/__pycache__/
+/cabal.project.local
+/cabal.project.local~
 *.aux
 *.bbl
 *.blg

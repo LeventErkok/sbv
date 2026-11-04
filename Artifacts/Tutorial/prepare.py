@@ -10,9 +10,10 @@ Every \\snippet{name}, \\snippet*{name}, or \\libsnippet{name} must resolve to a
 """
 from pathlib import Path
 import re
+from companion import sbv_source
 
 root = Path(__file__).resolve().parent
-repo = root.parents[1]
+repo, _ = sbv_source(root)
 destination = root / "build" / "snippets"
 destination.mkdir(parents=True, exist_ok=True)
 for stale in destination.glob("*.hs"):

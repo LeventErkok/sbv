@@ -123,40 +123,23 @@ must not be silently transferred to machine integers, partial computations, or
 infinite lists.
 
 \paragraph{Following along.}
-The companion was checked with the SBV 14.10 source tree and GHC 9.14.1.
-The solvers were Z3 5.3.2 and CVC5 1.4.2; the execution log records the source
-revision and exact tool versions. Z3 \citep{z3} is the default solver.
-The tautology-checker development also uses CVC5 \citep{cvc5}.
-Install the solvers on the \code{PATH};
-installing the Haskell package alone does not install them. Solver support varies
-by theory, so choosing a different solver may require changing the model.
-
-After building SBV as described in the companion's README, start GHCi from the
-repository root:
+The standalone companion pins its dependencies, including an SBV 14.10 source
+snapshot, and declares the required language extensions. It was checked with
+GHC 9.14.1, Z3 5.3.2~\citep{z3}, and CVC5 1.4.2~\citep{cvc5}.
+Install the solvers on \code{PATH}; Cabal does not install them. From the
+companion directory, build the examples and start GHCi:
 \begin{lstlisting}[language={}]
-cabal exec --offline -- ghci -ignore-dot-ghci -i -package sbv \
-  Artifacts/Tutorial/examples/TutorialExamples.hs
+cabal build tutorial-examples
+cabal repl tutorial-examples
 \end{lstlisting}
-This loads all the examples and their imports; \code{-i} ensures that GHCi uses
-the built SBV package. To write a separate module, use
-the following extensions and imports (some are only needed in later sections):
-\snippet{extensions}
-\snippet{imports}
-\code{OverloadedLists} lets literals such as \code{[1,2,3]} denote symbolic lists;
-\code{QuasiQuotes} enables \code{sCase}; \code{TemplateHaskell} enables datatype
-generation. \code{DataKinds} and \code{TypeApplications} support named
-quantifiers and explicit instantiation in proofs. \code{ScopedTypeVariables}
-permits the type annotations on lambda-bound variables used below. In GHCi,
-enable extensions for interactive expressions with:
-\begin{lstlisting}[language={}]
-:set -XOverloadedLists -XScopedTypeVariables
-:set -XDataKinds -XTypeApplications
-\end{lstlisting}
+The session loads all imports, including \code{Data.SBV.List} qualified as
+\code{SL}, and enables the extensions used below. Run the checks with
+\code{cabal run tutorial-examples}; the README gives full validation instructions.
+The execution log records source hashes and exact tool versions.
 
-The companion extracts executable listings from its own source and the SBV
-documentation modules. Transcripts and explicitly abbreviated listings are
-presented separately. Model values and their order can vary between solver
-versions; the validation checks their meaning rather than their printed form.
+Listings are extracted from checked sources; transcripts and elisions are marked
+separately. Model values and their order can vary between solver versions, so
+validation checks their meaning rather than their printed form.
 
 %==============================================================================
 \section{First Proofs and Counterexamples}

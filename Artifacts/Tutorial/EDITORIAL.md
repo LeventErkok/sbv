@@ -13,11 +13,13 @@ listed no Haskell Symposium call, and a search found none. Re-check the tutorial
 limit and treatment of references when that call appears.
 Pass 1 reduced the draft from 27 to 26 pages while adding datatype induction.
 Pass 2 adds troubleshooting and two teaching figures, with reserve cuts bringing
-the draft to 25 pages including references. There is little room for additions.
+the draft to 25 pages including references.
 The completeness listing, closures, and related-tools reserve cuts are already
-included in that count. Shortening "Following along" after introducing the
-standalone companion package remains available; do not budget the earlier cuts
-again when planning exercises and the abstract/conclusion revision.
+included in that count. The standalone package now lets "Following along" use
+two Cabal commands instead of repository instructions, imports, and extension
+setup. The paper is still 25 pages, but only about a quarter of its last page
+is occupied, leaving room for exercises and the abstract/conclusion revision.
+All previously listed reserve cuts have now been used.
 The `nonacm` class option suppresses dummy DOI, price, and publication metadata;
 remove it and insert the assigned metadata for publication.
 
@@ -25,7 +27,7 @@ remove it and insert the assigned metadata for publication.
 
 | Section | Teaches | Companion listings |
 |---|---|---|
-| 1 Introduction | Audience, roadmap, tested versions, runnable setup | `extensions`, `imports` |
+| 1 Introduction | Audience, roadmap, pinned standalone package, runnable setup | Cabal commands |
 | 2 First proofs | Symbolic types, dotted operators, `ite`, quantification, vacuity | (inline transcripts) |
 | 3 Specifications | Independent specs; a refuted wrong guard | `saturating`, `wrongAdd` |
 | 4 Finding values | `allSat` | `idempotent` |
@@ -77,6 +79,17 @@ teaching examples from successful proofs.
 
 ## Revision rationale
 
+- Bring the standalone Cabal package forward before exercises. Pin SBV 14.10
+  to the published source revision `ef9b2c0daeabb0e378eae9c584bb8bdbd815ddc3`,
+  freeze dependencies, and declare the extensions needed both for compilation
+  and the interactive examples. Validation and extraction locate Cabal's fetched
+  sources, not the surrounding repository. The source archive includes the
+  project/freeze files and validation tools. Keep final anonymization separate.
+  Verify it by unpacking outside the repository, building and running full
+  validation there, and rebuilding the PDF. The retained log is from that
+  standalone run, so hashes identify the companion rather than a Git revision.
+- Add an explicit check of the paper's `(223,124)` example: `wrongAdd` gives 91,
+  while `satAdd` and the mathematical specification give 255.
 - Pass 2 adds troubleshooting to the pitfalls section, distinguishing startup
   failure, unknown/timeout, counterexample, and a stalled TP step. The companion
   runs random tests of `satAddSpec` before proving it, and validates verbose
@@ -91,7 +104,7 @@ teaching examples from successful proofs.
   Retain the four implementation paragraphs without the architecture diagram.
 - Use reserve cuts in arrays, the tautology overview (omit the completeness
   listing while still validating its proof), closures, and related tools.
-  Exercises and standalone setup remain for the later passes.
+  Exercises remain for the next pass.
 
 - Place the arrays section after symbolic datatypes.
   Prove that distinct-address writes commute; remove the premise to obtain an
@@ -200,9 +213,9 @@ transfer theorem from SBV to Haskell.
 
 - Verify `bentley` directly against the publisher's record (CACM 27(9),
   pages 865–873, DOI 10.1145/358234.381162).
-- Package a stable supplementary artifact and supply its review-compatible
-  location. The current companion assumes this repository layout; its log
-  contains identifying local paths that should be removed for anonymous review.
+- Finish the anonymized supplement from the standalone source package. Its
+  validation log contains identifying local paths that should be removed for
+  anonymous review; keep the required third-party license notices.
 - Decide whether the tutorial should mention Cryptol/SAW or other users of SBV.
   The text currently makes no adoption claims.
 - Confirm acknowledgments and any AI-assistance disclosure required by the venue.
