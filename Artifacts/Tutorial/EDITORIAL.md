@@ -17,8 +17,8 @@ the draft to 25 pages including references.
 The completeness listing, closures, and related-tools reserve cuts are already
 included in that count. The standalone package now lets "Following along" use
 two Cabal commands instead of repository instructions, imports, and extension
-setup. The paper is still 25 pages, but only about a quarter of its last page
-is occupied, leaving room for exercises and the abstract/conclusion revision.
+setup, freeing space for Pass 3. With all six exercises now included, the paper
+remains 25 pages including references, with little margin for the final revision.
 All previously listed reserve cuts have now been used.
 The `nonacm` class option suppresses dummy DOI, price, and publication metadata;
 remove it and insert the assigned metadata for publication.
@@ -46,7 +46,7 @@ remove it and insert the assigned metadata for publication.
 | 17 Pitfalls and trust | Troubleshooting by outcome, diagnostics and replay, random testing, trusted base | `inspectSatAdd`; companion `testSatAdd` |
 | 18 Related tools | QuickCheck, Rosette, Grisette, Smten, what4, Liquid Haskell, Dafny | — |
 
-Three exercises (Sections 3, 7, 10) have checked solutions in the companion.
+Six exercises (Sections 3, 5, 7, 9, 10, 11) name checked companion solutions.
 
 ## Evidence for implementation claims
 
@@ -79,6 +79,19 @@ teaching examples from successful proofs.
 
 ## Revision rationale
 
+- Pass 3 adds lexicographic optimization with reversed priorities, array
+  last-write-wins, and a nonempty Kadane challenge. The latter has an explicit
+  nonempty-input precondition, a proved accumulator invariant, and an independent
+  segment oracle covering 3,905 short lists plus three examples. Both objective
+  orders are checked against finite enumeration. Every exercise names its
+  companion solution, including the three existing exercises.
+- Give the companion its own BSD-3-Clause review license, naming "the authors",
+  and anonymize the TeX author field included in the source archive. Restore
+  Levent Erkok's name for camera-ready. This notice also covers the author's
+  adaptations of their SBV examples; the fetched SBV dependency is unchanged.
+- Use `base >=4.19.2 && <5`, matching SBV's lower bound, while retaining the
+  tested compiler's exact versions in the freeze file. Note that source lookup
+  reads Cabal's internal plan format and was tested with Cabal 3.16.1.0.
 - Bring the standalone Cabal package forward before exercises. Pin SBV 14.10
   to the published source revision `ef9b2c0daeabb0e378eae9c584bb8bdbd815ddc3`,
   freeze dependencies, and declare the extensions needed both for compilation
@@ -104,7 +117,7 @@ teaching examples from successful proofs.
   Retain the four implementation paragraphs without the architecture diagram.
 - Use reserve cuts in arrays, the tautology overview (omit the completeness
   listing while still validating its proof), closures, and related tools.
-  Exercises remain for the next pass.
+  Exercises follow in Pass 3.
 
 - Place the arrays section after symbolic datatypes.
   Prove that distinct-address writes commute; remove the premise to obtain an
@@ -215,7 +228,14 @@ transfer theorem from SBV to Haskell.
   pages 865–873, DOI 10.1145/358234.381162).
 - Finish the anonymized supplement from the standalone source package. Its
   validation log contains identifying local paths that should be removed for
-  anonymous review; keep the required third-party license notices.
+  anonymous review. Restore the companion copyright holder and TeX author for
+  camera-ready.
+- After SBV 14.10 is released on Hackage, retain `sbv ==14.10`, remove the Git
+  source stanza, update
+  source discovery for extraction/validation, regenerate the freeze file, and
+  revalidate against the release. Then remove the Git prerequisite and the
+  paper's and bibliography's source-snapshot wording. The Git URL currently
+  identifies SBV's owner.
 - Decide whether the tutorial should mention Cryptol/SAW or other users of SBV.
   The text currently makes no adoption claims.
 - Confirm acknowledgments and any AI-assistance disclosure required by the venue.

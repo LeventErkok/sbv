@@ -23,7 +23,7 @@ transcript-replay examples.
 - `sbv-tutorial.pdf`: rendered manuscript.
 - `sbv-tutorial.tex`: manuscript in ACM `acmsmall` format (`review,anonymous,nonacm`).
 - `references.bib`: bibliography.
-- `EDITORIAL.md`: submission notes, evidence map, and open items for the author.
+- `EDITORIAL.md` (repository only): submission notes, evidence map, and open items for the author.
 - `sbv-tutorial.cabal`, `cabal.project`, `cabal.project.freeze`: standalone package,
   pinned SBV revision, dependency versions, and language extensions.
 - `examples/TutorialExamples.hs`: executable companion; source of the listings.
@@ -69,7 +69,11 @@ Cabal does not install solver executables. The project pins SBV's 14.10 source
 snapshot to published revision `ef9b2c0daeabb0e378eae9c584bb8bdbd815ddc3`;
 `cabal.project.freeze` pins the dependency versions and Hackage index state.
 This uses the development API rather than assuming a matching Hackage release.
-The direct `base` dependency and freeze file target GHC 9.14.1 specifically.
+The freeze file targets the tested GHC 9.14.1 environment. The package's `base`
+bounds follow SBV's supported range; removing the freeze file lets readers try
+other compiler versions, which have not been validated here.
+`companion.py` reads Cabal's internal `plan.json` format, tested with Cabal
+3.16.1.0; other Cabal versions may require updating that helper.
 
 From the companion directory:
 
@@ -89,6 +93,24 @@ bookKeepingAbstract
 runTP kadaneCorrect
 runTP mirrorCorrect
 ```
+
+Each exercise names its solution in the paper. All six are checked by validation:
+
+| Exercise | Companion solutions |
+|---|---|
+| Saturating subtraction | `satSub`, `satSubSpec` |
+| Lexicographic objectives and their order | `productionLex`, `productionLexReversed` |
+| Largest solution below 100 | `largestBelow100` |
+| Array last-write-wins | `lastWriteWins` |
+| Accumulator reversal length | `revAccLength` |
+| Nonempty Kadane (challenge) | `mssNonEmpty`, `kadaneNonEmpty`, `kadaneNonEmptyCorrect`, `segmentNonEmptyOracle` |
+
+The nonempty Kadane theorem requires nonempty input. The total functions return
+0 on `[]`, outside that contract; all-negative nonempty inputs retain their
+negative optimum. Validation compares both functions with independently
+enumerated nonempty segments on all 3,905 lists of length one through five over
+`[-2..2]`, plus three examples, and runs the inductive proof. The optimization
+exercise's two priority orders are checked against all feasible integer plans.
 
 Run the examples or the complete validation:
 
@@ -163,6 +185,12 @@ That call does not explicitly exempt references; counting them is a working
 assumption pending the 2027 call. No Haskell Symposium call was found on the
 ICFP 2027 site or by search on 4 November 2026.
 The `nonacm` option suppresses placeholder publication metadata in this draft.
+The companion's review license names "the authors"; restore the author's name
+in that license and the TeX author field for camera-ready. The Git source pin
+still exposes the SBV repository owner. Once the tested SBV 14.10 release is on
+Hackage, replace the Git stanza with the pinned release, update source lookup
+for validation/extraction, and remove the Git prerequisite and "source snapshot"
+wording after revalidation.
 For the camera-ready version, remove `anonymous`, `review`, and `nonacm`, then
 supply the publisher's actual metadata. `results/validation.txt` records local
 paths and the git revision; anonymize it before uploading the companion as

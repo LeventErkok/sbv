@@ -37,7 +37,7 @@
 
 \title{From Counterexamples to Inductive Proofs}
 \subtitle{A Tutorial on SBV}
-\author{Levent Erk\"{o}k}
+\author{Anonymous authors}
 \authorsaddresses{}
 
 \begin{document}
@@ -136,6 +136,7 @@ The session loads all imports, including \code{Data.SBV.List} qualified as
 \code{SL}, and enables the extensions used below. Run the checks with
 \code{cabal run tutorial-examples}; the README gives full validation instructions.
 The execution log records source hashes and exact tool versions.
+Each exercise names its checked solution in the companion.
 
 Listings are extracted from checked sources; transcripts and elisions are marked
 separately. Model values and their order can vary between solver versions, so
@@ -282,7 +283,7 @@ checks the reported pair with ordinary Haskell arithmetic.
 \begin{exercise}
 Write \code{satSub :: SWord8 -> SWord8 -> SWord8}, subtraction that saturates
 at 0, together with a specification over \code{SInteger}, and prove that they
-agree.
+agree. Solutions: \code{satSub} and \code{satSubSpec}.
 \end{exercise}
 
 %==============================================================================
@@ -384,6 +385,12 @@ is undecidable~\citep{z3arithmetic}. Z3's polynomial real procedures include
 optimization support since 5.3, but do not provide a general solution for
 nonlinear integer or mixed problems~\citep{z3optimization}. Prefer faithful
 linear formulations and distinguish feasible candidates from established optima.
+
+\begin{exercise}
+Keep \code{production}'s constraints, but maximize \code{x + 2*y}, then minimize
+\code{x + y} lexicographically. What changes if the priorities are reversed?
+\par\noindent Solutions: \code{productionLex} and \code{productionLexReversed}.
+\end{exercise}
 
 %==============================================================================
 \section{Haskell Structure and Symbolic Structure}
@@ -489,7 +496,7 @@ queries compose without regard to the order in which types are first used.
 
 \begin{exercise}
 Change \code{smallest} to find the \emph{largest} solution below 100. (The answer
-is 94.)
+is 94.) Solution: \code{largestBelow100}.
 \end{exercise}
 
 %==============================================================================
@@ -565,6 +572,11 @@ an interval and preserve \code{readArray mem i} elsewhere.
 The index type determines the domain: \code{Word8} has 256 addresses and
 \code{Integer} infinitely many. These total mappings differ from the finite
 recursive structure of lists and datatypes (Section~\ref{sec:finite-lists}).
+
+\begin{exercise}
+Prove that writing twice to the same address equals performing only the last
+write, for every array, address, and pair of values. Solution: \code{lastWriteWins}.
+\end{exercise}
 
 %==============================================================================
 \section{Proofs by Induction}
@@ -690,6 +702,7 @@ separates the reusable inductive result from the interface property callers need
 Prove that \code{SL.length (revAcc acc xs) .== SL.length xs + SL.length acc}.
 Why must the accumulator remain universally quantified in the induction
 hypothesis, even when the intended caller starts with \code{[]}?
+Solution: \code{revAccLength}.
 \end{exercise}
 
 %==============================================================================
@@ -841,6 +854,15 @@ and case analysis on \code{smax}; the human supplies generalizations and
 intermediate statements. When a proof gets stuck, the useful question is
 rarely ``which tactic is missing?'' and usually ``what is the statement that
 explains this step?''
+
+\begin{exercise}
+\emph{Challenge.} Require the chosen segment to be nonempty. Write a
+specification and a linear-time algorithm, and prove their equivalence under
+an explicit nonempty-input precondition. Test all-negative lists.
+Solutions: \code{mssNonEmpty}, \code{kadaneNonEmpty}, and
+\code{kadaneNonEmptyCorrect}; \code{segmentNonEmptyOracle} enumerates segments
+independently. The solutions return 0 on \code{[]}, outside the theorem's contract.
+\end{exercise}
 
 %==============================================================================
 \section{Induction over Datatypes}

@@ -100,6 +100,41 @@ production = optimize Lexicographic $ do
   maximize "profit" (2 * x + 3 * y)
 -- END production
 
+-- Exercise 2: maximize output, then minimize units; also reverse the priorities.
+productionLex, productionLexReversed :: IO OptimizeResult
+productionLex         = productionLexWith False
+productionLexReversed = productionLexWith True
+
+productionLexWith :: Bool -> IO OptimizeResult
+productionLexWith reversePriorities = optimize Lexicographic $ do
+  x <- sInteger "x"
+  y <- sInteger "y"
+  constrain $ x .>= 0 .&& y .>= 0
+  constrain $ x + 2 * y .<= 10
+  constrain $ 3 * x + y .<= 15
+  let maxOutput = maximize "output" (x + 2 * y)
+      minUnits  = minimize "units"  (x + y)
+  if reversePriorities then minUnits >> maxOutput else maxOutput >> minUnits
+
+productionLexChecked :: IO Bool
+productionLexChecked = and <$> mapM checkPriorities ([False, True] :: [Bool])
+  where plans = [(x, y) | x <- [0 .. 5], y <- [0 .. 5],
+                         x + 2 * y <= 10, 3 * x + y <= (15 :: Integer)]
+        key reversed (x, y) | reversed  = (x + y, negate (x + 2 * y))
+                            | otherwise = (negate (x + 2 * y), x + y)
+        checkPriorities reversed = do
+          result <- if reversed then productionLexReversed else productionLex
+          print result
+          pure $ case result of
+            LexicographicResult model ->
+              case (getModelValue "x" model, getModelValue "y" model,
+                    getModelValue "output" model, getModelValue "units" model) of
+                (Just x, Just y, Just out, Just units) ->
+                  (x, y) `elem` plans && out == x + 2 * y && units == x + y
+                  && key reversed (x, y) == minimum (map (key reversed) plans)
+                _ -> False
+            _ -> False
+
 productionOptimal :: IO Bool
 productionOptimal = do
   r <- production
@@ -187,6 +222,10 @@ writesCommute a i j x y =
     writeArray (writeArray a j y) i x
 -- END writesCommute
 
+-- Exercise 4: the last write to an address replaces the earlier one.
+lastWriteWins :: SArray Integer Integer -> SInteger -> SInteger -> SInteger -> SBool
+lastWriteWins mem i x y = writeArray (writeArray mem i x) i y .== writeArray mem i y
+
 arrayAliasingRefuted :: IO Bool
 arrayAliasingRefuted = do
   result <- prove $ do
@@ -228,7 +267,7 @@ smallest = runSMT $ do
           in descend Nothing
 -- END descent
 
--- Exercise 2 solution: the largest such value below 100.
+-- Exercise 3 solution: the largest such value below 100.
 largestBelow100 :: IO Integer
 largestBelow100 = runSMT $ do
   x <- sInteger "x"
@@ -361,7 +400,7 @@ reverseCorrect = do
     [proofOf generalized]
 -- END reverseCorrect
 
--- Exercise 3 solution.
+-- Exercise 5 solution.
 revAccLength :: TP (Proof (Forall "xs" [Integer] -> Forall "acc" [Integer] -> SBool))
 revAccLength = induct "revAccLength"
   (\(Forall xs) (Forall acc) -> SL.length (revAcc acc xs) .== SL.length xs + SL.length acc) $
@@ -574,6 +613,70 @@ kadaneConcrete = pure $ and
   ]
 
 -------------------------------------------------------------------------------
+-- Exercise 6: a nonempty segment of a nonempty input list.
+-- The total functions return 0 on []; the theorem requires nonempty input.
+-------------------------------------------------------------------------------
+
+mssNonEmpty :: SList Integer -> SInteger
+mssNonEmpty = smtFunction "mssNonEmpty" $ \xs -> [sCase| xs of
+  []    -> 0
+  h : t -> (h + mssBegin t) `smax` ite (SL.null t) h (mssNonEmpty t)
+  |]
+
+kadaneNonEmpty :: SList Integer -> SInteger
+kadaneNonEmpty = smtFunction "kadaneNonEmpty" $ \xs -> [sCase| xs of
+  []    -> 0
+  h : t -> kadaneNonEmptyHelper t h h
+  |]
+
+kadaneNonEmptyHelper :: SList Integer -> SInteger -> SInteger -> SInteger
+kadaneNonEmptyHelper = smtFunction "kadaneNonEmptyHelper" $ \xs meh msf -> [sCase| xs of
+  []    -> msf
+  h : t -> let meh' = h `smax` (h + meh)
+               msf' = msf `smax` meh'
+           in kadaneNonEmptyHelper t meh' msf'
+  |]
+
+kadaneNonEmptyCorrect :: TP (Proof (Forall "xs" [Integer] -> SBool))
+kadaneNonEmptyCorrect = do
+  inv <- induct "kadaneNonEmptyInvariant"
+    (\(Forall xs) (Forall meh) (Forall msf) -> msf .>= meh .=>
+      kadaneNonEmptyHelper xs meh msf .==
+        msf `smax` (meh + mssBegin xs) `smax` ite (SL.null xs) msf (mssNonEmpty xs)) $
+    \ih (h, t) meh msf -> [msf .>= meh] |-
+      let meh' = h `smax` (h + meh)
+          msf' = msf `smax` meh'
+      in kadaneNonEmptyHelper (h .: t) meh msf
+      =: kadaneNonEmptyHelper t meh' msf'
+      ?? ih `at` (Inst @"meh" meh', Inst @"msf" msf')
+      =: msf' `smax` (meh' + mssBegin t) `smax` ite (SL.null t) msf' (mssNonEmpty t)
+      =: qed
+  calc "kadaneNonEmptyCorrect"
+    (\(Forall xs) -> sNot (SL.null xs) .=> kadaneNonEmpty xs .== mssNonEmpty xs) $
+    \xs -> [sNot (SL.null xs)] |-
+      let h = SL.head xs
+          t = SL.tail xs
+      in kadaneNonEmpty xs
+      =: kadaneNonEmptyHelper t h h
+      ?? inv `at` (Inst @"xs" t, Inst @"meh" h, Inst @"msf" h)
+      =: h `smax` (h + mssBegin t) `smax` ite (SL.null t) h (mssNonEmpty t)
+      =: mssNonEmpty xs
+      =: qed
+
+segmentNonEmptyOracle :: [Integer] -> Integer
+segmentNonEmptyOracle [] = 0
+segmentNonEmptyOracle xs = maximum [sum segment | suffix <- tails xs,
+                                                  segment <- inits suffix, not (null segment)]
+
+kadaneNonEmptyConcrete :: IO Bool
+kadaneNonEmptyConcrete = pure $ and
+  [ unliteral (f (literal xs)) == Just (segmentNonEmptyOracle xs)
+  | xs <- concatMap (\n -> replicateM n [-2 .. 2]) ([1 .. 5] :: [Int])
+          ++ [[-2, -3, -1], [-7], [1, -2, 3, 4, -1, 2]]
+  , f <- [mssNonEmpty, kadaneNonEmpty]
+  ]
+
+-------------------------------------------------------------------------------
 -- Section: Induction over datatypes
 -------------------------------------------------------------------------------
 
@@ -740,8 +843,12 @@ main = do
       check "Kadane correctness" $ void (runTP kadaneCorrect) >> pure True
       check "mirroring Expr preserves evaluation" $ void (runTP mirrorCorrect) >> pure True
       check "exercise 1: saturating subtraction" $ isTheorem satSubSpec
-      check "exercise 2: largest below 100 is 94" $ (== 94) <$> largestBelow100
-      check "exercise 3: revAcc length" $ void (runTP revAccLength) >> pure True
+      check "exercise 2: lexicographic priorities against enumerated plans" productionLexChecked
+      check "exercise 3: largest below 100 is 94" $ (== 94) <$> largestBelow100
+      check "exercise 4: array last-write-wins" $ isTheorem lastWriteWins
+      check "exercise 5: revAcc length" $ void (runTP revAccLength) >> pure True
+      check "exercise 6: nonempty segments against an independent oracle" kadaneNonEmptyConcrete
+      check "exercise 6: nonempty Kadane correctness" $ void (runTP kadaneNonEmptyCorrect) >> pure True
     _ -> fail "Usage: tutorial-examples [--tautology | --generate DIR | --diagnostics FILE]"
 
 {- HLint ignore shiftEach "Avoid lambda" -}

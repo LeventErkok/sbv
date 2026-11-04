@@ -30,7 +30,7 @@ executable tutorial-examples
   main-is: TutorialExamples.hs
   hs-source-dirs: examples
   build-depends:
-    base ==4.22.0.0,
+    base >=4.19.2 && <5,
     sbv ==14.10
   default-language: Haskell2010
   default-extensions:
