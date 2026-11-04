@@ -14,6 +14,10 @@ limit and treatment of references when that call appears.
 Pass 1 reduced the draft from 27 to 26 pages while adding datatype induction.
 Pass 2 adds troubleshooting and two teaching figures, with reserve cuts bringing
 the draft to 25 pages including references. There is little room for additions.
+The completeness listing, closures, and related-tools reserve cuts are already
+included in that count. Shortening "Following along" after introducing the
+standalone companion package remains available; do not budget the earlier cuts
+again when planning exercises and the abstract/conclusion revision.
 The `nonacm` class option suppresses dummy DOI, price, and publication metadata;
 remove it and insert the assigned metadata for publication.
 
@@ -37,7 +41,7 @@ remove it and insert the assigned metadata for publication.
 | 14 Tautology checker (overview) | Lexicographic measures, strong induction beyond children, proof architecture | library quotes |
 | 15 C generation | `compileToC`, validating the translation boundary | `codegen` |
 | 16 Under the hood | Deferred nodes, sharing, run contexts, synchronization, termination obligations, finite-data semantics | (inline) |
-| 17 Pitfalls and trust | Troubleshooting by outcome, diagnostics and replay, random testing, trusted base | `inspectSatAdd`, `randomSatAdd` |
+| 17 Pitfalls and trust | Troubleshooting by outcome, diagnostics and replay, random testing, trusted base | `inspectSatAdd`; companion `testSatAdd` |
 | 18 Related tools | QuickCheck, Rosette, Grisette, Smten, what4, Liquid Haskell, Dafny | — |
 
 Three exercises (Sections 3, 7, 10) have checked solutions in the companion.
@@ -77,6 +81,10 @@ teaching examples from successful proofs.
   failure, unknown/timeout, counterexample, and a stalled TP step. The companion
   runs random tests of `satAddSpec` before proving it, and validates verbose
   diagnostics, transcript creation, and replay through Z3.
+  Keep early testing and general diagnostics before the failure checklist;
+  counterexample advice compares concrete implementation and specification
+  results. Place the Kadane figure before the paragraph introducing the split
+  and keep the invariant with its preconditions on the same page.
 - Replace the architecture figure with two teaching figures: Kadane's three
   segment locations and the correspondence between calculation hints and solver
   queries. The latter replaces the formula and most of the old §10.2 explanation.

@@ -766,11 +766,6 @@ initial accumulators \code{0} and \code{0}. An inductive proof will reach
 \code{kadaneHelper xs meh msf} computes for \emph{any} sensible \code{meh} and
 \code{msf}.
 
-Split the list into a processed prefix and the remaining suffix \code{xs}.
-Figure~\ref{fig:kadane} shows the three possible locations of the best segment.
-The crossing candidate combines the best suffix of the processed prefix
-(\code{meh}) with the best prefix of \code{xs} (\code{mssBegin xs}).
-
 \begin{figure}[htbp]
 \centering
 \begin{tikzpicture}[x=1cm,y=1cm,font=\small]
@@ -799,10 +794,16 @@ boundary. The corresponding best sums are msf, mss xs, and meh plus mssBegin xs.
 \label{fig:kadane}
 \end{figure}
 
+Split the list into a processed prefix and the remaining suffix \code{xs}.
+Figure~\ref{fig:kadane} shows the three possible locations of the best segment.
+The crossing candidate combines the best suffix of the processed prefix
+(\code{meh}) with the best prefix of \code{xs} (\code{mssBegin xs}).
+
 For example, split \code{[1,-2,3,4,-1,2]} after the 4. The processed prefix has
 $\mathit{meh}=7$ and $\mathit{msf}=7$, while the suffix has
 $\mathit{mss}=2$ and $\mathit{mssBegin}=1$. The three candidates are 7, 2, and
 $7+1=8$; the best segment crosses the boundary.
+\begin{samepage}
 So the invariant is
 \[
   \mathit{kadaneHelper}(xs, \mathit{meh}, \mathit{msf})
@@ -814,6 +815,7 @@ $\mathit{msf} \geq \mathit{meh}$ (the best segment so far is at least as good as
 the best one ending here). Without the preconditions the statement is false: for
 an empty \code{xs}, the right side would include $\mathit{meh}$ even when it
 exceeds $\mathit{msf}$.
+\end{samepage}
 
 \subsection{The proof}
 
@@ -1202,25 +1204,27 @@ constructor structure.
 \subsection{When a check does not succeed}
 \label{sec:troubleshooting}
 
+Before proving, run \code{testSatAdd}: it samples byte inputs to \code{satAddSpec}
+with \code{sbvQuickCheck}. The companion checks this result before proving;
+passing random tests is not a proof.
+
+Pass \code{"sat-add.smt2"} to this helper to inspect solver commands:
+\snippet{inspectSatAdd}
+Here \code{verbose} prints abbreviated diagnostics; \code{transcript} writes
+SMT-LIB. Replay it outside GHCi with \code{z3 sat-add.smt2}.
+
 \begin{description}
 \item[The solver cannot start.] Run \code{z3 --version} in the same shell and
-  check that the executable is on \code{PATH}. Installing SBV does not install
-  Z3. Once it starts, inspect a proof with this helper:
-\snippet{inspectSatAdd}
-  Run \code{inspectSatAdd} with \code{"sat-add.smt2"} as its argument.
-  \code{verbose} prints abbreviated diagnostics; \code{transcript} records
-  SMT-LIB for replay with \code{z3 sat-add.smt2} outside GHCi.
+  check that the executable is on \code{PATH}. Installing SBV does not install Z3.
 \item[The solver returns unknown or times out.] No conclusion follows.
   Simplify the obligation and check whether its theories suit the solver;
   nonlinear arithmetic is a common obstacle. Use \code{z3Timeout5} from
   Section~\ref{sec:host} to bound each solver call to 5,000 milliseconds.
   \code{SetTimeOut} does not limit the whole TP run, which may make many calls.
-\item[A counterexample is found.] Recheck types, assumptions, and the
-  specification on that input. Run \code{testSatAdd} for an early random check
-  without a solver:
-\snippet{randomSatAdd}
-  The companion runs this check before proving the property. Passing random
-  tests is evidence about the sampled inputs, not a proof.
+\item[A counterexample is found.] Evaluate implementation and specification on
+  that input. For example, \code{wrongAdd 223 124} returns 91, but
+  \code{min 255 (223 + 124 :: Integer)} is 255; the corrected \code{satAdd}
+  returns 255. Check which side disagrees with the intended behavior.
 \item[A TP calculation stalls.] Find the failed step and distinguish a
   counterexample from unknown. Check its assumptions and the \code{??} hints
   on that equality, instantiate hypotheses explicitly, or split the step with
