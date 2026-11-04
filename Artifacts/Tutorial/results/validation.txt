@@ -1,14 +1,14 @@
 SBV tutorial companion validation
-UTC: 2026-11-03T17:04:21.387828+00:00
+UTC: 2026-11-04T16:51:14.726971+00:00
 Scope: tutorial examples only; not the full repository test suite.
 
 $ git rev-parse HEAD
-fb2cdafe97a81c104951d0659ffe8815b4bbc27a
-Exit status: 0; elapsed: 0.02s
+79cf3bd28b8222fd150257f42c956cfd112233a6
+Exit status: 0; elapsed: 0.01s
 
 $ ghc --numeric-version
 9.14.1
-Exit status: 0; elapsed: 0.26s
+Exit status: 0; elapsed: 0.16s
 
 $ cabal --numeric-version
 3.16.1.0
@@ -78,26 +78,26 @@ See licenses/gpl-3.0.txt for more information.
 See the file COPYING (distributed with the source code, and with
 all binaries) for the full cvc5 copyright, licensing, and (lack of)
 warranty information.
-Exit status: 0; elapsed: 0.06s
+Exit status: 0; elapsed: 0.02s
 
 $ cc --version
 Apple clang version 21.0.0 (clang-2100.3.34.2)
 Target: arm64-apple-darwin25.6.0
 Thread model: posix
 InstalledDir: /Library/Developer/CommandLineTools/usr/bin
-Exit status: 0; elapsed: 0.11s
+Exit status: 0; elapsed: 0.04s
 
 Library source changes relative to the recorded revision (empty means clean):
 
 $ git status --short -- Data Documentation sbv.cabal
 
-Exit status: 0; elapsed: 0.02s
+Exit status: 0; elapsed: 0.01s
 
 SHA-256 of validation inputs:
-372d818282adc7f7b6b1043b765964a443046cc9918a88169ec598ff9fbe929c  Artifacts/Tutorial/examples/TutorialExamples.hs
+0a54e2d18232b0b5db873bc931aa187ff5576ec548423e7661152da81cbed1cd  Artifacts/Tutorial/examples/TutorialExamples.hs
 94bb964dbf0e9cb3d9ec1d8af6d4dc3a7f06b5399eae586c339fe061d4b92bc6  Artifacts/Tutorial/examples/adder-check.c
 6ab6706985b1e4b357adc9edd4ba7deff5f771417c54da962bb1d1c9ef586100  Artifacts/Tutorial/validate.py
-702c477c607a5d4179267d66ee7278d595469aa16c7e17490405a1218e4f89b4  Artifacts/Tutorial/prepare.py
+f1507302da325784a3ee538d76f5df7d3662f31fd6f488b0717b30d44acb5360  Artifacts/Tutorial/prepare.py
 f346d68da03c07968a810eeb08610b9c2aa630324e7387ddf55a4af0a64888f9  sbv.cabal
 c98cbecdb053de678af3ad406d2b99b351eec190b6644fefc78f44934f40c1ef  Documentation/SBV/Examples/TP/Lists.hs
 fcacc8fc472fcac60dbf4a007b7b502fc86dc2b4d5d2cc3cc901905e02ae4ed8  Documentation/SBV/Examples/TP/TautologyChecker.hs
@@ -107,14 +107,14 @@ Name        : sbv
 Version     : 14.10
 
 $ /Library/Developer/CommandLineTools/usr/bin/python3 /Users/lerkok/Projects/sbv/Artifacts/Tutorial/prepare.py
-Extracted 31 listings (31 used by the manuscript)
-Exit status: 0; elapsed: 0.04s
+Extracted 33 listings (33 used by the manuscript)
+Exit status: 0; elapsed: 0.03s
 
 $ cabal exec --offline -- ghc -O0 -Wall -Werror -i -i/Users/lerkok/Projects/sbv/Artifacts/Tutorial/examples -package sbv -outputdir /Users/lerkok/Projects/sbv/Artifacts/Tutorial/build -o /Users/lerkok/Projects/sbv/Artifacts/Tutorial/build/tutorial-examples /Users/lerkok/Projects/sbv/Artifacts/Tutorial/examples/TutorialExamples.hs
-Loaded package environment from /Users/lerkok/Projects/sbv/dist-newstyle/tmp/environment.-57325/.ghc.environment.aarch64-darwin-9.14.1
+Loaded package environment from /Users/lerkok/Projects/sbv/dist-newstyle/tmp/environment.-80914/.ghc.environment.aarch64-darwin-9.14.1
 [1 of 2] Compiling Main             ( /Users/lerkok/Projects/sbv/Artifacts/Tutorial/examples/TutorialExamples.hs, /Users/lerkok/Projects/sbv/Artifacts/Tutorial/build/Main.o ) [Source file changed]
 [2 of 2] Linking /Users/lerkok/Projects/sbv/Artifacts/Tutorial/build/tutorial-examples [Objects changed]
-Exit status: 0; elapsed: 5.40s
+Exit status: 0; elapsed: 4.27s
 
 $ /Users/lerkok/Projects/sbv/Artifacts/Tutorial/build/tutorial-examples
 PASS integer absolute value is nonnegative
@@ -301,6 +301,26 @@ Lemma: kadaneCorrect
   Result:                           Q.E.D.
 Functions proven terminating: kadaneHelper, mss, mssBegin
 PASS Kadane correctness
+Lemma: exprSizePos                         Q.E.D.
+Lemma: exprSizeSmaller                     Q.E.D.
+Inductive lemma (strong): mirrorCorrect
+  Step: Measure is non-negative            Q.E.D.
+  Step: 1 (3 way case split)
+    Step: 1.1                              Q.E.D.
+    Step: 1.2.1                            Q.E.D.
+    Step: 1.2.2                            Q.E.D.
+    Step: 1.2.3                            Q.E.D.
+    Step: 1.2.4                            Q.E.D.
+    Step: 1.2.5                            Q.E.D.
+    Step: 1.3.1                            Q.E.D.
+    Step: 1.3.2                            Q.E.D.
+    Step: 1.3.3                            Q.E.D.
+    Step: 1.3.4                            Q.E.D.
+    Step: 1.3.5                            Q.E.D.
+    Step: 1.Completeness                   Q.E.D.
+  Result:                                  Q.E.D.
+Functions proven terminating: eval, exprSize, mirror
+PASS mirroring Expr preserves evaluation
 PASS exercise 1: saturating subtraction
 PASS exercise 2: largest below 100 is 94
 Inductive lemma: revAccLength
@@ -311,7 +331,7 @@ Inductive lemma: revAccLength
   Result:                        Q.E.D.
 Functions proven terminating: revAcc
 PASS exercise 3: revAcc length
-Exit status: 0; elapsed: 42.17s
+Exit status: 0; elapsed: 32.64s
 
 $ /Users/lerkok/Projects/sbv/Artifacts/Tutorial/build/tutorial-examples --tautology
 Lemma: tautologyImpliesEval                         Q.E.D.
@@ -329,7 +349,7 @@ Lemma: completeness                                 Q.E.D.
 Functions proven terminating:
   eval, falsify', ifComplexity, ifDepth, isAssigned, isNormal, isTautology', lookUp, normalize
 PASS tautology checker completeness
-Exit status: 0; elapsed: 3.42s
+Exit status: 0; elapsed: 2.41s
 
 $ /Users/lerkok/Projects/sbv/Artifacts/Tutorial/build/tutorial-examples --generate /Users/lerkok/Projects/sbv/Artifacts/Tutorial/build/c
 
@@ -337,11 +357,11 @@ Exit status: 0; elapsed: 0.04s
 
 $ cc -std=c11 -Wall -Wextra -Werror -O2 -fsanitize=undefined -fno-sanitize-recover=all -I/Users/lerkok/Projects/sbv/Artifacts/Tutorial/build/c /Users/lerkok/Projects/sbv/Artifacts/Tutorial/build/c/sat_add.c /Users/lerkok/Projects/sbv/Artifacts/Tutorial/examples/adder-check.c -o /Users/lerkok/Projects/sbv/Artifacts/Tutorial/build/adder-check
 
-Exit status: 0; elapsed: 0.34s
+Exit status: 0; elapsed: 0.08s
 
 $ /Users/lerkok/Projects/sbv/Artifacts/Tutorial/build/adder-check
 PASS generated C: all 65536 unsigned-byte input pairs
-Exit status: 0; elapsed: 3.17s
+Exit status: 0; elapsed: 0.33s
 
 VALIDATION PASSED: all tutorial checks (including exercise solutions), the
 tautology checker's soundness and completeness proofs, and exhaustive
