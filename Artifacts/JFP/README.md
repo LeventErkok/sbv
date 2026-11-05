@@ -1,4 +1,4 @@
-# From counterexamples to inductive proofs
+# From counterexamples to proofs
 
 **A tutorial on solver-aided reasoning in Haskell with SBV.**
 
