@@ -1,0 +1,522 @@
+SBV JFP tutorial companion validation
+UTC: 2026-11-05T16:15:29.277563+00:00
+Scope: tutorial examples only; not the full repository test suite.
+Companion repository revision: b8a667ce1b10588de0f6450dae6ac5a05adbdf11
+Companion working-tree status (input hashes below identify this draft):
+
+$ git status --short -- .
+?? ./
+Exit status: 0; elapsed: 0.01s
+
+$ ghc --numeric-version
+9.14.1
+Exit status: 0; elapsed: 0.16s
+
+$ cabal --numeric-version
+3.16.1.0
+Exit status: 0; elapsed: 0.03s
+
+$ z3 --version
+Z3 version 5.3.2 - 64 bit - build hashcode b411c90217766c924e6ea3d0b51f452a89fd8fc2
+Exit status: 0; elapsed: 0.05s
+
+$ cvc5 --version
+cvc5 1.4.2 [git 282d5e0 on branch HEAD]
+compiled as a unrestricted build with GCC version Apple LLVM 17.0.0 (clang-1700.0.13.5) on Oct  8 2026 02:13:26
+
+Copyright (c) 2009-2026 by the authors and their institutional
+affiliations listed at https://cvc5.github.io/people.html
+
+This build of cvc5 uses GPLed libraries, and is thus covered by
+the GNU General Public License (GPL) version 3.  Versions of cvc5
+are available that are covered by the (modified) BSD license. If
+you want to license cvc5 under this license, please configure cvc5
+with the "--no-gpl" option before building from sources.
+
+THIS SOFTWARE IS PROVIDED AS-IS, WITHOUT ANY WARRANTIES.
+USE AT YOUR OWN RISK.
+
+This version of cvc5 is linked against the following non-(L)GPL'ed
+third party libraries.
+
+  CaDiCaL - Simplified Satisfiability Solver
+  See https://github.com/arminbiere/cadical for copyright information.
+
+  Editline Library
+  See https://thrysoee.dk/editline
+  for copyright information.
+
+  SymFPU - The Symbolic Floating Point Unit
+  See https://github.com/martin-cs/symfpu/tree/main for copyright information.
+
+This version of cvc5 is linked against the following third party
+libraries covered by the LGPLv3 license.
+See licenses/lgpl-3.0.txt for more information.
+
+  LibPoly polynomial library
+  See https://github.com/SRI-CSL/libpoly for copyright and
+  licensing information.
+
+cvc5 is statically linked against these libraries. To recompile
+this version of cvc5 with different versions of these libraries
+follow the instructions on https://github.com/cvc5/cvc5/blob/main/INSTALL.md
+
+This version of cvc5 is linked against the following third party
+libraries covered by the GPLv3 license.
+See licenses/gpl-3.0.txt for more information.
+
+  CLN - Class Library for Numbers
+  See http://www.ginac.de/CLN for copyright information.
+
+  glpk-cut-log - a modified version of GPLK, the GNU Linear Programming Kit
+  See http://github.com/timothy-king/glpk-cut-log for copyright information
+
+  CoCoALib - a computer algebra library
+  See https://cocoa.dima.unige.it/cocoa/cocoalib/index.shtml for copyright information
+
+  Normaliz - a rational cones library
+  See https://github.com/Normaliz/Normaliz for copyright information
+
+See the file COPYING (distributed with the source code, and with
+all binaries) for the full cvc5 copyright, licensing, and (lack of)
+warranty information.
+Exit status: 0; elapsed: 0.04s
+
+$ cc --version
+Apple clang version 21.0.0 (clang-2100.3.34.2)
+Target: arm64-apple-darwin25.6.0
+Thread model: posix
+InstalledDir: /Library/Developer/CommandLineTools/usr/bin
+Exit status: 0; elapsed: 0.03s
+
+$ cabal build --offline tutorial-examples
+Build profile: -w ghc-9.14.1 -O1
+In order, the following will be built (use -v for more details):
+ - sbv-tutorial-0.1.0.0 (exe:tutorial-examples) (file examples/TutorialExamples.hs changed)
+Preprocessing executable 'tutorial-examples' for sbv-tutorial-0.1.0.0...
+Building executable 'tutorial-examples' for sbv-tutorial-0.1.0.0...
+[1 of 1] Compiling Main             ( examples/TutorialExamples.hs, dist-newstyle/build/aarch64-osx/ghc-9.14.1/sbv-tutorial-0.1.0.0/x/tutorial-examples/noopt/build/tutorial-examples/tutorial-examples-tmp/Main.o, dist-newstyle/build/aarch64-osx/ghc-9.14.1/sbv-tutorial-0.1.0.0/x/tutorial-examples/noopt/build/tutorial-examples/tutorial-examples-tmp/Main.dyn_o ) [Source file changed]
+[2 of 2] Linking dist-newstyle/build/aarch64-osx/ghc-9.14.1/sbv-tutorial-0.1.0.0/x/tutorial-examples/noopt/build/tutorial-examples/tutorial-examples [Objects changed]
+Exit status: 0; elapsed: 7.55s
+
+SBV source revision: ef9b2c0daeabb0e378eae9c584bb8bdbd815ddc3
+SBV source package SHA-256: 4c0a04fbbef477df74f1e6771d8660b3abb6173593bc5ad41a755e9b9f6ca5fc
+Library source changes relative to that revision (empty means clean):
+
+$ git status --short -- Data Documentation sbv.cabal
+
+Exit status: 0; elapsed: 0.02s
+
+SHA-256 of validation inputs:
+c4a3240b31c8b38f5c70ebcd7e5bbf0d852900a6cc1644d7b3446a423e0e103e  examples/TutorialExamples.hs
+94bb964dbf0e9cb3d9ec1d8af6d4dc3a7f06b5399eae586c339fe061d4b92bc6  examples/adder-check.c
+61ecf8d5612acab1220d0a4eae3a05d8022f832c03b019678e9c55e23a9f79ed  validate.py
+54dea48b4beb25b4d748dc882c82781f567e7a32b99be9cdfa7ba6567205a49b  prepare.py
+85c0157065210a129d02ea0fca51d8f79c6d888f89c029c9a8840811827de8d2  companion.py
+0cadc136e3d9a38f1812af07b397b2bc2174bcca08b489f8a52a587d92f85ebb  sbv-tutorial.cabal
+d12b672fc2acd78c7a513e61c42f162aeab2d0e1c6056f6dd2d12e45a6200dea  cabal.project
+47a76c93961f585a55e006fdb698b089101e2813618bae0d98abcc7e3ca9254e  cabal.project.freeze
+c12e591cc839cd9ea1ea59ccb2a846df2731f2a7b3c5b6dbe9b4e27e45afecd7  jfp_format.py
+a1abea1456531e165caa17db3dd9a84241f5548d972bee47d87e8f1e950b0afc  sbv-tutorial.tex
+df5c8df4137ddaab7029d0d9538bf6a5344a7129a885e338cac25b6fc338b27f  references.bib
+8eea7aeec13290d8aa1ae4fac9c78e92f98f4095790b8a75d2040fd839affc13  Makefile
+bcf4de26bb14e21af79675dfe323d2d6bc3c3e48940e54687fa646296e105bcf  LICENSE
+f346d68da03c07968a810eeb08610b9c2aa630324e7387ddf55a4af0a64888f9  SBV/sbv.cabal
+c98cbecdb053de678af3ad406d2b99b351eec190b6644fefc78f44934f40c1ef  SBV/Documentation/SBV/Examples/TP/Lists.hs
+fcacc8fc472fcac60dbf4a007b7b502fc86dc2b4d5d2cc3cc901905e02ae4ed8  SBV/Documentation/SBV/Examples/TP/TautologyChecker.hs
+a74fe65b4ebfe7c34f1b4985fa3833cc5f0248f90b9ceb6e25339683eb7ea847  SBV/Documentation/SBV/Examples/TP/BinarySearch.hs
+4e796a7e532e4bcec75299a6f08d0c96b4d8c8d7b22da170999889d1181da431  SBV/Documentation/SBV/Examples/BitPrecise/BrokenSearch.hs
+
+Library package description:
+Name        : sbv
+Version     : 14.10
+
+$ /Library/Developer/CommandLineTools/usr/bin/python3 /Users/lerkok/Projects/sbv/Artifacts/JFP/prepare.py
+Extracted 42 listings (36 used by the manuscript)
+Exit status: 0; elapsed: 0.05s
+
+$ cabal list-bin tutorial-examples -v0
+/Users/lerkok/Projects/sbv/Artifacts/JFP/dist-newstyle/build/aarch64-osx/ghc-9.14.1/sbv-tutorial-0.1.0.0/x/tutorial-examples/noopt/build/tutorial-examples/tutorial-examples
+Exit status: 0; elapsed: 0.08s
+
+$ /Users/lerkok/Projects/sbv/Artifacts/JFP/dist-newstyle/build/aarch64-osx/ghc-9.14.1/sbv-tutorial-0.1.0.0/x/tutorial-examples/noopt/build/tutorial-examples/tutorial-examples
+PASS integer absolute value is nonnegative
+Falsifiable. Counter-example:
+  s0 = -128 :: Int8
+PASS Int8 absolute value counterexample is -128
+Falsifiable. Counter-example:
+  s0 = NaN :: Float
+PASS float reflexivity counterexample is NaN
++++ OK, passed 100 tests.
+PASS random testing of saturating addition
+PASS saturating addition theorem
+PASS printed overflow example: wrong result 91, specified result 255
+Falsifiable. Counter-example:
+  x = 223 :: Word8
+  y = 124 :: Word8
+PASS incorrect overflow guard is refuted, checked by an oracle
+examples/TutorialExamples.hs:90:32:+!: SInt32 addition overflows: Violated. Model:
+  low  = 1073741832 :: Int32
+  high = 1107296257 :: Int32
+examples/TutorialExamples.hs:90:41:/!: SInt32 division overflows: No violations detected
+PASS binary-search midpoint overflow model checked independently
+examples/TutorialExamples.hs:91:41:-!: SInt32 subtraction overflows: No violations detected
+examples/TutorialExamples.hs:91:49:/!: SInt32 division overflows: No violations detected
+examples/TutorialExamples.hs:91:31:+!: SInt32 addition overflows: No violations detected
+PASS repaired midpoint has no arithmetic violations
+PASS repaired midpoint equals the 64-bit specification
+PASS printed midpoint counterexample at 2^30
+Solution #1:
+  s0 = 1 :: Word8
+Solution #2:
+  s0 = 0 :: Word8
+Found 2 different solutions.
+PASS idempotent bytes are exactly 0 and 1
+Optimal model:
+  x      =  4 :: Integer
+  y      =  3 :: Integer
+  profit = 17 :: Integer
+PASS production plan optimum is 17
+Objective "lower": Optimal in an extension field:
+  lower = epsilon :: Real
+  upper =      oo :: Real
+Objective "upper": Optimal in an extension field:
+  lower = epsilon :: Real
+  upper =      oo :: Real
+PASS real bounds report epsilon and infinity (version-specific)
+PASS host-list sum of five nonnegatives
+PASS feasible assumptions and vacuous byte property
+Unknown.
+  Reason: timeout
+PASS bounded automatic sum attempt: unknown or proved, never refuted
+PASS query descent finds 24
+PASS array writes commute at distinct addresses
+Falsifiable. Counter-example:
+  a = ([], 2) :: Array Integer Integer
+  i =       5 :: Integer
+  j =       5 :: Integer
+  x =       3 :: Integer
+  y =       4 :: Integer
+PASS array aliasing counterexample checked with Haskell lookup
+Satisfiable. Model:
+  s0 = Mul (Mul (Num 1) (Num (-1))) (Num (-42)) :: Expr
+PASS datatype puzzle model re-evaluates to 42
+PASS datatype first introduced during query
+Inductive lemma: sumNonNeg
+  Step: Base                  Q.E.D.
+  Step: 1                     Q.E.D.
+  Step: 2                     Q.E.D.
+  Result:                     Q.E.D.
+Functions proven terminating: sbv.foldr, sumL
+PASS sum of nonnegatives, by induction
+Inductive lemma: revWeak
+  Step: Base                Q.E.D.
+  Step: 1                   Q.E.D.
+  Step: 2
+*** Failed to prove revWeak.2.
+
+*** Solver reported: canceled
+Failed
+PASS non-generalized reversal proof fails
+Inductive lemma: revAccCorrect
+  Step: Base                      Q.E.D.
+  Step: 1                         Q.E.D.
+  Step: 2                         Q.E.D.
+  Step: 3                         Q.E.D.
+  Step: 4                         Q.E.D.
+  Result:                         Q.E.D.
+Functions proven terminating: revAcc, sbv.reverse
+PASS generalized accumulator reversal
+Lemma: revAccCorrect              Q.E.D.
+Lemma: reverseCorrect             Q.E.D.
+Functions proven terminating: revAcc, sbv.reverse
+PASS reversal with empty initial accumulator
+Inductive lemma: reverseLength
+  Step: Base                      Q.E.D.
+  Step: 1                         Q.E.D.
+  Step: 2                         Q.E.D.
+  Step: 3                         Q.E.D.
+  Step: 4                         Q.E.D.
+  Result:                         Q.E.D.
+Functions proven terminating: sbv.reverse
+PASS polymorphic reverseLength at Integer
+Inductive lemma: reverseLength
+  Step: Base                      Q.E.D.
+  Step: 1                         Q.E.D.
+  Step: 2                         Q.E.D.
+  Step: 3                         Q.E.D.
+  Step: 4                         Q.E.D.
+  Result:                         Q.E.D.
+Functions proven terminating: sbv.reverse
+PASS polymorphic reverseLength at Word8
+Inductive lemma: foldBase
+  Step: Base                        Q.E.D.
+  Step: 1                           Q.E.D.
+  Step: 2                           Q.E.D.
+  Step: 3                           Q.E.D.
+  Step: 4                           Q.E.D.
+  Result:                           Q.E.D.
+Inductive lemma: foldrOverAppend
+  Step: Base                        Q.E.D.
+  Step: 1                           Q.E.D.
+  Step: 2                           Q.E.D.
+  Step: 3                           Q.E.D.
+  Step: 4                           Q.E.D.
+  Result:                           Q.E.D.
+Inductive lemma: bookKeeping
+  Step: Base                        Q.E.D.
+  Step: 1                           Q.E.D.
+  Step: 2                           Q.E.D.
+  Step: 3                           Q.E.D.
+  Step: 4                           Q.E.D.
+  Step: 5                           Q.E.D.
+  Step: 6                           Q.E.D.
+  Result:                           Q.E.D.
+Functions proven terminating: sbv.foldr, sbv.map
+PASS bookkeeping for an uninterpreted integer operation
+Inductive lemma: foldBase
+  Step: Base                        Q.E.D.
+  Step: 1                           Q.E.D.
+  Step: 2                           Q.E.D.
+  Step: 3                           Q.E.D.
+  Step: 4                           Q.E.D.
+  Result:                           Q.E.D.
+Inductive lemma: foldrOverAppend
+  Step: Base                        Q.E.D.
+  Step: 1                           Q.E.D.
+  Step: 2                           Q.E.D.
+  Step: 3                           Q.E.D.
+  Step: 4                           Q.E.D.
+  Result:                           Q.E.D.
+Inductive lemma: bookKeeping
+  Step: Base                        Q.E.D.
+  Step: 1                           Q.E.D.
+  Step: 2                           Q.E.D.
+  Step: 3                           Q.E.D.
+  Step: 4                           Q.E.D.
+  Step: 5                           Q.E.D.
+  Step: 6                           Q.E.D.
+  Result:                           Q.E.D.
+Lemma: bookKeepingSum               Q.E.D.
+Functions proven terminating: sbv.foldr, sbv.map
+PASS bookkeeping specialized to integer sum
+PASS bookkeeping needs the left-unit premise
+Inductive lemma: shiftLength
+  Step: Base                    Q.E.D.
+  Step: 1                       Q.E.D.
+  Step: 2                       Q.E.D.
+  Step: 3                       Q.E.D.
+  Result:                       Q.E.D.
+Functions proven terminating: sbv.closureMap
+PASS closure environment preserves mapped list length
+
+*** Data.SBV: Cannot determine a termination measure.
+***
+***   Function: badRecursion :: SBV Integer -> SBV Integer
+***
+***   Measures tried:
+***     abs arg1
+***     smax 0 arg1
+***     abs arg1 + smax 0 arg1
+***     (abs arg1, smax 0 arg1)
+***     (smax 0 arg1, abs arg1)
+***
+*** Please use 'smtFunctionWithMeasure' to provide an explicit measure.
+
+PASS non-decreasing recursion is rejected
+PASS Kadane and specification against enumerated segments (3906 lists plus 3 cases)
+Inductive lemma: kadaneInvariant
+  Step: Base                        Q.E.D.
+  Step: 1                           Q.E.D.
+  Step: 2                           Q.E.D.
+  Result:                           Q.E.D.
+Lemma: kadaneCorrect
+  Step: 1                           Q.E.D.
+  Step: 2                           Q.E.D.
+  Step: 3                           Q.E.D.
+  Step: 4                           Q.E.D.
+  Result:                           Q.E.D.
+Functions proven terminating: kadaneHelper, mss, mssBegin
+PASS Kadane correctness
+Lemma: exprSizePos                         Q.E.D.
+Lemma: exprSizeSmaller                     Q.E.D.
+Inductive lemma (strong): mirrorCorrect
+  Step: Measure is non-negative            Q.E.D.
+  Step: 1 (3 way case split)
+    Step: 1.1                              Q.E.D.
+    Step: 1.2.1                            Q.E.D.
+    Step: 1.2.2                            Q.E.D.
+    Step: 1.2.3                            Q.E.D.
+    Step: 1.2.4                            Q.E.D.
+    Step: 1.2.5                            Q.E.D.
+    Step: 1.3.1                            Q.E.D.
+    Step: 1.3.2                            Q.E.D.
+    Step: 1.3.3                            Q.E.D.
+    Step: 1.3.4                            Q.E.D.
+    Step: 1.3.5                            Q.E.D.
+    Step: 1.Completeness                   Q.E.D.
+  Result:                                  Q.E.D.
+Functions proven terminating: eval, exprSize, mirror
+PASS mirroring Expr preserves evaluation
+PASS exercise 1: saturating subtraction
+Optimal model:
+  x      =  0 :: Integer
+  y      =  5 :: Integer
+  output = 10 :: Integer
+  units  =  5 :: Integer
+Optimal model:
+  x      = 0 :: Integer
+  y      = 0 :: Integer
+  units  = 0 :: Integer
+  output = 0 :: Integer
+PASS exercise 2: lexicographic priorities against enumerated plans
+PASS exercise 3: largest below 100 is 94
+PASS exercise 4: array last-write-wins
+Inductive lemma: revAccLength
+  Step: Base                     Q.E.D.
+  Step: 1                        Q.E.D.
+  Step: 2                        Q.E.D.
+  Step: 3                        Q.E.D.
+  Result:                        Q.E.D.
+Functions proven terminating: revAcc
+PASS exercise 5: revAcc length
+PASS exercise 6: nonempty segments against an independent oracle
+Inductive lemma: kadaneNonEmptyInvariant
+  Step: Base                                Q.E.D.
+  Step: 1                                   Q.E.D.
+  Step: 2                                   Q.E.D.
+  Result:                                   Q.E.D.
+Lemma: kadaneNonEmptyCorrect
+  Step: 1                                   Q.E.D.
+  Step: 2                                   Q.E.D.
+  Step: 3                                   Q.E.D.
+  Result:                                   Q.E.D.
+Functions proven terminating: kadaneNonEmpty, kadaneNonEmptyHelper, mssBegin, mssNonEmpty
+PASS exercise 6: nonempty Kadane correctness
+Exit status: 0; elapsed: 33.37s
+
+$ /Users/lerkok/Projects/sbv/Artifacts/JFP/dist-newstyle/build/aarch64-osx/ghc-9.14.1/sbv-tutorial-0.1.0.0/x/tutorial-examples/noopt/build/tutorial-examples/tutorial-examples --binary-search
+Lemma: restrictHigh                              Q.E.D.
+Lemma: restrictLow                               Q.E.D.
+Inductive lemma (strong): binarySearchCorrect
+  Step: Measure is non-negative                  Q.E.D.
+  Step: 1 (2 way case split)
+    Step: 1.1                                    Q.E.D.
+    Step: 1.2 (3 way case split)
+      Step: 1.2.1                                Q.E.D.
+      Step: 1.2.2.1                              Q.E.D.
+      Step: 1.2.2.2                              Q.E.D.
+      Step: 1.2.3.1                              Q.E.D.
+      Step: 1.2.3.2                              Q.E.D.
+      Step: 1.2.Completeness                     Q.E.D.
+    Step: 1.Completeness                         Q.E.D.
+  Result:                                        Q.E.D.
+Functions proven terminating: bsearch
+PASS binary-search TP contract: constructor, bounds, and value
+PASS binary-search results against a list oracle (10 cases)
+Exit status: 0; elapsed: 0.20s
+
+$ /Users/lerkok/Projects/sbv/Artifacts/JFP/dist-newstyle/build/aarch64-osx/ghc-9.14.1/sbv-tutorial-0.1.0.0/x/tutorial-examples/noopt/build/tutorial-examples/tutorial-examples --tautology
+Lemma: tautologyImpliesEval                         Q.E.D.
+Lemma: normalizeRespectsTruth                       Q.E.D.
+Lemma: normalizeCorrect                             Q.E.D.
+Lemma: soundness
+  Step: 1                                           Q.E.D.
+  Step: 2                                           Q.E.D.
+  Result:                                           Q.E.D.
+Functions proven terminating: eval, ifComplexity, ifDepth, isAssigned, isNormal, isTautology', lookUp, normalize
+PASS tautology checker soundness
+Lemma: completenessHelper                           Q.E.D.
+Lemma: normalizeRespectsTruth                       Q.E.D.
+Lemma: completeness                                 Q.E.D.
+Functions proven terminating:
+  eval, falsify', ifComplexity, ifDepth, isAssigned, isNormal, isTautology', lookUp, normalize
+PASS tautology checker completeness
+Exit status: 0; elapsed: 2.52s
+
+$ /Users/lerkok/Projects/sbv/Artifacts/JFP/dist-newstyle/build/aarch64-osx/ghc-9.14.1/sbv-tutorial-0.1.0.0/x/tutorial-examples/noopt/build/tutorial-examples/tutorial-examples --diagnostics /Users/lerkok/Projects/sbv/Artifacts/JFP/build/sat-add.smt2
+** Calling: z3 -nw -in -smt2
+[GOOD] ; Automatically generated by SBV. Do not edit.
+[GOOD] (set-option :print-success true)
+[GOOD] (set-option :global-declarations true)
+[GOOD] (set-option :smtlib2_compliant true)
+[GOOD] (set-option :diagnostic-output-channel "stdout")
+[GOOD] (set-option :produce-models true)
+[GOOD] (set-logic ALL) ; has unbounded values, using catch-all.
+[GOOD] ; --- tuples ---
+[GOOD] ; --- sums ---
+[GOOD] ; --- literal constants ---
+[GOOD] (define-fun s2 () (_ BitVec 8) #xff)
+[GOOD] (define-fun s11 () Int 255)
+[GOOD] ; --- top level inputs ---
+[GOOD] (declare-fun s0 () (_ BitVec 8))
+[GOOD] (declare-fun s1 () (_ BitVec 8))
+[GOOD] ; --- constant tables ---
+[GOOD] ; --- non-constant tables ---
+[GOOD] ; --- uninterpreted constants ---
+[GOOD] ; --- user defined functions ---
+[GOOD] ; --- assignments ---
+[GOOD] (define-fun s3 () (_ BitVec 8) (bvsub s2 s1))
+[GOOD] (define-fun s4 () Bool (bvugt s0 s3))
+[GOOD] (define-fun s5 () (_ BitVec 8) (bvadd s0 s1))
+[GOOD] (define-fun s6 () (_ BitVec 8) (ite s4 s2 s5))
+[GOOD] (define-fun s7 () Int (ubv_to_int s6))
+[GOOD] (define-fun s8 () Int (ubv_to_int s0))
+[GOOD] (define-fun s9 () Int (ubv_to_int s1))
+[GOOD] (define-fun s10 () Int (+ s8 s9))
+[GOOD] (define-fun s12 () Bool (> s10 s11))
+[GOOD] (define-fun s13 () Int (ite s12 s11 s10))
+[GOOD] (define-fun s14 () Bool (= s7 s13))
+[GOOD] ; --- delayedEqualities ---
+[GOOD] ; --- formula ---
+[GOOD] (assert (not s14))
+[SEND] (check-sat)
+[RECV] unsat
+*** Solver   : Z3
+*** Exit code: ExitSuccess
+PASS verbose proof with replayable transcript
+Exit status: 0; elapsed: 0.79s
+
+$ z3 /Users/lerkok/Projects/sbv/Artifacts/JFP/build/sat-add.smt2
+success
+success
+success
+success
+success
+success
+success
+success
+success
+success
+success
+success
+success
+success
+success
+success
+success
+success
+success
+success
+success
+success
+unsat
+Exit status: 0; elapsed: 0.65s
+
+$ /Users/lerkok/Projects/sbv/Artifacts/JFP/dist-newstyle/build/aarch64-osx/ghc-9.14.1/sbv-tutorial-0.1.0.0/x/tutorial-examples/noopt/build/tutorial-examples/tutorial-examples --generate /Users/lerkok/Projects/sbv/Artifacts/JFP/build/c
+
+Exit status: 0; elapsed: 0.02s
+
+$ cc -std=c11 -Wall -Wextra -Werror -O2 -fsanitize=undefined -fno-sanitize-recover=all -I/Users/lerkok/Projects/sbv/Artifacts/JFP/build/c /Users/lerkok/Projects/sbv/Artifacts/JFP/build/c/sat_add.c /Users/lerkok/Projects/sbv/Artifacts/JFP/examples/adder-check.c -o /Users/lerkok/Projects/sbv/Artifacts/JFP/build/adder-check
+
+Exit status: 0; elapsed: 0.10s
+
+$ /Users/lerkok/Projects/sbv/Artifacts/JFP/build/adder-check
+PASS generated C: all 65536 unsigned-byte input pairs
+Exit status: 0; elapsed: 0.36s
+
+VALIDATION PASSED: all tutorial checks (including random tests and exercise
+solutions and midpoint checks), the strengthened binary-search TP proof,
+binary-search concrete oracles, verbose diagnostics and SMT-LIB transcript replay, the
+tautology checker's soundness and completeness proofs, and exhaustive
+generated-C checking. Timings are single-run diagnostics, not benchmarks.

@@ -1,0 +1,1706 @@
+% Journal of Functional Programming tutorial draft; single-anonymous review.
+% Run jfp_format.py to obtain the pinned official class.
+% Publication metadata and final-mode changes belong to the acceptance stage.
+\documentclass[review]{jfp-epi}
+\usepackage{listings}
+\usepackage{booktabs}
+\usepackage{tabularx}
+\usepackage{tikz}
+\usepackage{etoolbox}
+\usetikzlibrary{positioning,arrows.meta}
+\setcopyright{none}
+\citestyle{acmauthoryear}
+\lstset{language=Haskell,deletekeywords={Num},basicstyle=\small\ttfamily,
+  columns=fullflexible,keepspaces=true,showstringspaces=false,
+  commentstyle=\normalfont\ttfamily,breaklines=true,frame=single,
+  xleftmargin=0.4em,xrightmargin=0.4em,aboveskip=0.7em,belowskip=0.7em}
+\lstdefinestyle{output}{language={},basicstyle=\small\ttfamily,frame=none,
+  backgroundcolor=\color{black!6},xleftmargin=0.4em,xrightmargin=0.4em}
+% Keep commands and their results on the same page.
+\BeforeBeginEnvironment{lstlisting}{\par\noindent\begin{minipage}{\linewidth}}
+\AfterEndEnvironment{lstlisting}{\end{minipage}\par}
+\newcommand{\code}[1]{\texttt{#1}}
+% Starred snippets may break across pages; short listings stay together.
+\NewDocumentCommand{\snippet}{s m}{\par\noindent
+  \IfBooleanTF{#1}{\lstinputlisting{build/snippets/#2.hs}}{
+    \begin{minipage}{\linewidth}
+    \lstinputlisting{build/snippets/#2.hs}
+    \end{minipage}}\par}
+% Listings quoted verbatim from SBV's documentation modules, which use wider lines.
+\newcommand{\libsnippet}[1]{\par\noindent
+  \begin{minipage}{\linewidth}
+  \lstinputlisting[basicstyle=\footnotesize\ttfamily]{build/snippets/#1.hs}
+  \end{minipage}\par}
+\newcounter{exercise}
+\newenvironment{exercise}{\refstepcounter{exercise}\par\medskip\noindent
+  \textbf{Exercise~\theexercise.}\ }{\par\medskip}
+
+
+% Contents-page annotations for the outline sent to colleagues.
+\newcommand{\plannedmark}{\texorpdfstring{\textsuperscript{\textdagger}}{ (planned)}}
+\newcommand{\outlinelegend}{\noindent\textsuperscript{\textdagger}\ Planned: heading only; the section or subsection is not yet drafted.\par\medskip}
+\newcommand{\outlinepart}[1]{%
+  \ifstrequal{#1}{III. Structuring arguments}{\addtocontents{toc}{\protect\newpage}}{}%
+  \phantomsection\addcontentsline{toc}{outlinepart}{#1}}
+\makeatletter
+\newcommand{\l@outlinepart}[2]{\par\addvspace{0.7em}\noindent\textbf{#1}\par\nobreak}
+\newcommand{\toclevel@outlinepart}{0}
+\makeatother
+
+\title{From counterexamples to inductive proofs}
+\subtitle{A tutorial on solver-aided reasoning in Haskell with SBV}
+\author{Levent Erkök}
+% Author to supply the preferred affiliation and ORCID before submission.
+% Contact email from the SBV package: erkokl@gmail.com.
+
+\begin{document}
+\raggedbottom
+% Let paragraphs with long code identifiers use an extra line when necessary.
+\setlength{\emergencystretch}{2em}
+\begin{abstract}
+How can functional programmers use automated reasoning in practice while keeping
+programs, specifications, and proofs in Haskell? This tutorial develops a method
+of solver-aided reasoning with SBV around three decisions: how to formulate a
+question, choose a representation, and structure an argument when automation
+is insufficient. Formulating questions begins with semantic domains (mathematical
+integers, machine words, and floating point) and independent specifications;
+counterexamples distinguish intended behavior from implementation
+details, while constraint solving and optimization turn specifications into search.
+Choosing representations connects Haskell evaluation to incremental solver queries
+and unsatisfiable cores, introduces contracts through uninterpreted functions,
+and uses datatypes, arrays, strings, and sets to express different models.
+Quantifier order then distinguishes finding a program that works for every input
+from finding an answer for each input, leading to synthesis guided by counterexamples.
+Structuring arguments combines equational calculations with induction:
+generalization yields invariants for accumulator programs and Kadane's algorithm;
+decreasing measures support proofs about expression trees and a binary search
+whose midpoint overflow first appears as a counterexample; and invariant
+strengthening carries the same lesson into stateful programs. Polymorphic and
+higher-order proofs extend the method to reusable abstractions, and a verified
+tautology checker shows how these proofs scale. Finally, we follow a verified
+function to generated C and
+examine the meaning and limits of a successful check. No background in automated
+reasoning is assumed. An executable companion supplies checked examples and
+exercise solutions.
+\end{abstract}
+
+\maketitle
+
+% BEGIN outline-contents
+\clearpage
+\setcounter{tocdepth}{2}
+\addtocontents{toc}{\protect\outlinelegend}
+\begingroup
+\fontsize{9}{10.5}\selectfont
+% Suppress the class's redundant Abstract and Contents entries in this outline.
+\let\outlinecontentsline\contentsline
+\renewcommand{\contentsline}[4]{%
+  \ifstrequal{#2}{Abstract}{}{%
+    \ifstrequal{#2}{Contents}{}{\outlinecontentsline{#1}{#2}{#3}{#4}}}}
+\tableofcontents
+\endgroup
+\clearpage
+% END outline-contents
+
+%==============================================================================
+\section{Introduction}
+\label{sec:introduction}
+
+Haskell programmers often express the behavior of their code as properties.
+With QuickCheck~\citep{quickcheck}, these can be ordinary functions returning
+\code{Bool}; a test campaign searches for inputs that falsify them. SBV~\citep{sbv} lets
+the same programmer ask a stronger question. A property over \emph{symbolic}
+values is translated to logic and handed to a solver for satisfiability modulo
+theories (SMT). Such a solver combines logical reasoning with theories such as
+integer arithmetic and fixed-width bit-vectors. When it can settle the query,
+it proves the property for every input or produces a concrete counterexample:
+\begin{lstlisting}
+ghci> prove $ \x -> abs (x :: SInteger) .>= 0
+Q.E.D.
+ghci> prove $ \x -> abs (x :: SInt8) .>= 0
+Falsifiable. Counter-example:
+  s0 = -128 :: Int8
+\end{lstlisting}
+The two properties differ only in a type. Over mathematical integers, absolute
+values are nonnegative. Over signed bytes, 128 is not representable, so
+\code{abs (-128)} is $-128$. The solver did not test this value by luck: it
+solved a constraint whose domain contains all 256 inputs and reported a value
+that fails.
+
+The central question of this tutorial is how to retain this feedback as the
+programs and their properties become more demanding. Arithmetic examples often
+need only a single solver call. Recursive programs may require a stronger
+statement, an induction hypothesis, or intermediate equalities that make the
+argument visible. We develop these forms of guidance as successive refinements
+of the same activity: constructing a logical question whose answer establishes
+the intended property.
+
+Functional programming provides a useful setting for this progression. Pure
+functions admit equational specifications; recursive definitions suggest
+induction principles; and higher-order combinators expose the algebraic laws on
+which a proof depends. SBV makes both the programs and their proof scripts
+executable in Haskell. Our focus is the reasoning method: choosing a semantic
+domain, writing an independent specification, inspecting counterexamples, and
+introducing proof structure when automatic reasoning is insufficient.
+
+The tutorial assumes familiarity with Haskell's algebraic datatypes, type
+classes, and monads, but no knowledge of SMT or theorem proving. It is intended
+for functional programmers and advanced students learning to mechanize program
+reasoning. Three decisions organize the tutorial, followed by a fourth part
+that examines their boundaries and context:
+\begin{itemize}
+\item \emph{Formulating questions.}
+  Sections~\ref{sec:first}--\ref{sec:optimization} connect semantic domains and
+  independent specifications to proofs, counterexamples, satisfying models, and
+  optimal values. Machine-word and floating-point examples show how the domain
+  changes the question; optimization separates hard requirements from preferences.
+\item \emph{Choosing representations.}
+  Sections~\ref{sec:host}--\ref{sec:synthesis} distinguish host evaluation from
+  symbolic structure, using circuits as an example, then develop incremental
+  queries, unsatisfiable cores, and abstraction through contracts. Datatypes,
+  arrays, strings, and sets supply different models; expression synthesis brings
+  these choices together with quantifiers and a counterexample-guided search.
+\item \emph{Structuring arguments.}
+  Sections~\ref{sec:induction}--\ref{sec:tautology} develop calculations,
+  generalization, and induction through list reversal, Kadane's algorithm,
+  expression trees, and binary search. Strengthening an invariant carries the
+  generalization lesson into stateful programs. Polymorphic and higher-order
+  proofs and a verified tautology checker extend these techniques.
+\item \emph{Boundaries and context.}
+  Sections~\ref{sec:codegen}--\ref{sec:related} follow a verified function to C,
+  explain the execution model and its obligations, and examine solver results,
+  proof dependencies, and connections to other approaches to program reasoning.
+\end{itemize}
+Recurring examples connect the parts: the midpoint counterexample returns in the
+binary-search proof, expression trees connect search and synthesis to induction,
+and accumulator generalization becomes invariant strengthening for state transitions.
+Readers primarily interested in induction can proceed from
+Sections~\ref{sec:first}--\ref{sec:specs} and \ref{sec:host} to
+Section~\ref{sec:induction}, returning to contracts, datatypes, and arrays as needed.
+
+We verify functions expressed with SBV's symbolic operations; SBV does not
+translate arbitrary existing Haskell source into logic. In particular, a proof
+about mathematical integers or finite lists must not be silently transferred to
+machine integers, partial computations, or infinite lists. Making these choices
+explicit is part of the method, alongside writing and checking the proof.
+
+\paragraph{Following along.}
+The standalone companion pins its dependencies, including an SBV 14.10 source
+snapshot, and declares the required language extensions. It was checked with
+GHC 9.14.1, Z3 5.3.2~\citep{z3}, and CVC5 1.4.2~\citep{cvc5}.
+Install the solvers on \code{PATH}; Cabal does not install them. From the
+companion directory, build the examples and start GHCi:
+\begin{lstlisting}[language={}]
+cabal build tutorial-examples
+cabal repl tutorial-examples
+\end{lstlisting}
+The session loads all imports, including \code{Data.SBV.List} qualified as
+\code{SL}, and enables the extensions used below. Run the checks with
+\code{cabal run tutorial-examples}; the README gives full validation instructions.
+The execution log records source hashes and exact tool versions.
+Each exercise names its checked solution in the companion.
+
+Listings are extracted from checked sources; transcripts and elisions are marked
+separately. Model values and their order can vary between solver versions, so
+validation checks their meaning rather than their printed form.
+
+\paragraph{Preparation.}
+Codex assisted with drafting and revising prose, constructing the teaching
+figures, developing companion examples and proof scripts, and implementing
+packaging and validation. The accompanying log records the solver checks and
+tests used to validate the resulting examples.
+
+%==============================================================================
+\outlinepart{I. Formulating questions}
+\section{Semantic domains and counterexamples}
+\label{sec:first}
+
+\subsection{Symbolic values and their types}
+
+SBV's central type is \code{SBV a}, a symbolic value whose concrete counterpart
+has type \code{a}. Abbreviations name the common cases: \code{SBool},
+\code{SInteger} (unbounded integers), \code{SWord8} through \code{SWord64} and
+\code{SInt8} through \code{SInt64} (bit-vectors with wrap-around arithmetic),
+\code{SReal} (exact real numbers), \code{SFloat} and \code{SDouble} (IEEE-754),
+\code{SString}, and \code{SList a}. There are also arrays, sets, tuples,
+\code{Maybe}, \code{Either}, and user-defined algebraic datatypes.
+
+These types are not interchangeable encodings of one numeric type; each is a
+different mathematical problem. The introduction showed that the choice between
+\code{SInteger} and \code{SInt8} changes a theorem into a false statement.
+Floating point has its own surprises:
+\begin{lstlisting}
+ghci> prove $ \(x :: SFloat) -> x .== x
+Falsifiable. Counter-example:
+  s0 = NaN :: Float
+\end{lstlisting}
+Equality in IEEE-754 is not reflexive, and the solver knows it. Choosing a
+symbolic type is choosing the semantics the solver will use, so it deserves the
+same care as choosing a type for a production program.
+
+\subsection{Symbolic operators}
+
+Arithmetic on symbolic values uses the ordinary \code{Num} class, so \code{x + 1}
+and \code{2 * y} work as expected. Comparisons cannot reuse \code{Eq} and
+\code{Ord}: their methods return a Haskell \code{Bool}, which must be known when
+Haskell evaluates it, while the result of comparing symbolic values may be
+unknown. SBV therefore provides \code{.==}, \code{./=}, \code{.<}, \code{.<=},
+\code{.>}, and \code{.>=}, which return \code{SBool}. Boolean connectives are
+\code{.\&\&}, \code{.||}, \code{sNot}, and implication \code{.=>}.
+
+For the same reason, Haskell's \code{if-then-else} cannot branch on an
+\code{SBool}. The function \code{ite :: Mergeable a => SBool -> a -> a -> a}
+builds a symbolic choice that the solver resolves. This distinction between
+\emph{Haskell control} and \emph{symbolic control} recurs throughout the
+tutorial. Concrete arguments allow symbolic operations to compute immediately.
+For example, \code{ite sTrue 10 20 :: SInteger} produces the literal \code{10};
+no solver is involved.
+
+\subsection{Validity, counterexamples, and vacuity}
+
+Calling \code{prove} on a function of symbolic arguments creates a fresh
+unknown for each argument, evaluates the function to obtain a symbolic formula
+$P(\vec{x})$, and asks the solver whether $\neg P(\vec{x})$ is satisfiable. If it
+is not, $P$ holds for every input and SBV prints \code{Q.E.D.} If it is, the
+satisfying assignment is a counterexample. A third outcome is possible: for
+undecidable or very hard problems, the solver may give up or time out. SBV reports
+this as an unknown result, which is neither a proof nor a refutation.
+
+Unknowns can also be created by name inside the \code{Symbolic} monad, which
+gives readable counterexamples and allows assumptions:
+\begin{lstlisting}
+prove $ do x <- sInteger "x"
+           y <- sInteger "y"
+           constrain $ x .> 0 .&& y .> 0
+           pure $ x * y .> 0
+\end{lstlisting}
+Here \code{constrain} restricts attention to inputs that satisfy the assumption.
+A contradictory assumption makes every property provable, so assumptions should
+be kept as weak as the property permits. For assumptions $A$ and conclusion $P$,
+\code{prove} searches for a model of $A \land \neg P$; it does not establish that
+$A$ is feasible. For example,
+\begin{lstlisting}
+ghci> prove $ \(x :: SWord8) -> x .> 255 .=> x .== 0
+Q.E.D.
+ghci> sat $ \(x :: SWord8) -> x .> 255
+Unsatisfiable
+\end{lstlisting}
+The first answer is a vacuous proof: no byte satisfies its premise. Checking the
+premise with \code{sat} exposes the modeling mistake. Here and below, fresh
+arguments have the default universal interpretation under \code{prove} and
+existential interpretation under \code{sat}. Explicit mixed quantifiers are
+possible but outside this tutorial.
+
+Table~\ref{tab:interfaces} lists the main ways of using a symbolic model. The
+rest of the tutorial visits each of them.
+
+\begin{table}[t]
+\caption{Entry points into SBV. All of them consume the same symbolic programs.}
+\label{tab:interfaces}
+\begin{tabularx}{\linewidth}{@{}l X X l@{}}
+\toprule
+Interface & You supply & Successful result & Section\\
+\midrule
+\code{prove} & A property & Validity or a counterexample & \ref{sec:first}--\ref{sec:specs}\\
+\code{sat}, \code{allSat} & Constraints on unknowns & One or all satisfying models & \ref{sec:finding}\\
+\code{optimize} & Constraints and objectives & Optimal models or objective bounds & \ref{sec:optimization}\\
+\code{query} & A Haskell program driving the solver & Whatever the program computes & \ref{sec:queries}\\
+TP & Lemmas, induction, calculations & Checked proofs with dependencies & \ref{sec:induction}--\ref{sec:tautology}\\
+\code{compileToC} & A symbolic function & C source code & \ref{sec:codegen}\\
+\bottomrule
+\end{tabularx}
+\smallskip
+\par\small Solver calls can also be inconclusive. Enumeration can fail to
+terminate, and an optimization objective need not have an attained optimum.
+\end{table}
+
+%==============================================================================
+\section{Independent specifications}
+\label{sec:specs}
+
+A proof is only as good as the property it proves. The most useful properties
+compare an implementation with a specification written in a different, simpler
+way.
+
+\subsection{Saturating arithmetic}
+
+Consider addition on unsigned bytes that saturates at 255 instead of wrapping. An implementation can avoid overflow by testing before it adds, while
+the specification can use unbounded integers, where overflow cannot happen:
+\snippet{saturating}
+On concrete inputs, \code{satAdd 250 10} evaluates to \code{255} without a solver.
+The guard \code{x .> 255 - y} cannot overflow, because \code{255 - y} is
+representable for every byte \code{y}, and on the other branch \code{x + y} does
+not wrap. In the specification, \code{sFromIntegral} converts each byte to an
+integer \emph{before} adding. Converting the already wrapped byte sum would
+repeat the implementation's arithmetic and could hide its mistakes.
+\begin{lstlisting}
+ghci> prove satAddSpec
+Q.E.D.
+\end{lstlisting}
+The proof covers all 65,536 input pairs. A tempting alternative implementation
+shows why the independent specification matters:
+\snippet{wrongAdd}
+\begin{lstlisting}[style=output]
+ghci> prove $ do { x <- sWord8 "x"; y <- sWord8 "y"; pure (wrongAddSpec x y) }
+Falsifiable. Counter-example:
+  x = 223 :: Word8
+  y = 124 :: Word8
+\end{lstlisting}
+The sum $223+124=347$ wraps to 91, and no byte is greater than 255, so the
+saturation branch is never taken. Had the specification also used byte
+arithmetic, it would have agreed with the bug. Your solver may report a different
+pair; any pair whose sum exceeds 255 is a valid counterexample, and the companion
+checks the reported pair with ordinary Haskell arithmetic.
+
+\begin{exercise}
+Write \code{satSub :: SWord8 -> SWord8 -> SWord8}, subtraction that saturates
+at 0, together with a specification over \code{SInteger}, and prove that they
+agree. Solutions: \code{satSub} and \code{satSubSpec}.
+\end{exercise}
+
+\subsection{A midpoint that leaves its interval}
+\label{sec:midpoint}
+
+Binary search supplies another example of why the arithmetic domain matters.
+The midpoint bug described by \citet{blochbinarysearch} arises when
+\code{low + high} overflows before division by two. We can expose it without
+building an array: the local arithmetic already violates the intended bounds.
+The following functions, adapted from SBV's \code{BitPrecise.BrokenSearch}
+example, use signed 32-bit indices:
+\snippet{midpoint}
+The operators \code{+!}, \code{-!}, and \code{/!}, from
+\code{Data.SBV.Tools.Overflow}, attach safety assertions to the arithmetic.
+The function \code{safe} checks these assertions under the supplied constraints
+and returns a result for each check:
+\snippet{midpointSafety}
+Running \code{midPointSafety midPointBroken} reports an addition overflow and a
+counterexample. For a simple instance, take $\mathit{low}=\mathit{high}=2^{30}$.
+The sum wraps to $-2^{31}$ and the computed midpoint is $-2^{30}$, outside the
+singleton interval. The companion checks both this instance and the solver's
+reported counterexample using ordinary Haskell arithmetic.
+
+The repair computes the distance before adding half of it to the lower bound.
+Under $0\leq\mathit{low}\leq\mathit{high}$, this avoids an overflowing
+intermediate sum. We can check all its arithmetic assertions:
+\begin{lstlisting}[style=output]
+ghci> all isSafe <$> midPointSafety midPointFixed
+True
+\end{lstlisting}
+But an overflow-free expression could still compute the wrong answer. We need
+a separate specification. Signed 64-bit arithmetic can represent the sum of any
+two signed 32-bit inputs, so it gives a reference calculation:
+\snippet{midpointSpec}
+\begin{lstlisting}[style=output]
+ghci> prove (midPointSpec midPointFixed)
+Q.E.D.
+\end{lstlisting}
+As with saturating addition, both inputs are widened \emph{before} the addition.
+These checks establish arithmetic safety and the value of the repaired midpoint;
+they do not yet show that binary search finds a target. We return to that
+algorithmic question in Section~\ref{sec:binary-search}, after introducing arrays
+and induction.
+
+%==============================================================================
+
+
+
+
+% BEGIN proposed-outline:arithmetic
+\section[Bit-vectors and machine-word reasoning\protect\plannedmark]{Bit-vectors and machine-word reasoning}
+\label{sec:bit-vectors}
+
+\subsection[Widths, signedness, and modular arithmetic\protect\plannedmark]{Widths, signedness, and modular arithmetic}
+\label{sec:bit-vector-semantics}
+
+\subsection[Masks, shifts, rotations, and bit fields\protect\plannedmark]{Masks, shifts, rotations, and bit fields}
+\label{sec:bit-operations}
+
+\subsection[Widening, narrowing, and checked arithmetic\protect\plannedmark]{Widening, narrowing, and checked arithmetic}
+\label{sec:bit-representations}
+
+\subsection[Bit tricks and independent specifications\protect\plannedmark]{Bit tricks and independent specifications}
+\label{sec:bit-tricks}
+
+\section[Exact and floating-point arithmetic\protect\plannedmark]{Exact and floating-point arithmetic}
+\label{sec:arithmetic-models}
+
+\subsection[Rationals and algebraic reals\protect\plannedmark]{Rationals and algebraic reals}
+\label{sec:exact-arithmetic}
+
+\subsection[Rounding modes and the limits of floating-point identities\protect\plannedmark]{Rounding modes and the limits of floating-point identities}
+\label{sec:floating-point}
+% END proposed-outline:arithmetic
+
+\section{Constraint solving and model enumeration}
+\label{sec:finding}
+
+\subsection{Satisfying models and finite enumeration}
+
+Proving a property asks whether every input satisfies it. The dual question asks
+whether \emph{some} input satisfies a constraint, and which one. The function
+\code{sat} returns one satisfying model, and \code{allSat} enumerates all of them.
+Which bytes are unchanged by squaring?
+\snippet{idempotent}
+\begin{lstlisting}[style=output]
+ghci> idempotentBytes
+Solution #1:
+  s0 = 1 :: Word8
+Solution #2:
+  s0 = 0 :: Word8
+Found 2 different solutions.
+\end{lstlisting}
+The answer is a small theorem in disguise: $x(x-1)\equiv 0 \pmod{256}$, and since
+$x$ and $x-1$ are coprime and $256=2^8$, one of them must be divisible by 256.
+\code{allSat} repeatedly finds a model and excludes it before searching again.
+The finite byte domain makes a complete enumeration possible here; on an
+unbounded domain, asking for all models may never finish.
+
+%==============================================================================
+
+
+\section{Optimization and competing objectives}
+\label{sec:optimization}
+
+A satisfying model witnesses feasibility; an optimization result also describes
+how a feasible choice compares with alternatives. This adds a modeling decision:
+which quantities define a better answer, and how should competing objectives be
+ordered? The function \code{optimize} ranks feasible solutions by named objective
+\emph{measures}: \code{minimize} a cost or \code{maximize} a profit.
+SBV's \code{Metric} class supports symbolic integers, reals, and bit-vectors,
+among others. These objectives differ from the decreasing measures used later
+to establish termination.
+A workshop makes two products with profits 2 and 3, subject to two resource
+limits:
+\snippet{production}
+Running \code{production} gives $x=4$, $y=3$, and profit 17.
+Here \code{constrain} sets hard requirements. Over \code{SInteger} this is integer linear programming;
+using \code{SReal} instead allows fractional production quantities. The resource
+bounds ensure that the maximum is attained. In general, check for infeasibility,
+unbounded objectives, and unattained bounds: maximizing a real $x$ subject to
+$x<1$ has supremum 1 but no optimal model.
+
+\paragraph{Combining measures.}
+The first argument of \code{optimize} selects an \code{OptimizeStyle}:
+\begin{itemize}
+\item \code{Lexicographic} optimizes objectives in declaration order. Once the
+  first objective is optimal, the second breaks ties, and so on. For example,
+  maximize profit first, then minimize the number of units produced without
+  sacrificing profit.
+\item \code{Independent} uses Z3's \emph{box} mode: optimize each objective
+  separately under the same constraints, returning a model for each. These
+  individual optima need not be jointly attainable.
+\item \code{Pareto Nothing} enumerates nondominated objective vectors: improving
+  one objective requires worsening another. Their set is the \emph{Pareto front}.
+  Use \code{Pareto (Just n)} to request at most $n$ such points; an infinite
+  front makes unrestricted enumeration nonterminating.
+\end{itemize}
+For comparison, maximize nonnegative integers $x$ and $y$ with
+$x+y\leq 10$. Lexicographic order $x$ then $y$ gives $(10,0)$; box gives separate
+maxima $x=10$ and $y=10$; the Pareto front consists of the eleven pairs with
+$x+y=10$. Box does not promise the infeasible pair $(10,10)$.
+
+\paragraph{Bounds in an extension field.}
+Extension-field results apply to both \code{SInteger} and \code{SReal}:
+unbounded objectives can yield \code{oo} or \code{-oo}. Real objectives can
+additionally require infinitesimals. For example, independently minimize and
+maximize a positive real:
+\snippet{realBounds}
+Both independent results report these extension-field bounds in the tested configuration:
+\begin{lstlisting}[style=output]
+lower = epsilon :: Real
+upper =      oo :: Real
+\end{lstlisting}
+Here \code{epsilon} denotes a positive infinitesimal: the infimum is 0 but is
+unattained. It is not a small floating-point tolerance. The symbol \code{oo}
+denotes positive infinity: the maximum is unbounded. Neither is a concrete
+real assignment to \code{x}. SBV exposes such bounds through
+\code{getModelObjectives} as \code{GeneralizedCV} values, using \code{ExtendedCV}
+for extension-field expressions.
+Changing \code{sReal} to \code{sInteger} in this example makes the minimum 1,
+while the maximum remains \code{oo}.
+
+\emph{Strict-bound pitfall.} Infinitesimal results are not reliable for every
+formulation or Z3 version: issue~5314 reports this minimization returning 1
+without an unknown result~\citep{z3strictbounds}. Check strict-bound behavior;
+replacing $>$ by $\geq$ changes the problem.
+
+\paragraph{Solver support and arithmetic limits.}
+Z3 is currently the only optimization backend supported by SBV. SMT-LIB has
+not standardized optimization commands; SBV uses Z3's extensions for objectives
+and priorities~\citep{z3optimization}. Optimization is therefore less portable
+across solvers than ordinary satisfiability checking.
+
+Products of unknowns, such as \code{x * y}, introduce nonlinear arithmetic,
+which can be difficult even without optimization; over integers, satisfiability
+is undecidable~\citep{z3arithmetic}. Z3's polynomial real procedures include
+optimization support since 5.3, but do not provide a general solution for
+nonlinear integer or mixed problems~\citep{z3optimization}. Prefer faithful
+linear formulations and distinguish feasible candidates from established optima.
+
+\begin{exercise}
+With \code{production}'s constraints, maximize \code{x + 2*y}, then minimize
+\code{x + y} lexicographically. Compare with the opposite priority order.
+Solutions: \code{productionLex} for the original order and
+\code{productionLexReversed} for the reverse.
+\end{exercise}
+
+%==============================================================================
+
+
+
+% BEGIN proposed-outline:soft-constraints
+\subsection[Soft constraints, weights, and objective priorities\protect\plannedmark]{Soft constraints, weights, and objective priorities}
+\label{sec:soft-constraints}
+% END proposed-outline:soft-constraints
+
+\outlinepart{II. Choosing representations}
+\section{Host evaluation and symbolic structure}
+\label{sec:host}
+
+An SBV interaction separates two kinds of work: Haskell evaluates the program
+to build a symbolic formula, and the solver reasons about that formula. Query
+programs can alternate between these activities. Knowing which side handles
+which part of a program explains how recursion behaves.
+
+\subsection{Haskell lists of symbolic values}
+
+A Haskell list \code{[SInteger]} has a spine that Haskell owns and elements that
+may be symbolic. Functions such as \code{sum}, \code{map}, and \code{foldr} work
+on it unchanged, because they only rearrange the spine and apply \code{Num}
+operations to the elements:
+\snippet{hostSum}
+For example, \code{prove (nonNegSum 5)} establishes the property for five
+symbolic integers. Haskell
+unfolds \code{sum} into \code{x1 + x2 + x3 + x4 + x5} before the solver sees
+anything; the recursion has disappeared. This style is ideal for fixed-size
+problems: circuits, unrolled loops, puzzles on fixed boards. The price is that
+the theorem is about lists of length five, not all lists.
+
+\subsection{Symbolic lists and recursive functions}
+
+The type \code{SList Integer} denotes a \emph{finite} sequence whose length and
+contents may both be unknown. There is no fixed length bound, but infinite lists
+and partial values are outside this domain. Throughout the tutorial, a theorem
+about ``every list'' means every finite list of values in the modeled element
+type (Section~\ref{sec:finite-lists}). To state such a property, we need a function whose
+recursion is part of the logic, not something Haskell unfolds. Writing a naive
+recursive Haskell function over \code{SList} does not work: whether the list is
+empty is unknown, so Haskell would unfold both branches forever.
+SBV's \code{smtFunction} solves this problem. It gives the function a name, and
+recursive calls become calls to that named function in the logic:
+\snippet{sumL}
+The \code{sCase} quasi-quoter provides pattern matching on symbolic values. The
+definition reads like ordinary Haskell, but SBV translates it to a single
+recursive SMT-LIB definition~\citep{smtlib}. Because \code{sumL} is a function
+of symbolic values, it still computes on literals: \code{sumL [1,2,3]} evaluates
+to \code{6} without a solver. When a recursive definition is registered for
+symbolic reasoning, SBV checks termination; for \code{sumL}, it automatically
+finds the list length as a decreasing, nonnegative measure. Termination makes
+the definition admissible; it does not prove arbitrary properties of it.
+
+Now try the obvious generalization of \code{nonNegSum}:
+\snippet{sumWithoutInduction}
+The property is true, but ordinary SMT reasoning about recursive definitions
+does not reliably establish it. The configuration preserves Z3's default options
+and limits each solver call to five seconds; an unknown answer is expected
+with the tested configuration.
+It says nothing about the truth of the property. Section~\ref{sec:induction}
+supplies an induction argument that works for lists of every finite length.
+
+The general rule is: \emph{recursion over Haskell structure happens while building
+the problem; recursion through \code{smtFunction} becomes part of the problem}.
+The former fixes the amount of unfolding before solving; the latter allows
+statements about structures of unbounded size. Neither representation guarantees
+that the resulting solver query will be easy.
+
+%==============================================================================
+
+% BEGIN proposed-outline:circuits
+\subsection[Circuit equivalence through host-language recursion\protect\plannedmark]{Circuit equivalence through host-language recursion}
+\label{sec:circuit-equivalence}
+% END proposed-outline:circuits
+
+\section{Incremental solver interaction}
+\label{sec:queries}
+
+The functions \code{prove}, \code{sat}, and \code{optimize} manage solver
+interactions on the caller's behalf. Many applications need a conversation: ask, inspect the
+answer, and ask a refined question. SBV's \code{query} mode hands control of a
+live solver session to a Haskell program. The following function finds the
+smallest integer greater than 10 that leaves remainder 3 when divided by 7 and
+remainder 4 when divided by 5:
+\snippet*{descent}
+\begin{lstlisting}[style=output]
+ghci> smallest
+24
+\end{lstlisting}
+The constraints before \code{query} set up the problem as usual. Inside the
+query, \code{checkSat} asks for a model, and \code{getValue} reads the value of
+\code{x} in that model. That value is an ordinary \code{Integer}, so Haskell can
+branch on it and use it to build the next constraint, \code{x .< literal v},
+which asks for a smaller solution. When no smaller solution exists, the last
+model found is the minimum. The \code{case} on the solver's answer is Haskell
+control; the constraint that it adds is symbolic. Keeping the two apart is what
+makes the solver usable as a component of a larger algorithm.
+
+Three properties of this loop matter. First, successful candidates are strictly
+decreasing \emph{integers} bounded below by 11. After the first candidate $v$,
+there can be at most $v-11$ further decreases. Thus the loop terminates provided
+each solver call returns. The existence of a minimum alone would not justify
+this reasoning over reals: the candidates could decrease forever without
+reaching it. Second, the solver may return the candidates in any order. Our loop
+does not depend on that order; it only relies on unsatisfiability at the end.
+Third, the loop handles an unknown answer separately: an inconclusive solver
+response is not evidence that no smaller value exists.
+
+Queries can do much more: \code{push} and \code{pop} add and retract temporary
+assumptions, named constraints allow unsatisfiable cores to be extracted, and new
+unknowns can be created in the middle of a session with \code{freshVar}. The last
+point is less trivial than it looks: a new variable may have a type, such as a
+user-defined datatype, that the solver has not seen yet. SBV tracks the
+declarations each new term needs and sends them before the term is used, so
+queries compose without regard to the order in which types are first used.
+
+\begin{exercise}
+Change \code{smallest} to find the \emph{largest} solution below 100. (The answer
+is 94.) Solution: \code{largestBelow100}.
+\end{exercise}
+
+%==============================================================================
+
+
+
+% BEGIN proposed-outline:abstraction
+\subsection[Scoped assumptions and solver state\protect\plannedmark]{Scoped assumptions and solver state}
+\label{sec:scoped-assumptions}
+
+\subsection[Unsatisfiable cores and explanations of failure\protect\plannedmark]{Unsatisfiable cores and explanations of failure}
+\label{sec:unsat-cores}
+
+\section[Abstraction through contracts\protect\plannedmark]{Abstraction through contracts}
+\label{sec:abstraction}
+
+\subsection[Uninterpreted sorts and functions\protect\plannedmark]{Uninterpreted sorts and functions}
+\label{sec:uninterpreted-models}
+
+\subsection[Explicit assumptions and consistent contracts\protect\plannedmark]{Explicit assumptions and consistent contracts}
+\label{sec:consistent-contracts}
+% END proposed-outline:abstraction
+
+\section{Symbolic datatypes}
+\label{sec:datatypes}
+
+A datatype declaration can serve two roles in a solver-aided program: it defines
+the candidates a search may return, and the structures over which a theorem may
+quantify. We use one expression language for both roles, first synthesizing an
+expression and later proving that a transformation preserves its meaning
+(Section~\ref{sec:datatype-induction}). User-defined algebraic datatypes become
+symbolic with one line of Template Haskell:
+\snippet*{expr}
+The call \code{mkSymbolic [''Expr]} generates the type \code{SExpr}, symbolic
+constructors (\code{sNum}, \code{sAdd}, \code{sMul}), recognizers (\code{isNum},
+\code{isAdd}, \code{isMul}), and field accessors such as \code{getMul\_1}. The
+evaluator is an \code{smtFunction}, so it is a recursive definition in the
+logic, and \code{sCase} matches on an expression whose constructor may be
+unknown. The puzzle asks the solver to \emph{synthesize} an expression: a
+multiplication whose left argument is not a number, evaluating to 42.
+\begin{lstlisting}[style=output]
+ghci> puzzle
+Satisfiable. Model:
+  s0 = Mul (Mul (Num 1) (Num (-1))) (Num (-42)) :: Expr
+\end{lstlisting}
+The model is an ordinary Haskell value of type \code{Expr}, which we can inspect,
+print, or evaluate with a separate Haskell interpreter. The companion does exactly
+that to check the answer independently of the solver. Different solver versions
+may find different expressions.
+
+The constructor test \code{isMul e} matters: an accessor such as
+\code{getMul\_1 e} describes the intended field only when \code{e} has that
+constructor. Also, this is synthesis from a structural constraint and one
+evaluation constraint, not a proof that the expression implements a function
+on every input. The search has no explicit depth bound and is not guaranteed
+to terminate for arbitrary constraints.
+
+The same datatype can be the subject of proofs: a property of \code{eval} over
+all expressions concerns finite expression trees of unbounded size, and may
+need induction. Infinite or partial trees are outside the model
+(Section~\ref{sec:finite-lists}). Section~\ref{sec:datatype-induction} returns to
+\code{Expr} with a proof that a recursive transformation preserves evaluation.
+
+%==============================================================================
+
+
+
+% BEGIN proposed-outline:partiality
+\subsection[Optional results and partial operations\protect\plannedmark]{Optional results and partial operations}
+\label{sec:partial-operations}
+% END proposed-outline:partiality
+
+\section{Arrays and symbolic memory}
+\label{sec:arrays}
+
+The expression trees above describe data by constructors. Memory is often more
+naturally described by what can be observed at an address. SMT arrays support
+this second representation: proofs use read-after-write laws and equality of
+mappings, rather than induction over a sequence of stored cells.
+An \code{SArray Integer Integer} is a total mapping from integer addresses to
+integer values. Use \code{sArray "mem"} to create an unknown array and
+\code{readArray mem i} to read a symbolic address. Updates are functional:
+\code{writeArray mem i v} returns an updated array, preserving \code{mem} as
+the previous state.
+
+\subsection{Read-after-write laws and aliasing}
+
+The array theory supplies read-after-write laws: the updated address returns
+the new value; all other addresses retain their values. Equality is
+\emph{extensional}: equal arrays agree at every address, and
+conversely~\citep{smtarrays}. Thus writes to distinct addresses commute:
+\snippet{writesCommute}
+\begin{lstlisting}[style=output]
+ghci> prove writesCommute
+Q.E.D.
+\end{lstlisting}
+The proof covers every initial array, both addresses, and both values. The solver
+establishes equality of entire arrays directly, without traversal or induction.
+
+Omit \code{i ./= j} and the property is false: the addresses may \emph{alias}.
+For example, with $i=j=0$, $x=1$, and $y=2$, the left side stores 2 at address
+0 while the right side stores 1. The last write wins, regardless of the initial
+contents. The companion obtains a counterexample from the solver and checks
+its updates independently using Haskell association-list lookup.
+
+\subsection{Bounds and total memory models}
+
+SMT arrays have no built-in length or out-of-bounds error. For a buffer of length
+\code{n}, prove \code{0 .<= i .\&\& i .< n} at each access; assuming the bound
+would exclude unsafe accesses. \code{constArray v} initializes every address to
+\code{v}, while \code{lambdaArray} defines values by index, for example to update
+an interval and preserve \code{readArray mem i} elsewhere.
+The index type determines the domain: \code{Word8} has 256 addresses and
+\code{Integer} infinitely many. These total mappings differ from the finite
+recursive structure of lists and datatypes (Section~\ref{sec:finite-lists}).
+
+\begin{exercise}
+Prove that writing twice to the same address equals performing only the last
+write, for every array, address, and pair of values. Solution: \code{lastWriteWins}.
+\end{exercise}
+
+%==============================================================================
+
+
+
+% BEGIN proposed-outline:representations-and-synthesis
+\section[Constraints over strings and sets\protect\plannedmark]{Constraints over strings and sets}
+\label{sec:strings-and-sets}
+
+\subsection[Regular expressions as specifications\protect\plannedmark]{Regular expressions as specifications}
+\label{sec:strings-regex}
+
+\subsection[Set membership and representation invariants\protect\plannedmark]{Set membership and representation invariants}
+\label{sec:sets}
+
+\section[Quantifiers and program synthesis\protect\plannedmark]{Quantifiers and program synthesis}
+\label{sec:synthesis}
+
+\subsection[Expression search from examples\protect\plannedmark]{Expression search from examples}
+\label{sec:expression-search}
+
+\subsection[Quantifier order and witness dependence\protect\plannedmark]{Quantifier order and witness dependence}
+\label{sec:quantifiers}
+
+\subsection[Counterexample-guided expression synthesis\protect\plannedmark]{Counterexample-guided expression synthesis}
+\label{sec:synthesis-candidates}
+% END proposed-outline:representations-and-synthesis
+
+\outlinepart{III. Structuring arguments}
+\section{Proofs by induction}
+\label{sec:induction}
+
+SMT solvers decide many theories well, but an induction argument may be needed
+to connect recursive definitions to a theorem. SBV's TP layer (in
+\code{Data.SBV.TP}) lets the programmer write the
+argument in Haskell and has the solver check each step. The programmer decides
+\emph{what} to prove and \emph{how} to break it into steps; the solver decides
+whether each step is valid.
+
+This division connects symbolic execution to calculational reasoning. We choose
+intermediate expressions and useful hypotheses; the solver checks the logical
+consequences of each step. The notation below makes the
+proof obligations explicit. Section~\ref{sec:related-calculation} relates this
+style to equational reasoning in proof assistants and refinement-based proofs.
+
+\subsection{A first inductive proof}
+
+We return to the property that eluded \code{prove} in Section~\ref{sec:host}:
+\snippet{sumNonNeg}
+The type \code{Proof (Forall "xs" [Integer] -> SBool)} records quantification
+over integer lists; the predicate is supplied to \code{induct}. The name
+\code{xs} identifies the variable for output and instantiation. Scripts live in
+the \code{TP} monad: \code{runTP} checks their obligations and returns a proof
+object; Haskell typechecking alone does not establish the theorem.
+
+The function \code{induct} applies list induction: SBV checks the
+base case automatically, then supplies the hypothesis \code{ih} for \code{xs}
+to prove the property for \code{x .: xs}. This covers finite lists; the scope
+for lists and recursive datatypes is discussed in Section~\ref{sec:finite-lists}.
+
+The step is a \emph{calculation}. Its first line lists the assumptions, here the
+precondition for the longer list, and \code{|-} starts a chain of expressions
+connected by \code{=:}. Each link must be justified by the definitions, the
+assumptions, and any hints supplied with \code{??}. The chain ends with
+\code{qed}. A hint written between two expressions justifies the transition
+\emph{to the following expression}; \code{?? ih} is not a new assumption about
+the entire theorem. In this example the expressions being equated are Boolean
+formulas, and the calculation reduces the target formula to \code{sTrue}.
+Running the proof shows each checked step (the final proof-object display is
+omitted here):
+\begin{lstlisting}[style=output]
+ghci> runTP sumNonNeg
+Inductive lemma: sumNonNeg
+  Step: Base                  Q.E.D.
+  Step: 1                     Q.E.D.
+  Step: 2                     Q.E.D.
+  Result:                     Q.E.D.
+Functions proven terminating: sbv.foldr, sumL
+\end{lstlisting}
+Step~1 unfolds \code{sumL} once. Step~2 uses the hypothesis: \code{x} is
+nonnegative by assumption and so is \code{sumL xs}, so the sum is too. The
+\code{Result} line checks that the chain, together with the base case, establishes
+the theorem as stated. The last line reports that the recursive functions used,
+including the library's \code{foldr} that underlies \code{SL.all}, were checked for
+termination. Section~\ref{sec:termination} explains how TP enforces this requirement.
+
+\subsection{Solver obligations in a calculation}
+
+Figure~\ref{fig:calculation} shows the queries under assumptions $A$, with
+facts $H_i$ supplied by hints $h_i$. Definitions are available in every query.
+SBV also checks that the chain establishes the stated theorem under its
+precondition. For failed steps, see Section~\ref{sec:troubleshooting}.
+
+\begin{figure}[htbp]
+\centering
+\begin{tikzpicture}[x=1cm,y=1cm,font=\small,
+    arr/.style={-{Stealth[length=1.5mm]}}]
+\node (e0) at (0,0.8) {$e_0$};
+\node (s0) at (1.9,0.8) {\code{=:}};
+\node (e1) at (3.8,0.8) {$e_1$};
+\node (s1) at (5.7,0.8) {\code{=:}};
+\node (e2) at (7.6,0.8) {$e_2$};
+\node at (9.2,0.8) {$\cdots$};
+\node at (10.6,0.8) {\code{=: qed}};
+\node (h0) at (1.9,1.4) {\code{??} $h_0$};
+\node (h1) at (5.7,1.4) {\code{??} $h_1$};
+\draw[arr] (h0) -- (s0);
+\draw[arr] (h1) -- (s1);
+\node (q0) at (1.9,0) {$A\land H_0\land\neg(e_0=e_1)$};
+\node (q1) at (5.7,0) {$A\land H_1\land\neg(e_1=e_2)$};
+\draw[arr] (s0) -- (q0);
+\draw[arr] (s1) -- (q1);
+\end{tikzpicture}
+\caption{Each hint supplies a fact for the next equality; its query must be unsatisfiable.}
+\Description{Two links in a calculation, from e0 to e1 and from e1 to e2.
+Each hint points to the equality it justifies. Each equality points to a query
+conjoining the assumptions, that hint's fact, and the negation of the equality.}
+\label{fig:calculation}
+\end{figure}
+
+\subsection{Generalization over accumulators}
+
+Reversing a list with an accumulator is a standard optimization:
+\snippet{revAcc}
+We expect \code{revAcc [] xs} to equal \code{SL.reverse xs}. The direct attempt
+is instructive:
+\snippet{revWeak}
+Run it with a five-second per-call timeout (intermediate output omitted):
+\begin{lstlisting}[style=output]
+ghci> runTPWith z3Timeout5 revWeak
+...
+*** Failed to prove revWeak.2.
+\end{lstlisting}
+Step~2 tries to use the induction hypothesis, but the hypothesis is about
+\code{revAcc [] xs}, while the expression contains \code{revAcc [x] xs}. After
+one step of recursion, the accumulator is no longer empty, and the hypothesis says
+nothing about it. The timeout leaves the statement unresolved; it does not
+refute reversal correctness.
+
+The fix is the oldest trick in inductive proofs: prove a more general statement.
+The theorem must describe \code{revAcc} for \emph{every} accumulator, so that the
+hypothesis can be used at whatever accumulator the recursion produces:
+\snippet*{revAccCorrect}
+Here \code{acc} is universally quantified, and the induction hypothesis
+\code{ih} holds for all accumulators. When it is supplied as a hint, the solver
+instantiates it with \code{x .: acc}. The remaining steps use ordinary laws of
+\code{++} and \code{reverse}, using their sequence operations and definitions.
+The original statement is the special case \code{acc = []}:
+\snippet{reverseCorrect}
+\code{recall} obtains the generalized proof, reusing it if it is already cached
+in the current TP run. \code{proofOf} packages that proof as a dependency for
+\code{lemma}, which asks the solver to establish the specialization. This
+separates the reusable inductive result from the interface property callers need.
+
+\begin{exercise}
+Prove that the length of \code{revAcc acc xs} equals
+\code{SL.length xs + SL.length acc}.
+Why must the accumulator remain universally quantified in the induction
+hypothesis, even when the intended caller starts with \code{[]}?
+Solution: \code{revAccLength}.
+\end{exercise}
+
+%==============================================================================
+\section{Kadane's algorithm and invariant discovery}
+\label{sec:kadane}
+
+The maximum segment sum problem asks for the largest sum of a contiguous segment
+of a list, where the empty segment has sum 0. For
+\code{[1, -2, 3, 4, -1, 2]}, the answer is 8, from \code{[3, 4, -1, 2]}.
+Kadane's algorithm~\citep[Algorithm~4]{bentley} solves it in a single left-to-right pass.
+Its correctness is not obvious, which makes it a good example of finding and
+proving an invariant.
+
+\subsection{Specification}
+
+We specify the problem by its most direct recursive reading:
+\snippet*{mss}
+\code{mssBegin xs} is the best sum of a segment that starts at the beginning of
+\code{xs}: either the empty segment (0), just the head, or the head followed by
+the best segment starting at the tail. \code{mss xs} is the best of
+\code{mssBegin xs} and the best segment of the tail: a segment either starts at
+the head or lies entirely in the tail. With unit-cost arithmetic and without
+memoizing calls across suffixes, these recurrences take quadratic time. Since they are
+symbolic functions, they also run on literal lists, which is a convenient way to
+test a specification before reasoning about it:
+\code{mss [1, -2, 3, 4, -1, 2]} evaluates to \code{8}.
+
+To check that the recurrence matches the intended problem, we can independently
+enumerate segments with ordinary Haskell's \code{Data.List.inits} and
+\code{Data.List.tails}:
+\snippet{segmentOracle}
+Every segment is a prefix of a suffix, and the empty segment ensures the
+maximum is defined even for \code{[]}. The companion compares both \code{mss}
+and \code{kadane} against this oracle on all 3,906 lists of length at most five
+over $\{-2,-1,0,1,2\}$, plus the examples above. These tests check the connection
+to the intended specification; the theorem below establishes equivalence for
+every finite integer list.
+
+\subsection{Implementation}
+
+Kadane's algorithm maintains two accumulators while it scans the list:
+\code{meh}, the maximum sum of a segment ending at the current position, and
+\code{msf}, the maximum found so far:
+\snippet*{kadane}
+At each element \code{h}, the best segment ending here either extends the best
+segment ending at the previous position or is empty, so the new \code{meh} is
+\code{0 `smax` (h + meh)}. The best so far is updated if that value is larger.
+The allowance of an empty segment matters: an all-negative input returns 0.
+An API that requires a nonempty segment would need a different specification
+and initialization.
+
+\subsection{Invariant discovery}
+
+As with reversal, the theorem we want, \code{kadane xs .== mss xs}, concerns the
+initial accumulators \code{0} and \code{0}. An inductive proof will reach
+\code{kadaneHelper} with other accumulator values, so we must describe what
+\code{kadaneHelper xs meh msf} computes for \emph{any} sensible \code{meh} and
+\code{msf}.
+
+\begin{figure}[htbp]
+\centering
+\begin{tikzpicture}[x=1cm,y=1cm,font=\small]
+\node at (1.8,0.6) {processed prefix};
+\node at (5.4,0.6) {remaining \code{xs}};
+\foreach \y in {0,-0.65,-1.3} {
+  \fill[black!6] (0,\y-0.12) rectangle (7.2,\y+0.12);
+  \draw[black!40] (0,\y-0.12) rectangle (7.2,\y+0.12);
+}
+\draw[dashed] (3.6,0.35) -- (3.6,-1.65);
+\draw[line width=2pt] (0.7,0) -- (2.9,0);
+\node[anchor=west] at (7.5,0) {$\mathit{msf}$};
+\draw[line width=2pt] (4.3,-0.65) -- (6.6,-0.65);
+\node[anchor=west] at (7.5,-0.65) {$\mathit{mss}(xs)$};
+\draw[line width=2pt] (2,-1.3) -- (5.6,-1.3);
+\node[anchor=west] at (7.5,-1.3) {$\mathit{meh}+\mathit{mssBegin}(xs)$};
+\node at (2.8,-1.8) {$\mathit{meh}$};
+\node at (4.8,-1.8) {$\mathit{mssBegin}(xs)$};
+\end{tikzpicture}
+\caption{Three candidates for the maximum segment sum: within the processed
+prefix, within the remaining suffix, or across the boundary. Segments may be
+empty; each label gives the best sum for that case.}
+\Description{Three copies of a list split at the same boundary. A highlighted
+segment lies in the processed prefix, in the remaining suffix, or crosses the
+boundary. The corresponding best sums are msf, mss xs, and meh plus mssBegin xs.}
+\label{fig:kadane}
+\end{figure}
+
+Split the list into a processed prefix and the remaining suffix \code{xs}.
+Figure~\ref{fig:kadane} shows the three possible locations of the best segment.
+The crossing candidate combines the best suffix of the processed prefix
+(\code{meh}) with the best prefix of \code{xs} (\code{mssBegin xs}).
+
+For example, split \code{[1,-2,3,4,-1,2]} after the 4. The processed prefix has
+$\mathit{meh}=7$ and $\mathit{msf}=7$, while the suffix has
+$\mathit{mss}=2$ and $\mathit{mssBegin}=1$. The three candidates are 7, 2, and
+$7+1=8$; the best segment crosses the boundary.
+\begin{samepage}
+So the invariant is
+\[
+  \mathit{kadaneHelper}(xs, \mathit{meh}, \mathit{msf})
+  = \max\bigl(\mathit{msf},\ \mathit{mss}(xs),\ \mathit{meh} + \mathit{mssBegin}(xs)\bigr),
+\]
+under the preconditions that make the accumulators meaningful:
+$\mathit{meh} \geq 0$ (the empty segment is always available) and
+$\mathit{msf} \geq \mathit{meh}$ (the best segment so far is at least as good as
+the best one ending here). Without the preconditions the statement is false: for
+an empty \code{xs}, the right side would include $\mathit{meh}$ even when it
+exceeds $\mathit{msf}$.
+\end{samepage}
+
+\subsection{The proof}
+
+Once the invariant is written down, the proof is short:
+\snippet*{kadaneCorrect}
+The inductive step unfolds \code{kadaneHelper} once and applies the hypothesis
+at the new accumulators. Here the hint is more specific than in the earlier
+proofs: \code{ih `at` (Inst @"meh" meh', Inst @"msf" msf')} instantiates the
+quantified accumulators explicitly. The solver could search for the
+instantiation, but stating it makes the step easier and documents the argument.
+The remaining equality between the instantiated hypothesis and the invariant
+for \code{a .: as} is arithmetic over \code{smax}, which the solver checks
+without further help, using the definitions of \code{mss} and \code{mssBegin}.
+The preconditions are needed to instantiate the hypothesis: the new accumulators
+satisfy them because \code{meh'} is a maximum with 0 and \code{msf'} is a
+maximum with \code{meh'}.
+
+The main theorem then follows by a calculation without induction. With both
+accumulators 0, the invariant gives
+$\max(0, \mathit{mss}(xs), \mathit{mssBegin}(xs))$, and the solver discharges the
+last two steps: \code{mss} is nonnegative and at least \code{mssBegin} by its
+definition. Abbreviated output shows the two results:
+\begin{lstlisting}[style=output]
+ghci> runTP kadaneCorrect
+Inductive lemma: kadaneInvariant
+  ...
+  Result:                           Q.E.D.
+Lemma: kadaneCorrect
+  ...
+  Result:                           Q.E.D.
+\end{lstlisting}
+
+\subsection{Lessons}
+
+The effort in this proof went into one place: the invariant. Once we had
+explained \emph{why} the algorithm works, as the three-way case analysis on where
+the best segment lies, the mechanical checking was immediate. This division of
+labor is typical of TP. The solver handles unfolding definitions, arithmetic,
+and case analysis on \code{smax}; the human supplies generalizations and
+intermediate statements. When a proof gets stuck, the useful question is
+rarely ``which tactic is missing?'' and usually ``what is the statement that
+explains this step?''
+
+\begin{exercise}
+\emph{Challenge.} Require the chosen segment to be nonempty. Write a
+specification and a linear-time algorithm, and prove their equivalence under
+an explicit nonempty-input precondition. Test all-negative lists.
+Solutions: \code{mssNonEmpty}, \code{kadaneNonEmpty}, and
+\code{kadaneNonEmpty\allowbreak Correct}. The independent segment enumerator is
+\code{segmentNonEmpty\allowbreak Oracle}. The solutions return 0 on \code{[]}, outside the theorem's contract.
+\end{exercise}
+
+%==============================================================================
+\section{Induction on decreasing measures}
+\label{sec:datatype-induction}
+
+The next two examples use \code{sInduct} to choose a measure suited to the
+computation: the size of an expression tree, then the length of a search interval.
+
+\subsection{Expression trees}
+
+Return to \code{Expr}: mirroring swaps the children at every addition and
+multiplication node, preserving evaluation because both operations commute.
+\snippet{exprMirror}
+Each binary case needs the hypothesis for both children before commutativity applies.
+The calculational \code{induct} interface supports integers and lists, so for
+this datatype we use \code{sInduct} with a size measure.
+Define \code{exprSize} to be zero at \code{Num} and one plus the
+two child sizes at \code{Add} or \code{Mul}. The companion proves nonnegativity
+as \code{exprSizePos}, using \code{inductiveLemma}: it applies the generated
+datatype induction principle without further guidance. Then
+\code{exprSizeSmaller} uses this fact to show that each child is smaller than
+its parent. These facts justify applying the hypothesis to each child.
+The listing abbreviates the identical multiplication case; the companion
+checks all three cases in full:
+\snippet*{mirrorCorrect}
+The hypothesis supplied by \code{sInduct} is conditional: it proves the result
+for an expression only if its measure is smaller than that of the current
+\code{e}. Each \code{smaller} hint discharges these conditions; the two
+\code{ih} hints instantiate the hypothesis separately at \code{a} and \code{b}.
+After substituting their evaluations, commutativity finishes the case.
+The final \code{eval e} reconnects each binary case to the theorem's goal.
+The \code{pCase} quasi-quoter splits the \emph{proof} by constructor and checks
+that the cases cover the datatype; \code{sCase} defines symbolic functions.
+The \code{Num} case has no recursive children and needs no hypothesis.
+Running \code{runTP mirrorCorrect} checks all three cases and returns
+\code{Proven}. The size argument is structural induction expressed through
+\code{sInduct}'s more general principle of induction on a decreasing measure.
+
+\subsection{Binary search with a decreasing interval}
+\label{sec:binary-search}
+
+Section~\ref{sec:midpoint} checked midpoint arithmetic. We now ask whether the
+search itself finds a target in a sorted interval. SBV's
+\code{TP.BinarySearch} example uses \code{Arr = SArray Integer Integer} and
+\code{Idx = (SInteger, SInteger)}, with both bounds inclusive:
+\libsnippet{binarySearch}
+Here \code{sEDiv} by 2 computes the floor of the integer average, including for
+negative bounds. The measure $\max(\mathit{hi}-\mathit{lo}+1,0)$ is the number
+of indices remaining. On a nonempty interval, the midpoint lies within its
+bounds, so either recursive call strictly decreases this measure. The empty
+interval returns \code{sNothing}; a match returns \code{sJust mid}.
+
+The companion imports this module as \code{Search} and
+\code{Data.SBV.Maybe} as \code{SM}. We state the result contract explicitly:
+\snippet*{binarySearchContract}
+The predicate \code{Search.inArray} means that the target occurs at some index
+between the bounds. If it occurs, \code{searchFound} requires a \code{Just}
+result, an index within the interval, and the correct value at that index.
+Otherwise the result must be \code{Nothing}. The theorem assumes that the array
+is nondecreasing throughout the interval; duplicates are allowed, and no
+particular matching index is prescribed.
+
+The proof \code{binarySearchCorrect} uses \code{sInduct} with the same interval
+measure. Its two helper lemmas show that restricting the search to the selected
+half preserves sortedness and whether the target occurs. In the upper-half
+case, for example, all values at or below the midpoint are too small. The
+calculation supplies that range lemma and instantiates the induction hypothesis
+at $[\mathit{mid}+1,\mathit{hi}]$; the lower-half case is symmetric. Empty
+intervals and immediate matches close directly. Running
+\code{binarySearchProof} checks this argument with CVC5, including termination
+of \code{bsearch}; the complete calculation is in the companion.
+
+This proof uses unbounded integer indices, so \code{lo + hi} cannot overflow.
+It complements the earlier arithmetic proof, but does not verify a fixed-width
+implementation of the whole search: that further step must also justify the
+index conversions and updates \code{mid+1} and \code{mid-1}.
+
+%==============================================================================
+
+% BEGIN proposed-outline:stateful-programs
+\section[State transitions and inductive invariants\protect\plannedmark]{State transitions and inductive invariants}
+\label{sec:stateful-programs}
+
+\subsection[Transition systems and bounded model checking\protect\plannedmark]{Transition systems and bounded model checking}
+\label{sec:bounded-model-checking}
+
+\subsection[Inductive invariants and strengthening\protect\plannedmark]{Inductive invariants and strengthening}
+\label{sec:transition-invariants}
+
+\subsection[Weakest preconditions and imperative programs\protect\plannedmark]{Weakest preconditions and imperative programs}
+\label{sec:weakest-preconditions}
+% END proposed-outline:stateful-programs
+
+\section{Polymorphic and higher-order proofs}
+\label{sec:higherorder}
+
+Proof scripts can be reused across types and parameterized by operations.
+The next examples show what each form of reuse establishes.
+
+\subsection{Polymorphic scripts, monomorphic proofs}
+\label{sec:polymorphic}
+
+Reversal preserves length regardless of the element type. We can express the
+proof once, using Haskell polymorphism:
+\snippet*{reverseLength}
+The Haskell \code{forall a} makes the \emph{script} polymorphic; \code{SymVal a}
+provides the symbolic representation of its elements. Before running it, we
+choose a monotype. For example, in GHCi:
+\begin{lstlisting}
+runTP (reverseLength @Integer)
+runTP (reverseLength @Word8)
+\end{lstlisting}
+Each invocation checks a separate theorem over that type's solver sort. The
+companion runs both.
+
+This differs from \code{Forall "xs" [a]}, which quantifies over \emph{values}
+inside the theorem after \code{a} has been chosen. A successful integer instance
+does not by itself certify every type instance of the script: SBV is not
+quantifying over Haskell types. Polymorphism lets us reuse the argument and its
+implementation, while each proof run establishes a monomorphic result. This
+distinction matters especially for arithmetic laws, whose truth may change
+between \code{Integer} and \code{Word8}.
+
+%==============================================================================
+\subsection{The bookkeeping law}
+
+Many useful list laws concern an operation supplied by the caller. The
+\emph{bookkeeping law}, adapted here from
+\code{Documentation.SBV.Examples.TP.Lists}, says that reducing a concatenation
+equals reducing each chunk and then reducing those results:
+\[
+ \mathit{reduce}(\mathit{concat}\ xss)
+ = \mathit{reduce}(\mathit{map}\ \mathit{reduce}\ xss),
+ \qquad \mathit{reduce}=\mathit{foldr}\ f\ e.
+\]
+Associativity of $f$ and a two-sided identity $e$ suffice. For integer addition
+with identity 0, this is ``sum the elements'' versus ``sum the chunk sums.''
+Commutativity is not assumed: the order of elements is preserved.
+Both the outer list \code{xss} and every chunk are finite; the law makes no
+claim about consuming an infinite stream of chunks.
+
+
+
+We reuse a library lemma with the following import:
+\snippet{listProofImports}
+The proof has two dependencies: \code{foldrOverAppend}, and a helper
+\code{foldBase} proved in the companion. Their conclusions are, respectively,
+\[
+\begin{aligned}
+ \mathit{foldr}\ f\ e\ (xs \mathbin{++} ys)
+   &= \mathit{foldr}\ f\ (\mathit{foldr}\ f\ e\ ys)\ xs,\\
+ \mathit{foldr}\ f\ y\ xs &= f\ (\mathit{foldr}\ f\ e\ xs)\ y.
+\end{aligned}
+\]
+The first needs no assumptions on $f$. The second requires associativity and
+the left-identity law. Its empty-list case uses
+$f\ e\ y=y$; its inductive step uses associativity to move $y$ past the head.
+These lemmas expose exactly the two transformations the main induction needs:
+\snippet*{bookKeeping}
+\code{quantifiedBool} packages a quantified property as an \code{SBool}, so the
+algebraic laws can appear as assumptions in the calculation and as the premise
+of the theorem. They are not unconditionally added as user axioms. Induction
+is over the outer list of chunks: unfold \code{concat}, move the fold across
+append, use the induction hypothesis on the remaining chunks, then use
+\code{foldBase} to combine their result with that of the first chunk.
+
+The left-identity assumption has a concrete purpose. Take $f\ x\ y=x$ and
+$e=0$. This operation is associative and has right identity 0, but for
+\code{xss = [[],[1]]}, the two sides of the bookkeeping law are 1 and 0.
+The empty first chunk contributes an identity that must work on the left.
+The companion checks this counterexample as well as the proof.
+
+\subsection{An arbitrary operation at a fixed type}
+
+The parameters \code{e} and \code{f} are Haskell arguments to the proof script.
+To prove the law without choosing an implementation of the operation, give
+them fresh uninterpreted names:
+\snippet{bookKeepingRun}
+An \code{uninterpret} declaration supplies a logical name without defining
+equations. Here \code{combine} is a total function on integers; the proof must
+work for every interpretation satisfying the stated algebraic laws. The solver
+does not enumerate implementations of \code{combine}. SBV specializes its list
+operations to this logical operation and reasons about the resulting
+definitions. The higher-order Haskell interface thus supports a proof about an
+arbitrary operation at a fixed type. We do not pass a Haskell function as an
+ordinary \code{Forall} argument of the theorem.
+
+Passing \code{0} and \code{(+)} instead gives a concrete instance. The companion
+also checks that instance and derives the unconditional sum-of-chunk-sums law.
+An uninterpreted operation represents a total mathematical function; it does
+not model divergence or exceptions in a Haskell callback.
+
+\subsection{Closures and higher-order functions}
+\label{sec:closures}
+
+Ordinary Haskell allows \code{map (+k) xs}; \code{SL.map (+k) xs} needs an
+explicit \code{Closure} when \code{k} is a symbolic unknown from the enclosing
+solver context:
+\snippet{closure}
+SBV passes \code{k} through the recursion as \code{env}, so \code{closureFun}
+need not capture it. Literals and globally named logical symbols need no such
+environment. The companion proves length preservation for every offset and
+finite integer list.
+
+%==============================================================================
+\section{A verified tautology checker}
+\label{sec:tautology}
+
+Larger developments are built from the same ingredients. SBV's documentation
+includes a verified tautology checker for propositional formulas in
+if-then-else form, after a classic development by \citet[Chapter~4]{boyermoore} that was
+later formalized in Imandra~\citep{imandraTautology}. We sketch its structure
+rather than its proofs; the full development is in the module
+\code{Documentation.\allowbreak SBV.\allowbreak Examples.\allowbreak TP.\allowbreak TautologyChecker}. The listings in this
+section are quoted from that module.
+
+\paragraph{Formulas and normalization.}
+A formula is a constant, a variable, or a conditional:
+\libsnippet{tautFormula}
+The checker first normalizes a formula so that no conditional appears in the
+condition position of another conditional, by repeatedly rewriting
+\code{If (If p q r) l r'} to \code{If p (If q l r') (If r l r')}. Abbreviated
+slightly, the definition is:
+\begin{lstlisting}
+normalize :: SFormula -> SFormula
+normalize = smtFunctionWithMeasure "normalize"
+    ( \f -> tuple (ifComplexity f, ifDepth f)
+    , [measureLemma ifDepthNonNeg, measureLemma ifComplexityPos, ...] )
+  $ \f -> [sCase| f of
+             If (If p q r) l r' -> normalize (sIf p (sIf q l r') (sIf r l r'))
+             If c l r           -> sIf c (normalize l) (normalize r)
+             _                  -> f
+          |]
+\end{lstlisting}
+This function is the first new ingredient. Its termination is not structural:
+the rewrite in the first branch produces a \emph{larger} formula. Instead of
+letting SBV guess a measure, the definition supplies one through
+\code{smtFunctionWithMeasure}: a pair
+ordered lexicographically. To see why this works, write $C$ for
+\code{ifComplexity} and $D$ for \code{ifDepth}. On constants and variables,
+$C=1$ and $D=0$; on conditionals,
+\[
+ C(\mathit{If}\ c\ l\ r)=C(c)\bigl(C(l)+C(r)\bigr),
+ \qquad D(\mathit{If}\ c\ l\ r)=1+D(c).
+\]
+The distributive rewrite preserves $C$ exactly and reduces $D$ by one.
+Recursing into either branch of an ordinary conditional strictly reduces $C$,
+because every complexity is positive. Thus each recursive call decreases the
+pair, even though tree size may increase. These checks use proved facts supplied
+by \code{measureLemma}, including positivity of $C$. Termination and
+truth preservation remain separate obligations.
+
+\paragraph{Checking.}
+On a normalized formula, the checker walks down the conditionals, recording an
+assumed value for each variable the first time it is tested. When it meets a
+variable that was already assigned, it follows the corresponding branch;
+otherwise it checks both branches, once under each assumption. The function
+\code{isTautology f} normalizes \code{f} and runs this walk with no assumptions.
+
+\paragraph{The theorems.}
+Soundness says that a formula accepted by the checker evaluates to true under
+every assignment:
+\libsnippet{tautSoundness}
+Completeness says that if the checker rejects a formula, a companion function
+\code{falsify} produces an assignment under which the formula is false.
+Both top-level proofs are short because the work is in their lemmas. The
+development contains 21 TP lemmas. Several prove properties of variable lookup
+when assignments are extended; others establish that normalization produces a
+normal formula and preserves meaning. The central inductive lemmas, such as
+\code{tautologyImpliesEval}, use \emph{strong induction} via \code{sInduct}:
+the hypothesis is available for every formula with a smaller measure, not only
+for immediate subformulas, which matches the shape of the recursion in
+\code{isTautology'}. The lemmas use \code{recall} to reuse previously proved
+results; some obligations use CVC5. The companion checks both top-level
+theorems and their dependencies.
+
+\paragraph{What to take away.}
+The development reuses every technique from the earlier sections at larger
+scale. Generalization appears again: the central lemma \code{tautologyImpliesEval} is
+stated for arbitrary variable assignments, not only for the empty list of
+assumptions with which \code{isTautology} starts. Here strong induction extends
+beyond immediate children, and termination uses an explicit lexicographic measure.
+The structure
+of the proof follows the structure of the program: one group of lemmas per
+auxiliary function, and top-level theorems assembled from them by short
+calculations. SBV's documentation contains about forty further TP developments,
+including sorting algorithms, a semantics-preserving constant folder, and a
+compiler from expressions to a stack machine.
+
+%==============================================================================
+
+
+\outlinepart{IV. Boundaries and context}
+\section{C generation from verified functions}
+\label{sec:codegen}
+
+\subsection{A verified function across the translation boundary}
+
+A theorem about a symbolic function and a claim about an executable program
+meet at a translation boundary. To make that boundary concrete, we return to
+the first specification in the tutorial. SBV translates a symbolic function to
+C code that runs without a solver. For the saturating adder
+of Section~\ref{sec:specs}:
+\snippet{codegen}
+This produces \code{sat\_add.c} and a matching header. Because the C code is
+generated from the same \code{satAdd} that we proved correct, there is no manual
+rewrite in which the two could drift apart. For this adder, the generated header
+maps \code{SWord8} to \code{uint8\_t}, and the arithmetic helpers implement
+8-bit modular addition and subtraction using unsigned intermediates and masks.
+
+\subsection{Executable validation and trust assumptions}
+
+The companion checks the compiled artifact exhaustively: it compiles the
+generated adder with undefined-behavior sanitization and compares all 65,536
+inputs with an independent oracle written directly in C. This checks the
+translation and compilation boundary for the generated executable;
+Section~\ref{sec:pitfalls} explains the remaining trust assumptions.
+
+Not all of SBV's vocabulary is executable. Quantifiers and uninterpreted sorts,
+for example, have no operational meaning, and the code generator rejects programs
+that use them rather than approximating them. Uninterpreted functions become calls
+to C functions that the user provides, which then join the trusted code.
+
+%==============================================================================
+\section{The execution model and its proof obligations}
+\label{sec:hood}
+
+Two questions connect the examples to their implementation: what does Haskell
+evaluate before the solver runs, and which definitions may the proof rely on?
+The representation of symbolic values explains the first; termination and the
+choice of a finite, total domain explain the second. These distinctions help
+predict both the cost of constructing a query and the scope of its answer.
+
+\paragraph{Symbolic values are deferred graph nodes.}
+Internally, a value of type \code{SBV a} is either a concrete constant or a
+deferred computation that, given the state of the current symbolic run, adds a
+node to a graph and returns its identifier:
+\begin{lstlisting}
+newtype SBV a = SBV SVal
+data SVal     = SVal Kind (Either CV (Cached SV))
+newtype Cached a = Cached (State -> IO a)
+\end{lstlisting}
+The addition function \code{\textbackslash{}x y -> x + y} can therefore have
+the pure type \code{SWord8 -> SWord8 -> SWord8} and still allocate graph nodes. Operations
+on constants are folded immediately, which is why \code{satAdd 250 10} evaluates
+to \code{255} without a solver. The run-time \code{Kind} records the logical sort,
+so simplifications can respect it: rewriting \code{x .== x} to true is valid for
+integers but not for floats.
+
+\paragraph{Sharing comes in two forms.}
+A generator that combines a term with itself, such as
+\code{iterate (\textbackslash{}t -> t + t) x !! 30}, describes a term that is
+exponentially large as a tree but linear as a graph. SBV preserves this sharing
+in two ways. It memoizes each deferred computation, using stable names in the
+style of observable sharing~\citep{sharing}, so that forcing the same Haskell
+value twice yields the same node. It also interns nodes, so that separately
+constructed applications of the same operator to the same arguments reuse a node.
+Neither mechanism identifies arbitrary mathematically equal expressions.
+
+\paragraph{Nodes belong to a run.}
+A graph node is meaningful only in the run that created it. Two values of type
+\code{SInteger} from different calls to \code{prove} cannot be combined, even
+though their types agree, and SBV checks for common mistakes of this kind. To
+carry a result from one run to another, extract a concrete value from a model
+and turn it back into a literal. Section~\ref{sec:queries} illustrates the same
+concrete-to-symbolic conversion with \code{literal v}, though its loop stays
+within one run. Constants and reusable function definitions can be shared
+across runs; session-specific symbolic unknowns cannot.
+
+\paragraph{Queries synchronize dependencies.}
+When a query creates a new term, SBV records the declarations it requires: sorts
+for datatypes (including those nested inside lists, tuples, or other datatypes),
+uninterpreted constants, and definitions of \code{smtFunction}s it calls. Before
+the term is used, any of these that the solver has not seen are sent. This is why
+a datatype can first appear inside a query. The companion exercises this case
+with two fresh values of a parameterized datatype created by \code{freshVar}.
+
+\subsection{Termination is a proof obligation}
+\label{sec:termination}
+
+SMT functions denote total functions. An equation such as $b(n)=b(n)+1$ has
+no integer-valued solution; admitting it as a definition would make the logical
+context inconsistent and allow unrelated claims to be proved. TP therefore
+checks termination of the symbolic functions used in a proof, separately from
+checking the theorem itself.
+
+SBV tries automatic measures such as list length or datatype size. For recursion
+on a list's tail, length decreases at each call and is bounded below by zero,
+so the calls cannot continue indefinitely. The
+\code{Functions proven terminating} line reports these checks. If the automatic
+check fails, supply a measure with \code{smtFunctionWithMeasure}; the normalizer
+in Section~\ref{sec:tautology} illustrates a lexicographic measure. An unknown
+solver result does not establish termination. Explicitly bypassing a check with
+\code{smtFunctionNoTermination} leaves a dependency reported as \code{Modulo}
+the function's termination. The companion checks that $b(n)=b(n)+1$ is rejected.
+
+\subsection{Finite lists and datatypes}
+\label{sec:finite-lists}
+
+Symbolic lists and recursive algebraic datatypes contain finite, total values:
+no undefined elements, partial tails, or infinite constructor trees. Sizes are
+unbounded, but each value is finite. For example, double reversal is the identity
+on finite lists, while for \code{xs = repeat 0}, \code{take 1 xs} returns
+\code{[0]} and \code{take 1 (reverse (reverse xs))} diverges. This domain makes
+structural induction and decreasing-size arguments available; total reasoning
+and its relationship to partial languages are studied by
+\citet{fastloose}. Arrays instead denote total mappings over possibly infinite
+index domains (Section~\ref{sec:arrays}); they do not introduce infinite recursive
+constructor structure.
+
+%==============================================================================
+\section{Proof results, diagnostics, and trust}
+\label{sec:pitfalls}
+
+\subsection{Failed checks and diagnostic steps}
+\label{sec:troubleshooting}
+
+Before proving, run \code{testSatAdd} to check \code{satAddSpec} on random byte
+inputs with \code{sbvQuickCheck}. The companion checks this result before proving;
+passing random tests is not a proof.
+
+Pass \code{"sat-add.smt2"} to this helper to inspect solver commands:
+\snippet{inspectSatAdd}
+Here \code{verbose} prints abbreviated diagnostics; \code{transcript} writes
+SMT-LIB. Replay it outside GHCi with \code{z3 sat-add.smt2}.
+
+\begin{description}
+\item[The solver cannot start.] Run \code{z3 --version} in the same shell and
+  check that the executable is on \code{PATH}. Installing SBV does not install Z3.
+\item[The solver returns unknown or times out.] No conclusion follows.
+  Simplify the obligation and check whether its theories suit the solver;
+  nonlinear arithmetic is a common obstacle. Use \code{z3Timeout5} from
+  Section~\ref{sec:host} to bound each solver call to 5,000 milliseconds.
+  \code{SetTimeOut} does not limit the whole TP run, which may make many calls.
+\item[A counterexample is found.] Evaluate implementation and specification on
+  that input. The result of \code{wrongAdd 223 124} is 91. The specification
+  evaluates \code{min 255 (223 + 124 :: Integer)} to 255, which agrees with
+  the corrected \code{satAdd}. Check which side disagrees with the intended behavior.
+\item[A TP calculation stalls.] Find the failed step and distinguish a
+  counterexample from unknown. Check its assumptions and the \code{??} hints
+  on that equality, instantiate hypotheses explicitly, or split the step with
+  an intermediate expression. If the recursive call changes an accumulator,
+  generalize the statement as in Sections~\ref{sec:induction} and~\ref{sec:kadane}.
+\end{description}
+
+\paragraph{Common pitfalls.}
+\begin{itemize}
+\item \emph{Wrong domain.} A property proved over \code{SInteger} says nothing
+  about \code{SInt32}, and vice versa. Choose the type that matches the code you
+  care about. List and recursive-datatype theorems cover finite, total values only
+  (Section~\ref{sec:finite-lists}).
+\item \emph{Specification repeats the implementation.} Write specifications in a
+  different style or a wider domain (Section~\ref{sec:specs}).
+\item \emph{Haskell \code{if} or recursion on symbolic data.} Use \code{ite} and
+  \code{sCase} for symbolic choices, and \code{smtFunction} for recursion over
+  symbolic structure (Section~\ref{sec:host}).
+\item \emph{Contradictory assumptions.} If \code{constrain}ed assumptions are
+  unsatisfiable, everything is provable. A quick \code{sat} on the assumptions
+  alone detects this.
+\item \emph{Mixing runs.} Unknowns belong to the run that created
+them; move concrete values instead (Section~\ref{sec:hood}).
+\end{itemize}
+
+\paragraph{What a proof rests on.}
+A Q.E.D. from SBV depends on the correctness of SBV's translation to SMT-LIB, the
+solver, and, for TP, the generation of proof obligations. TP proofs also depend on
+any axioms the user introduces and on any functions whose termination checks
+were explicitly bypassed. SBV tracks these dependencies: a proof that rests on an
+axiom, or on an unfinished step marked with \code{sorry}, is reported as
+\code{Modulo} the offending lemmas rather than as \code{Proven}. TP does not replay solver certificates in an independent proof
+kernel. Functional correctness does not establish running-time or space bounds.
+For generated C, the C compiler and code generator join the trusted base:
+Section~\ref{sec:codegen}'s exhaustive check covers the tested executable and
+input domain, rather than verifying either compiler in general.
+
+%==============================================================================
+
+
+
+% BEGIN proposed-outline:proof-diagnostics
+\subsection[Encodings and solver selection\protect\plannedmark]{Encodings and solver selection}
+\label{sec:encodings-and-solvers}
+
+\subsection[Model validation and proof dependencies\protect\plannedmark]{Model validation and proof dependencies}
+\label{sec:proof-audits}
+% END proposed-outline:proof-diagnostics
+
+\section{Connections to program reasoning}
+\label{sec:related}
+
+The examples place SBV within a broader set of approaches to reasoning about
+functional programs. Three questions make the connections useful: how is the
+program represented, how is a proof decomposed, and what does a successful check
+establish?
+
+\subsection{Testing and symbolic evaluation}
+
+QuickCheck~\citep{quickcheck} treats a property as an executable function and
+searches for counterexamples by sampling inputs. Symbolic reasoning instead
+represents unknown inputs and asks whether a violating assignment exists.
+For \code{satAddSpec}, the independent specification serves both purposes:
+Section~\ref{sec:troubleshooting} tests it before asking the solver to prove it.
+The practical connection is a shared specification and concrete feedback, while
+the evidence differs: successful tests cover the executed inputs, and an
+unsatisfiability result rules out a counterexample throughout the modeled domain.
+
+Rosette~\citep{rosette} develops solver-aided host languages using a symbolic
+virtual machine, demonstrated in Racket. Grisette~\citep{grisette} brings
+symbolic evaluation and state merging to Haskell as a library;
+Smten~\citep{smten} translates high-level symbolic computations in a
+Haskell-derived language to SMT queries. These approaches address a common
+representation problem: execution with unknown data must preserve the possible
+outcomes of symbolic choices. In our examples, \code{ite} and \code{sCase}
+make those choices explicit, while ordinary Haskell computes the query generator.
+The what4 library~\citep{what4} provides typed symbolic values and solver
+interfaces for building verification tools. SBV's interface combines symbolic
+programming, model extraction, and explicit proof calculations in one library.
+
+\subsection{Equational reasoning and proof guidance}
+\label{sec:related-calculation}
+
+\citet{danvyfoldunfold} teaches equational reasoning about recursive programs in
+Coq using fold--unfold lemmas. A recursive definition supplies equations for its
+constructor cases, and controlled rewriting makes their use visible in a proof.
+Our mirror calculation illustrates a related teaching choice: unfold the
+transformation, apply the hypotheses for both children, and then use
+commutativity. The displayed steps explain the argument even when automation
+could combine several of them. The checking mechanisms differ: our \code{=:}
+links generate SMT obligations, and hints provide facts for the following link.
+
+The expression evaluator also connects to tutorials on programming-language
+semantics. \citet{huttonsemantics} uses a minimal arithmetic language to develop
+semantic descriptions and calculate an abstract machine. Our evaluator serves
+as the specification of a transformation: \code{mirrorCorrect} proves that
+changing syntax preserves meaning. Reusing \code{Expr} for search and proof
+lets the reader see the change from finding one term with a desired evaluation
+to establishing an equation for every finite term.
+
+Generalization is the crucial step when the computation carries extra state.
+The reversal proof needs a statement about an arbitrary accumulator because a
+recursive call changes it; Kadane's proof needs an invariant describing the
+remaining suffix under arbitrary admissible accumulator values. In each case,
+the stronger statement makes the induction step possible. This is the reusable
+lesson of the calculations, independently of their concrete proof notation.
+
+\subsection{Refinements, invariants, and the scope of a proof}
+
+Liquid Haskell~\citep{liquidhaskell} adds logical refinements to Haskell types.
+Refinement reflection~\citep{reflection} makes function definitions available
+to the refinement logic and supports equational proofs written as Haskell
+programs, with pattern matching and recursion expressing case splits and
+induction. It therefore shares our interest in combining user-written proof
+structure with SMT reasoning. The interface differs: Liquid Haskell checks
+refinements of Haskell programs, while our SBV scripts construct symbolic
+models and execute TP checks. A \code{Proof} value is obtained by running those
+checks; ordinary GHC typechecking of a script does not establish its theorem.
+
+Dafny~\citep{dafny} provides a language and verifier in which programmers supply
+specifications and invariants and the verifier uses SMT to discharge the
+resulting obligations. The accumulator invariant in our Kadane development
+plays a comparable explanatory role: it describes what remains true as the
+state changes, here across recursive calls rather than an imperative loop.
+
+For readers moving between these approaches, it is useful to carry over the
+specification and the mathematical argument before translating the notation.
+Check which numeric domains, termination conditions, and notions of equality
+the target system uses. Our finite-data scope (Section~\ref{sec:finite-lists})
+and monomorphic theorem instances (Section~\ref{sec:polymorphic}) are part of the
+claim being proved, not incidental details of the proof script.
+
+%==============================================================================
+\section{Conclusion}
+
+Solver-aided reasoning combines executable feedback with explicit mathematical
+structure. The examples develop a repeatable method: choose the symbolic domain, write an
+independent specification, and use counterexamples to check both the code and
+its intended behavior. When automation stalls, expose intermediate equalities
+and generalize the induction hypothesis to cover changing accumulators.
+Check termination separately, and read each theorem within its modeled domain.
+The resulting progression makes both success and failure informative: a
+counterexample helps refine a specification, and an unresolved proof obligation
+can expose the need for a stronger invariant or a more explicit argument.
+SBV supplies an executable setting for learning these decisions alongside the
+programs they justify.
+
+For further practice, three SBV example modules extend these ideas.
+\code{ConstFold} proves that constant folding preserves expression meaning;
+\code{InsertionSort} combines ordering and permutation properties; and
+\code{VM} verifies compilation to a stack machine. All three are under
+\code{Documentation.\allowbreak SBV.\allowbreak Examples.\allowbreak TP}.
+
+\begin{acks}
+We thank Joel Burget, Iavor Diatchki, Brian Huffman, John Matthews, Brian Schroeder,
+and Jeffrey Young for their contributions to SBV's design and development, and
+the wider SBV community for bug reports, feedback, and examples.
+\end{acks}
+
+\bibliographystyle{ACM-Reference-Format}
+\bibliography{references}
+\end{document}

@@ -1,0 +1,18 @@
+/build/
+/dist-newstyle/
+/__pycache__/
+/cabal.project.local
+/cabal.project.local~
+*.aux
+*.bbl
+*.blg
+*.fdb_latexmk
+*.fls
+*.log
+*.out
+*.toc
+*.synctex.gz
+
+# Generated from the pinned official JFP distribution by jfp_format.py.
+/jfp-epi.cls
+/comment.cut
