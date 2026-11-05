@@ -36,11 +36,8 @@
   \textbf{Exercise~\theexercise.}\ }{\par\medskip}
 
 
-% Contents-page annotations for the outline sent to colleagues.
-\newcommand{\plannedmark}{\texorpdfstring{\textsuperscript{\textdagger}}{ (planned)}}
-\newcommand{\outlinelegend}{\noindent\textsuperscript{\textdagger}\ Planned: heading only; the section or subsection is not yet drafted.\par\medskip}
+% Part dividers in the table of contents.
 \newcommand{\outlinepart}[1]{%
-  \ifstrequal{#1}{III. Structuring arguments}{\addtocontents{toc}{\protect\newpage}}{}%
   \phantomsection\addcontentsline{toc}{outlinepart}{#1}}
 \makeatletter
 \newcommand{\l@outlinepart}[2]{\par\addvspace{0.7em}\noindent\textbf{#1}\par\nobreak}
@@ -58,38 +55,27 @@
 % Let paragraphs with long code identifiers use an extra line when necessary.
 \setlength{\emergencystretch}{2em}
 \begin{abstract}
-How can functional programmers use automated reasoning in practice while keeping
-programs, specifications, and proofs in Haskell? This tutorial develops a method
-of solver-aided reasoning with SBV around three decisions: how to formulate a
-question, choose a representation, and structure an argument when automation
-is insufficient. Formulating questions begins with semantic domains (mathematical
-integers, machine words, and floating point) and independent specifications;
-counterexamples distinguish intended behavior from implementation
-details, while constraint solving and optimization turn specifications into search.
-Choosing representations connects Haskell evaluation to incremental solver queries
-and unsatisfiable cores, introduces contracts through uninterpreted functions,
-and uses datatypes, arrays, strings, and sets to express different models.
-Quantifier order then distinguishes finding a program that works for every input
-from finding an answer for each input, leading to synthesis guided by counterexamples.
-Structuring arguments combines equational calculations with induction:
-generalization yields invariants for accumulator programs and Kadane's algorithm;
-decreasing measures support proofs about expression trees and a binary search
-whose midpoint overflow first appears as a counterexample; and invariant
-strengthening carries the same lesson into stateful programs. Polymorphic and
-higher-order proofs extend the method to reusable abstractions, and a verified
-tautology checker shows how these proofs scale. Finally, we follow a verified
-function to generated C and
-examine the meaning and limits of a successful check. No background in automated
-reasoning is assumed. An executable companion supplies checked examples and
-exercise solutions.
+How can functional programmers apply automated reasoning techniques while keeping
+programs, specifications, and proofs in the same programming language and
+development environment? This tutorial develops a method of solver-aided reasoning
+in Haskell with SBV. The method rests on three decisions: how to
+formulate a question so that its answer means what we intend, how to represent
+programs and data so that a solver can reason about them, and how to structure
+an argument when automation alone is not enough. Counterexamples refine
+specifications, the same models support search, optimization, and synthesis, and
+induction and invariants extend proofs from simple properties to recursive and
+stateful programs. Recurring examples connect these ideas; a binary-search
+overflow found as a counterexample, for instance, later becomes part of a
+correctness proof. We close by examining what a successful check establishes,
+from generated code to the limits of the model. No background in automated
+reasoning is assumed, and an executable companion supplies checked examples and
+exercises.
 \end{abstract}
 
 \maketitle
 
 % BEGIN outline-contents
-\clearpage
 \setcounter{tocdepth}{2}
-\addtocontents{toc}{\protect\outlinelegend}
 \begingroup
 \fontsize{9}{10.5}\selectfont
 % Suppress the class's redundant Abstract and Contents entries in this outline.
@@ -99,7 +85,6 @@ exercise solutions.
     \ifstrequal{#2}{Contents}{}{\outlinecontentsline{#1}{#2}{#3}{#4}}}}
 \tableofcontents
 \endgroup
-\clearpage
 % END outline-contents
 
 %==============================================================================
@@ -127,49 +112,64 @@ values are nonnegative. Over signed bytes, 128 is not representable, so
 solved a constraint whose domain contains all 256 inputs and reported a value
 that fails.
 
-The central question of this tutorial is how to retain this feedback as the
-programs and their properties become more demanding. Arithmetic examples often
-need only a single solver call. Recursive programs may require a stronger
-statement, an induction hypothesis, or intermediate equalities that make the
-argument visible. We develop these forms of guidance as successive refinements
-of the same activity: constructing a logical question whose answer establishes
-the intended property.
+Our aim is to make this feedback part of ordinary development, with programs,
+specifications, and proofs expressed in the same programming language and
+development environment. The tasks extend beyond checking a property:
+constraints can describe a counterexample, a feasible solution, or a candidate
+program, and objectives can rank the solutions. A single solver call may settle
+an arithmetic property, while a recursive program may require a stronger
+statement, an induction hypothesis, or intermediate equalities. These activities
+share the three decisions developed throughout the tutorial: formulate a question
+whose answer has the intended meaning, choose a representation the solver can
+reason about, and supply an argument when automation alone is insufficient.
 
-Functional programming provides a useful setting for this progression. Pure
+Functional programming provides useful structure for these decisions. Pure
 functions admit equational specifications; recursive definitions suggest
 induction principles; and higher-order combinators expose the algebraic laws on
-which a proof depends. SBV makes both the programs and their proof scripts
-executable in Haskell. Our focus is the reasoning method: choosing a semantic
-domain, writing an independent specification, inspecting counterexamples, and
-introducing proof structure when automatic reasoning is insufficient.
+which a proof depends. SBV keeps programs, specifications, and proof scripts
+executable in Haskell while constructing solver queries from symbolic definitions.
+This reduces the need to translate definitions between tools and reconcile their
+syntactic and semantic differences by hand. It also lets counterexamples become
+inputs for ordinary evaluation, linking solver feedback back to the program.
+The choice of symbolic domain determines what the resulting proof establishes.
 
 The tutorial assumes familiarity with Haskell's algebraic datatypes, type
 classes, and monads, but no knowledge of SMT or theorem proving. It is intended
 for functional programmers and advanced students learning to mechanize program
-reasoning. Three decisions organize the tutorial, followed by a fourth part
-that examines their boundaries and context:
+reasoning. The first three parts develop the three decisions; a fourth examines
+their boundaries and context:
 \begin{itemize}
 \item \emph{Formulating questions.}
-  Sections~\ref{sec:first}--\ref{sec:optimization} connect semantic domains and
-  independent specifications to proofs, counterexamples, satisfying models, and
-  optimal values. Machine-word and floating-point examples show how the domain
-  changes the question; optimization separates hard requirements from preferences.
+  Sections~\ref{sec:first}--\ref{sec:optimization} begin with semantic domains
+  and independent specifications. Mathematical integers, machine words, and
+  floating-point arithmetic give different meanings to apparently similar
+  properties. Saturating addition and a binary-search midpoint illustrate how
+  counterexamples distinguish intended behavior from implementation details.
+  Constraint solving and optimization turn specifications into search for
+  feasible and preferred solutions, separating hard requirements from preferences.
 \item \emph{Choosing representations.}
-  Sections~\ref{sec:host}--\ref{sec:synthesis} distinguish host evaluation from
-  symbolic structure, using circuits as an example, then develop incremental
-  queries, unsatisfiable cores, and abstraction through contracts. Datatypes,
-  arrays, strings, and sets supply different models; expression synthesis brings
-  these choices together with quantifiers and a counterexample-guided search.
+  Sections~\ref{sec:host}--\ref{sec:synthesis} distinguish Haskell evaluation
+  from symbolic structure, with circuit equivalence as an example. Incremental
+  queries organize repeated solver calls, and unsatisfiable cores help explain
+  contradictory assumptions. Uninterpreted functions support abstraction through
+  contracts; datatypes, arrays, strings, and sets provide different models of data.
+  Quantifier order distinguishes finding one program that works for every input
+  from finding an answer for each input. Expression search develops into synthesis
+  by checking candidates and using counterexamples to refine the next search.
 \item \emph{Structuring arguments.}
-  Sections~\ref{sec:induction}--\ref{sec:tautology} develop calculations,
-  generalization, and induction through list reversal, Kadane's algorithm,
-  expression trees, and binary search. Strengthening an invariant carries the
-  generalization lesson into stateful programs. Polymorphic and higher-order
-  proofs and a verified tautology checker extend these techniques.
+  Sections~\ref{sec:induction}--\ref{sec:tautology} combine equational calculations
+  with induction. Generalization supplies the hypotheses needed for accumulator
+  programs, including list reversal and Kadane's algorithm. Decreasing measures
+  support proofs about expression trees and binary search; invariant strengthening
+  carries the same lesson into stateful programs. Polymorphic and higher-order
+  proofs extend the method to reusable abstractions, and a verified tautology
+  checker brings these techniques into a larger development.
 \item \emph{Boundaries and context.}
-  Sections~\ref{sec:codegen}--\ref{sec:related} follow a verified function to C,
-  explain the execution model and its obligations, and examine solver results,
-  proof dependencies, and connections to other approaches to program reasoning.
+  Sections~\ref{sec:codegen}--\ref{sec:related} follow a verified function through
+  C generation, then examine the execution model, termination obligations, and
+  the scope of finite-data models. Diagnostics, solver selection, and proof
+  dependencies help interpret successful and unsuccessful checks; connections
+  to other approaches place the method in context.
 \end{itemize}
 Recurring examples connect the parts: the midpoint counterexample returns in the
 binary-search proof, expression trees connect search and synthesis to induction,
@@ -184,6 +184,7 @@ about mathematical integers or finite lists must not be silently transferred to
 machine integers, partial computations, or infinite lists. Making these choices
 explicit is part of the method, alongside writing and checking the proof.
 
+\clearpage
 \paragraph{Following along.}
 The standalone companion pins its dependencies, including an SBV 14.10 source
 snapshot, and declares the required language extensions. It was checked with
@@ -203,12 +204,6 @@ Each exercise names its checked solution in the companion.
 Listings are extracted from checked sources; transcripts and elisions are marked
 separately. Model values and their order can vary between solver versions, so
 validation checks their meaning rather than their printed form.
-
-\paragraph{Preparation.}
-Codex assisted with drafting and revising prose, constructing the teaching
-figures, developing companion examples and proof scripts, and implementing
-packaging and validation. The accompanying log records the solver checks and
-tests used to validate the resulting examples.
 
 %==============================================================================
 \outlinepart{I. Formulating questions}
@@ -406,28 +401,28 @@ and induction.
 
 
 % BEGIN proposed-outline:arithmetic
-\section[Bit-vectors and machine-word reasoning\protect\plannedmark]{Bit-vectors and machine-word reasoning}
+\section{Bit-vectors and machine-word reasoning}
 \label{sec:bit-vectors}
 
-\subsection[Widths, signedness, and modular arithmetic\protect\plannedmark]{Widths, signedness, and modular arithmetic}
+\subsection{Widths, signedness, and modular arithmetic}
 \label{sec:bit-vector-semantics}
 
-\subsection[Masks, shifts, rotations, and bit fields\protect\plannedmark]{Masks, shifts, rotations, and bit fields}
+\subsection{Masks, shifts, rotations, and bit fields}
 \label{sec:bit-operations}
 
-\subsection[Widening, narrowing, and checked arithmetic\protect\plannedmark]{Widening, narrowing, and checked arithmetic}
+\subsection{Widening, narrowing, and checked arithmetic}
 \label{sec:bit-representations}
 
-\subsection[Bit tricks and independent specifications\protect\plannedmark]{Bit tricks and independent specifications}
+\subsection{Bit tricks and independent specifications}
 \label{sec:bit-tricks}
 
-\section[Exact and floating-point arithmetic\protect\plannedmark]{Exact and floating-point arithmetic}
+\section{Exact and floating-point arithmetic}
 \label{sec:arithmetic-models}
 
-\subsection[Rationals and algebraic reals\protect\plannedmark]{Rationals and algebraic reals}
+\subsection{Rationals and algebraic reals}
 \label{sec:exact-arithmetic}
 
-\subsection[Rounding modes and the limits of floating-point identities\protect\plannedmark]{Rounding modes and the limits of floating-point identities}
+\subsection{Rounding modes and the limits of floating-point identities}
 \label{sec:floating-point}
 % END proposed-outline:arithmetic
 
@@ -549,7 +544,7 @@ Solutions: \code{productionLex} for the original order and
 
 
 % BEGIN proposed-outline:soft-constraints
-\subsection[Soft constraints, weights, and objective priorities\protect\plannedmark]{Soft constraints, weights, and objective priorities}
+\subsection{Soft constraints, weights, and objective priorities}
 \label{sec:soft-constraints}
 % END proposed-outline:soft-constraints
 
@@ -616,7 +611,7 @@ that the resulting solver query will be easy.
 %==============================================================================
 
 % BEGIN proposed-outline:circuits
-\subsection[Circuit equivalence through host-language recursion\protect\plannedmark]{Circuit equivalence through host-language recursion}
+\subsection{Circuit equivalence through host-language recursion}
 \label{sec:circuit-equivalence}
 % END proposed-outline:circuits
 
@@ -671,19 +666,19 @@ is 94.) Solution: \code{largestBelow100}.
 
 
 % BEGIN proposed-outline:abstraction
-\subsection[Scoped assumptions and solver state\protect\plannedmark]{Scoped assumptions and solver state}
+\subsection{Scoped assumptions and solver state}
 \label{sec:scoped-assumptions}
 
-\subsection[Unsatisfiable cores and explanations of failure\protect\plannedmark]{Unsatisfiable cores and explanations of failure}
+\subsection{Unsatisfiable cores and explanations of failure}
 \label{sec:unsat-cores}
 
-\section[Abstraction through contracts\protect\plannedmark]{Abstraction through contracts}
+\section{Abstraction through contracts}
 \label{sec:abstraction}
 
-\subsection[Uninterpreted sorts and functions\protect\plannedmark]{Uninterpreted sorts and functions}
+\subsection{Uninterpreted sorts and functions}
 \label{sec:uninterpreted-models}
 
-\subsection[Explicit assumptions and consistent contracts\protect\plannedmark]{Explicit assumptions and consistent contracts}
+\subsection{Explicit assumptions and consistent contracts}
 \label{sec:consistent-contracts}
 % END proposed-outline:abstraction
 
@@ -732,7 +727,7 @@ need induction. Infinite or partial trees are outside the model
 
 
 % BEGIN proposed-outline:partiality
-\subsection[Optional results and partial operations\protect\plannedmark]{Optional results and partial operations}
+\subsection{Optional results and partial operations}
 \label{sec:partial-operations}
 % END proposed-outline:partiality
 
@@ -790,25 +785,25 @@ write, for every array, address, and pair of values. Solution: \code{lastWriteWi
 
 
 % BEGIN proposed-outline:representations-and-synthesis
-\section[Constraints over strings and sets\protect\plannedmark]{Constraints over strings and sets}
+\section{Constraints over strings and sets}
 \label{sec:strings-and-sets}
 
-\subsection[Regular expressions as specifications\protect\plannedmark]{Regular expressions as specifications}
+\subsection{Regular expressions as specifications}
 \label{sec:strings-regex}
 
-\subsection[Set membership and representation invariants\protect\plannedmark]{Set membership and representation invariants}
+\subsection{Set membership and representation invariants}
 \label{sec:sets}
 
-\section[Quantifiers and program synthesis\protect\plannedmark]{Quantifiers and program synthesis}
+\section{Quantifiers and program synthesis}
 \label{sec:synthesis}
 
-\subsection[Quantifier order and witness dependence\protect\plannedmark]{Quantifier order and witness dependence}
+\subsection{Quantifier order and witness dependence}
 \label{sec:quantifiers}
 
-\subsection[Expression search from examples\protect\plannedmark]{Expression search from examples}
+\subsection{Expression search from examples}
 \label{sec:expression-search}
 
-\subsection[Counterexample-guided expression synthesis\protect\plannedmark]{Counterexample-guided expression synthesis}
+\subsection{Counterexample-guided expression synthesis}
 \label{sec:synthesis-candidates}
 % END proposed-outline:representations-and-synthesis
 
@@ -1184,16 +1179,16 @@ index conversions and updates \code{mid+1} and \code{mid-1}.
 %==============================================================================
 
 % BEGIN proposed-outline:stateful-programs
-\section[State transitions and inductive invariants\protect\plannedmark]{State transitions and inductive invariants}
+\section{State transitions and inductive invariants}
 \label{sec:stateful-programs}
 
-\subsection[Transition systems and bounded model checking\protect\plannedmark]{Transition systems and bounded model checking}
+\subsection{Transition systems and bounded model checking}
 \label{sec:bounded-model-checking}
 
-\subsection[Inductive invariants and strengthening\protect\plannedmark]{Inductive invariants and strengthening}
+\subsection{Inductive invariants and strengthening}
 \label{sec:transition-invariants}
 
-\subsection[Weakest preconditions and imperative programs\protect\plannedmark]{Weakest preconditions and imperative programs}
+\subsection{Weakest preconditions and imperative programs}
 \label{sec:weakest-preconditions}
 % END proposed-outline:stateful-programs
 
@@ -1584,10 +1579,10 @@ input domain, rather than verifying either compiler in general.
 
 
 % BEGIN proposed-outline:proof-diagnostics
-\subsection[Encodings and solver selection\protect\plannedmark]{Encodings and solver selection}
+\subsection{Encodings and solver selection}
 \label{sec:encodings-and-solvers}
 
-\subsection[Model validation and proof dependencies\protect\plannedmark]{Model validation and proof dependencies}
+\subsection{Model validation and proof dependencies}
 \label{sec:proof-audits}
 % END proposed-outline:proof-diagnostics
 
