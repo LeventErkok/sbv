@@ -190,6 +190,32 @@ about mathematical integers or finite lists must not be silently transferred to
 machine integers, partial computations, or infinite lists. Making these choices
 explicit is part of the method, alongside writing and checking the proof.
 
+\paragraph{Why not a proof assistant?}
+Proof assistants such as Lean~\citep{lean4}, Isabelle/HOL~\citep{isabelle},
+Agda~\citep{agda}, ACL2~\citep{acl2}, Rocq~\citep{rocq},
+HOL4~\citep{hol4}, and PVS~\citep{pvs}, among others, offer another valuable
+route. When a project can invest in expressing its programs and
+specifications in such a system and maintaining their correspondence with the
+Haskell implementation, that can be an excellent choice. Our goal here is to
+keep as much of this work as possible in the host language and its development
+environment. Programs, specifications, and proofs can then evolve together,
+without also maintaining a separate formalization in another language and
+reconciling its syntactic and semantic differences by hand. SBV still translates
+symbolic computations into solver logic, but the programmer works with Haskell
+definitions and proof scripts.
+
+SMT automation is particularly helpful for obligations within the supported
+theories: the solver can discharge them without a user-written sequence of
+proof steps~\citep{z3,cvc5}. Interactive proof development typically asks for
+more human guidance in choosing lemmas, organizing cases, and constructing
+proof scripts. This is a difference of emphasis: proof assistants also offer
+substantial automation, including interfaces to SMT solvers such as Isabelle's
+Sledgehammer~\citep{sledgehammer}. AI agents are further changing the balance
+by selecting premises and generating proof steps, as demonstrated by
+LeanDojo~\citep{leandojo}. SBV's TP layer likewise needs user guidance when
+automation alone cannot settle a property; the aim is to express that guidance
+in Haskell and leave the individual obligations to the solver.
+
 \paragraph{Following along.}
 The standalone companion pins its dependencies, including an SBV 14.10 source
 snapshot, and declares the required language extensions. It was checked with

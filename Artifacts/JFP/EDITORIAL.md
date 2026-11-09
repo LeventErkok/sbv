@@ -628,3 +628,49 @@ The current PDF's outline was inspected with PDFKit: the bookmark is exactly
 was also visually checked; mkSymbolic renders correctly there. No title-macro
 change was needed, and the current placement is retained. This check changed
 only the editorial log, so the manuscript and validation inputs remain unchanged.
+
+### 2026-11-09: positioning the host-language workflow
+
+Added a short paragraph headed "Why not a proof assistant?" at the end of the introduction, immediately before
+Following along and after the statement of the modeled-program scope. It presents
+Lean, Isabelle, Agda, ACL2, and Rocq as valuable alternatives when a project can
+invest in a formalization and maintain its correspondence with the Haskell code.
+The tutorial's goal is to keep programs, specifications, and proofs in the host
+language as far as possible, reducing the need to maintain definitions across
+languages and reconcile their syntax and semantics. It explicitly retains SBV's
+translation to solver logic; no claim about avoiding external solvers or proving
+arbitrary Haskell source is made. No comparative capability or soundness claims
+were added. The rebuilt PDF is 59 pages at this snapshot, and the introduction's
+new paragraph was visually checked on page 5 without layout warnings.
+
+### 2026-11-09: proof-assistant references and automation
+
+The introduction's tool list is now explicitly illustrative ("among others"),
+with citations for every named system. HOL4 and PVS were added as established
+alternatives. The automation comparison is qualified: supported SMT obligations
+can be discharged without explicit proof steps, while interactive development
+typically asks for more guidance. Existing automation, including Sledgehammer's
+SMT integration, and AI-assisted premise/tactic selection in LeanDojo prevent
+this from becoming a blanket claim that proof assistants are manual. The final
+sentence acknowledges that TP also needs guidance and returns to the purpose of
+expressing that guidance in Haskell. This is discussion of proof automation,
+not a manuscript-preparation disclosure; that separate item remains deferred.
+
+New references checked against primary sources:
+
+| Key | Verified source |
+|---|---|
+| lean4 | Official paper https://lean-lang.org/papers/lean4.pdf and publisher https://doi.org/10.1007/978-3-030-79876-5_37: de Moura and Ullrich, CADE 28, 2021, 625–635. |
+| isabelle | Publisher https://doi.org/10.1007/3-540-45949-9: book, 2002, LNCS 2283. Author order Nipkow, Paulson, Wenzel follows the official tutorial title page at https://isabelle.in.tum.de/doc/tutorial.pdf; the publisher's catalogue labels/reorders them as editors. |
+| agda | Chalmers record https://research.chalmers.se/publication/46311 and author-hosted thesis: Norell, 2007, Chalmers. |
+| acl2 | Authors' book page https://www.cs.utexas.edu/~moore/publications/acl2-books/car/index.html: Kaufmann, Manolios, Moore; Kluwer, 2000. |
+| rocq | Official versioned manual https://rocq-prover.org/doc/V9.2.0/refman/index.html, reached from the project's documentation page. No release year inferred; access date recorded. |
+| hol4 | Publisher https://doi.org/10.1007/978-3-540-71067-7_6: Slind and Norrish, TPHOLs 2008, LNCS 5170, 28–32. |
+| pvs | Authors' record https://www.csl.sri.com/papers/cade92-pvs/: Owre, Rushby, Shankar; CADE 1992, LNAI 607, 748–752. Removed the duplicate "and" in the site's BibTeX. |
+| sledgehammer | Official manual https://isabelle.in.tum.de/doc/sledgehammer.pdf, dated 24 October 2026. Main author and contributors follow its title page; its introduction explicitly describes ATP/SMT integration. |
+| leandojo | NeurIPS proceedings https://proceedings.nips.cc/paper_files/paper/2023/hash/4441469427094f8873d0fecb0c4e1cee-Abstract-Datasets_and_Benchmarks.html: title, nine authors, 2023, volume 36, DOI 10.52202/075280-0944. The authors' https://leandojo.org/leandojo.html explains premise retrieval and tactic generation. Cited as a published demonstration, not a claim of complete automation or a recommendation to install the deprecated original package. |
+
+The revised introduction was visually checked on pages 5–6. At this snapshot
+the complete PDF remains 59 pages, with no overfull boxes or undefined citations
+or references. Bibliography style warnings concern omitted optional publication
+fields; unsupported metadata was not invented to silence them.
