@@ -16,6 +16,7 @@ module Main (main) where
 import Control.Exception (ErrorCall, displayException, try)
 import Control.Monad (replicateM, unless, void)
 import Data.List (inits, isInfixOf, sort, tails)
+import Data.Maybe (fromMaybe)
 import System.Environment (getArgs)
 import qualified System.Timeout as Timeout
 
@@ -33,6 +34,7 @@ import Data.SBV.Tools.Overflow
 -- BEGIN listProofImports
 import qualified Documentation.SBV.Examples.TP.Lists as ListProofs
 -- END listProofImports
+import qualified Documentation.SBV.Examples.TP.Basics as TPBasics
 import qualified Documentation.SBV.Examples.TP.TautologyChecker as Taut
 import qualified Documentation.SBV.Examples.TP.BinarySearch as Search
 
@@ -415,6 +417,22 @@ sumNonNeg = induct "sumNonNeg"
               =: sTrue
               =: qed
 -- END sumNonNeg
+
+-- BEGIN appendAssoc
+appendAssoc :: TP (Proof (Forall "xs" [Integer] -> Forall "ys" [Integer]
+                       -> Forall "zs" [Integer] -> SBool))
+appendAssoc = induct "appendAssoc"
+  (\(Forall xs) (Forall ys) (Forall zs) ->
+      (xs SL.++ ys) SL.++ zs .== xs SL.++ (ys SL.++ zs)) $
+  \ih (x, xs) ys zs ->
+    [] |- ((x .: xs) SL.++ ys) SL.++ zs
+       =: (x .: (xs SL.++ ys)) SL.++ zs
+       =: x .: ((xs SL.++ ys) SL.++ zs)
+       ?? ih `at` (Inst @"ys" ys, Inst @"zs" zs)
+       =: x .: (xs SL.++ (ys SL.++ zs))
+       =: (x .: xs) SL.++ (ys SL.++ zs)
+       =: qed
+-- END appendAssoc
 
 -- BEGIN revAcc
 revAcc :: SList Integer -> SList Integer -> SList Integer
@@ -904,6 +922,146 @@ binarySearchConcrete = and <$> mapM checkCase casesToCheck
               _ -> pure False
 
 -------------------------------------------------------------------------------
+-- Failed TP obligations: adapted from TP.Basics, with an invalid calculation.
+-------------------------------------------------------------------------------
+
+-- BEGIN badLengthProof
+badLength :: SList Integer -> SInteger
+badLength xs = ite (SL.length xs .> 5 .&& 42 `SL.elem` xs)
+                   42 (SL.length xs)
+
+badLengthProof :: TP (Proof (Forall "xs" [Integer] -> SBool))
+badLengthProof = lemma "badLengthProof"
+  (\(Forall xs) -> observe "imp"  (badLength xs)
+              .== observe "spec" (SL.length xs)) []
+-- END badLengthProof
+
+-- BEGIN badCalculation
+badCalculation :: TP (Proof (Forall "n" Integer -> SBool))
+badCalculation = calc "badCalculation"
+  (\(Forall n) -> n + n .== 2 * n) $ \n ->
+    [] |- n + n
+       =: 2 * n + 1
+       =: 2 * n
+       =: qed
+-- END badCalculation
+
+-- BEGIN badJustification
+badJustification :: TP (Proof (Forall "n" Integer -> SBool))
+badJustification = calc "badJustification"
+  (\(Forall n) -> n + n .== 2 * n) $ \n ->
+    [] |- n + n
+       ?? (n .>= 0)
+       =: 2 * n
+       =: qed
+-- END badJustification
+
+-- BEGIN showHintFailure
+showHintFailure :: IO ()
+showHintFailure = void $ runTPWith
+  z3Timeout5{tpOptions = (tpOptions z3Timeout5){printAsms = True}}
+  badJustification
+-- END showHintFailure
+
+-- Failure alone is insufficient: validate.py also requires a Falsifiable
+-- diagnostic for each expected failure, and checks the displayed observations.
+expectTPFailure :: IO () -> IO Bool
+expectTPFailure action = do
+  result <- try action :: IO (Either ErrorCall ())
+  case result of
+    Left err
+      | takeWhile (/= '\n') (displayException err) == "Failed" -> pure True
+      | otherwise -> do
+          putStrLn $ "Unexpected TP exception; expected first line \"Failed\" from the pinned SBV version:\n"
+                  ++ displayException err
+          pure False
+    Right () -> do
+      putStrLn "Expected a TP rejection, but the action completed successfully."
+      pure False
+
+badLengthRefuted :: IO Bool
+badLengthRefuted = do
+  result <- prove $ do
+    xs <- sList "xs"
+    pure $ badLength xs .== SL.length xs
+  pure $ case getModelValue "xs" result of
+    Just (xs :: [Integer]) ->
+      length xs > 5 && 42 `elem` xs && length xs /= 42 &&
+      unliteral (badLength (literal xs)) == Just 42
+    Nothing -> False
+
+tpFailureChecks :: IO ()
+tpFailureChecks = do
+  putStrLn "BEGIN badLengthProof"
+  check "TP rejects the incorrect length function" $
+    expectTPFailure $ void $ runTPWith z3Timeout5 badLengthProof
+  putStrLn "END badLengthProof"
+  check "length counterexample against ordinary Haskell length" badLengthRefuted
+  putStrLn "BEGIN badCalculation"
+  check "TP rejects the incorrect intermediate equality" $
+    expectTPFailure $ void $ runTPWith z3Timeout5 badCalculation
+  putStrLn "END badCalculation"
+  check "the failed calculation's theorem is nevertheless true" $
+    isTheorem $ \(n :: SInteger) -> n + n .== 2 * n
+  putStrLn "BEGIN badJustification"
+  check "TP rejects the unjustified Boolean hint" $
+    expectTPFailure showHintFailure
+  putStrLn "END badJustification"
+  putStrLn "BEGIN forallDisjunctionNot"
+  check "TP reports a function model for the false quantified law" $
+    expectTPFailure $ TPBasics.forallDisjunctionNot @Integer
+                       (uninterpret "p") (uninterpret "q")
+  putStrLn "END forallDisjunctionNot"
+
+-------------------------------------------------------------------------------
+-- Tautology checker: concrete examples and an independent truth-table oracle.
+-------------------------------------------------------------------------------
+
+-- A direct evaluator over ordinary constructors, independent of symbolic eval,
+-- normalization, and the checking algorithm. The first binding wins; missing
+-- variables are false, as in the library's stated semantics.
+evalFormula :: Taut.Formula -> [Taut.Binding] -> Bool
+evalFormula f bs = case f of
+  Taut.FTrue -> True
+  Taut.FFalse -> False
+  Taut.Var n -> fromMaybe False $ lookup n [(i, v) | Taut.Binding i v <- bs]
+  Taut.If c l r -> evalFormula (if evalFormula c bs then l else r) bs
+
+normalFormula :: Taut.Formula -> Bool
+normalFormula (Taut.If c l r) = case c of
+  Taut.If{} -> False
+  _ -> normalFormula l && normalFormula r
+normalFormula _ = True
+
+tautologyConcrete :: IO Bool
+tautologyConcrete = pure $ all agrees formulas && workedExamples
+  where p = Taut.Var 0
+        q = Taut.Var 1
+        good = Taut.If p p Taut.FTrue
+        bad = Taut.If p q Taut.FTrue
+        nested = Taut.If (Taut.If p q Taut.FFalse) q Taut.FTrue
+        atoms = [Taut.FTrue, Taut.FFalse, p, q]
+        formulas = atoms ++ [Taut.If c l r | c <- atoms, l <- atoms, r <- atoms]
+                         ++ [nested, Taut.If nested good bad]
+        assignments = [[Taut.Binding 0 a, Taut.Binding 1 b] | a <- [False, True], b <- [False, True]]
+        agrees f = case (unliteral (Taut.normalize (literal f)),
+                        unliteral (Taut.isTautology (literal f)),
+                        unliteral (Taut.falsify (literal f))) of
+          (Just nf, Just verdict, Just (Taut.FalsifyResult rejected witness)) ->
+            normalFormula nf &&
+            all (\bs -> evalFormula f bs == evalFormula nf bs) assignments &&
+            verdict == all (evalFormula f) assignments &&
+            rejected == not verdict && (verdict || not (evalFormula f witness))
+          _ -> False
+        workedExamples =
+          unliteral (Taut.isTautology (literal good)) == Just True &&
+          unliteral (Taut.isTautology (literal bad)) == Just False &&
+          case unliteral (Taut.falsify (literal bad)) of
+            Just (Taut.FalsifyResult True bs) ->
+              evalFormula p bs && not (evalFormula q bs) && not (evalFormula bad bs)
+            _ -> False
+
+-------------------------------------------------------------------------------
 -- Section: Generating C
 -------------------------------------------------------------------------------
 
@@ -961,7 +1119,10 @@ main = do
         void binarySearchProof >> pure True
       check "binary-search results against a list oracle (10 cases)" binarySearchConcrete
     ["--midpoint"] -> midpointChecks
+    ["--tp-failures"] -> tpFailureChecks
+    ["--tautology-concrete"] -> check "tautology checker against truth tables (70 formulas)" tautologyConcrete
     ["--tautology"] -> do
+      check "tautology checker against truth tables (70 formulas)" tautologyConcrete
       check "tautology checker soundness"    $ void (runTP Taut.soundness)              >> pure True
       check "tautology checker completeness" $ void (runTPWith cvc5 Taut.completeness)  >> pure True
     [] -> do
@@ -1003,6 +1164,8 @@ main = do
       check "datatype puzzle model re-evaluates to 42" puzzleChecked
       check "datatype first introduced during query" $ (== Sat) <$> lateDatatype
       check "sum of nonnegatives, by induction" $ void (runTP sumNonNeg) >> pure True
+      check "append associativity, by induction on the first list" $
+        void (runTP appendAssoc) >> pure True
       check "non-generalized reversal proof fails" revWeakFails
       check "generalized accumulator reversal" $ void (runTP revAccCorrect) >> pure True
       check "reversal with empty initial accumulator" $ void (runTP reverseCorrect) >> pure True
@@ -1023,6 +1186,6 @@ main = do
       check "exercise 5: revAcc length" $ void (runTP revAccLength) >> pure True
       check "exercise 6: nonempty segments against an independent oracle" kadaneNonEmptyConcrete
       check "exercise 6: nonempty Kadane correctness" $ void (runTP kadaneNonEmptyCorrect) >> pure True
-    _ -> fail "Usage: tutorial-examples [--midpoint | --binary-search | --tautology | --generate DIR | --diagnostics FILE]"
+    _ -> fail "Usage: tutorial-examples [--midpoint | --binary-search | --tp-failures | --tautology | --tautology-concrete | --generate DIR | --diagnostics FILE]"
 
 {- HLint ignore shiftEach "Avoid lambda" -}

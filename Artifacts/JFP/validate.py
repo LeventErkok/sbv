@@ -1,5 +1,7 @@
 #!/usr/bin/env python3
 """Run the tutorial's checks and keep a complete, dated execution log."""
+import ast
+import re
 from datetime import datetime, timezone
 from hashlib import sha256
 from pathlib import Path
@@ -57,7 +59,7 @@ with log_path.open("w") as log:
                     ["cabal", "--numeric-version"], ["z3", "--version"],
                     ["cvc5", "--version"], ["cc", "--version"]]:
         run(command)
-    run(["cabal", "build", "--offline", "tutorial-examples"], timeout=900)
+    run(["cabal", "build", "--offline", "-fstrict", "tutorial-examples"], timeout=900)
     repo, package = sbv_source(tutorial)
     record("\nSBV source revision: " + package["pkg-src"]["source-repo"]["tag"])
     record("SBV source package SHA-256: " + package["pkg-src-sha256"])
@@ -72,8 +74,12 @@ with log_path.open("w") as log:
                         "validate.py", "prepare.py", "companion.py", "sbv-tutorial.cabal",
                         "cabal.project", "cabal.project.freeze", "jfp_format.py",
                         "sbv-tutorial.tex", "references.bib", "Makefile", "LICENSE"]),
-        (repo, "SBV/", ["sbv.cabal", "Documentation/SBV/Examples/TP/Lists.hs",
+        (repo, "SBV/", ["sbv.cabal", "Data/SBV/TP/TP.hs", "Documentation/SBV/Examples/TP/Lists.hs",
                         "Documentation/SBV/Examples/TP/TautologyChecker.hs",
+                        "Documentation/SBV/Examples/TP/Basics.hs",
+                        "Documentation/SBV/Examples/ProofTools/BMC.hs",
+                        "Documentation/SBV/Examples/ProofTools/Strengthen.hs",
+                        "Documentation/SBV/Examples/WeakestPreconditions/Basics.hs",
                         "Documentation/SBV/Examples/TP/BinarySearch.hs",
                         "Documentation/SBV/Examples/BitPrecise/BrokenSearch.hs"]),
     ]:
@@ -88,6 +94,49 @@ with log_path.open("w") as log:
     if "*** Failed to prove revWeak.2." not in output:
         record("VALIDATION FAILED: expected failure at reversal step 2 was not observed")
         raise SystemExit(1)
+    failures = run([executable, "--tp-failures"])
+    def failed_obligation(name, obligation, *, assumptions=False):
+        block = failures.split("BEGIN " + name + "\n", 1)[1].split("END " + name, 1)[0]
+        kind = "assumptions for " if assumptions else ""
+        if (f"*** Failed to prove {kind}{obligation}." not in block or
+                "Falsifiable. Counter-example:" not in block):
+            raise SystemExit(f"Expected a refuting model for {name}, not just an exception")
+        return block
+
+    length_model = failed_obligation("badLengthProof", "badLengthProof")
+    xs = ast.literal_eval(re.search(r"xs\s*=\s*(\[[^\n]*\])\s*::", length_model)[1])
+    imp = int(re.search(r"imp\s*=\s*(-?\d+)\s*::", length_model)[1])
+    spec = int(re.search(r"spec\s*=\s*(-?\d+)\s*::", length_model)[1])
+    if not (len(xs) > 5 and 42 in xs and imp == 42 and spec == len(xs) and imp != spec):
+        raise SystemExit("TP length model fails independent concrete replay")
+
+    step_model = failed_obligation("badCalculation", "badCalculation.1")
+    n = int(re.search(r"\bn\s*=\s*(-?\d+)\s*::", step_model)[1])
+    if not (n + n != 2*n + 1 and n + n == 2*n):
+        raise SystemExit("TP step model does not distinguish the step from its theorem")
+
+    hint_model = failed_obligation("badJustification", "badJustification.1", assumptions=True)
+    n = int(re.search(r"\bn\s*=\s*(-?\d+)\s*::", hint_model)[1])
+    if not (n < 0 and n + n == 2*n):
+        raise SystemExit("TP hint model does not refute the justification while satisfying the equality")
+
+    function_model = failed_obligation("forallDisjunctionNot", "forallDisjunctionNot")
+    def predicate(name):
+        rows = re.findall(r"^\s*" + name + r"\s+(-?\d+|_)\s*=\s*(True|False)\s*$",
+                          function_model, re.M)
+        values = {key: value == "True" for key, value in rows}
+        if "_" not in values:
+            raise SystemExit("Function model has no default value")
+        return values
+    p, q = predicate("p"), predicate("q")
+    # The union of explicit arguments plus the default partitions the entire
+    # integer domain for these finite function interpretations.
+    regions = set(p) | set(q)
+    pv = [p.get(k, p["_"]) for k in regions]
+    qv = [q.get(k, q["_"]) for k in regions]
+    if not (all(a or b for a, b in zip(pv, qv)) and not all(pv) and not all(qv)):
+        raise SystemExit("Function model does not refute the quantified equivalence")
+    record("PASS TP diagnostics: replayed concrete, intermediate-step, and function models")
     run([executable, "--binary-search"])
     run([executable, "--tautology"])
     transcript = build / "sat-add.smt2"
@@ -105,6 +154,6 @@ with log_path.open("w") as log:
     run([build / "adder-check"])
     record("\nVALIDATION PASSED: all tutorial checks (including random tests and exercise")
     record("solutions and midpoint checks), the strengthened binary-search TP proof,")
-    record("binary-search concrete oracles, verbose diagnostics and SMT-LIB transcript replay, the")
-    record("tautology checker's soundness and completeness proofs, and exhaustive")
+    record("binary-search concrete oracles, TP counterexample replay, verbose diagnostics and SMT-LIB transcript replay, the")
+    record("tautology checker's truth-table checks, soundness and completeness proofs, and exhaustive")
     record("generated-C checking. Timings are single-run diagnostics, not benchmarks.")

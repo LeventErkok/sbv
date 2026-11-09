@@ -3,8 +3,9 @@
 
 Two sources are used:
   * examples/TutorialExamples.hs, delimited by '-- BEGIN name' / '-- END name';
-  * declarations quoted verbatim from SBV's own documentation modules, taken
-    from the declaration's first line up to the next top-level line.
+  * declarations extracted from SBV's own documentation modules, taken
+    from the declaration's first line up to the next top-level line; two long
+    declarations are reindented with a non-whitespace identity check.
 PAPER-ELIDE-BEGIN/END comments replace checked code with a printed summary.
 Every \\snippet{name}, \\snippet*{name}, or \\libsnippet{name} must resolve to an extracted file.
 """
@@ -49,10 +50,52 @@ for name, body in re.findall(r"^-- BEGIN (\w+)\n(.*?)^-- END \1$", companion, re
 # (snippet name, library module, regex matching the declaration's first line)
 library = [
     ("binarySearch", "Documentation/SBV/Examples/TP/BinarySearch.hs", r"^bsearch :: "),
+    ("tautNormalize",    "Documentation/SBV/Examples/TP/TautologyChecker.hs", r"^normalize :: "),
+    ("tautEval",         "Documentation/SBV/Examples/TP/TautologyChecker.hs", r"^eval :: "),
+    ("tautCheck",        "Documentation/SBV/Examples/TP/TautologyChecker.hs", r"^isTautology' :: "),
+    ("tautTop",          "Documentation/SBV/Examples/TP/TautologyChecker.hs", r"^isTautology :: "),
     ("tautFormula",      "Documentation/SBV/Examples/TP/TautologyChecker.hs", r"^data Formula "),
     ("tautSoundness",    "Documentation/SBV/Examples/TP/TautologyChecker.hs", r"^soundness :: "),
     ("tautCompleteness", "Documentation/SBV/Examples/TP/TautologyChecker.hs", r"^completeness :: "),
 ]
+# Compact whitespace in two long library declarations for the printed page.
+# The extraction below verifies that no non-whitespace character has changed;
+# these declarations contain no string literals with significant whitespace.
+formatted_library = {
+    "tautNormalize": r'''normalize :: SFormula -> SFormula
+normalize = smtFunctionWithMeasure "normalize"
+  ( \f -> tuple (ifComplexity f, ifDepth f)
+  , [ measureLemma ifDepthNonNeg
+    , measureLemma ifComplexityPos
+    , measureLemmaWith z3 ifComplexitySmaller
+    , measureLemmaWith z3 normalizePreservesComplexity
+    ]
+  ) $ \f -> [sCase| f of
+    If (If p q r) left right ->
+      normalize (sIf p (sIf q left right) (sIf r left right))
+    If c left right -> sIf c (normalize left) (normalize right)
+    _ -> f
+  |]
+''',
+    "tautSoundness": r'''soundness :: TP (Proof (Forall "f" Formula
+                    -> Forall "bindings" [Binding] -> SBool))
+soundness = do
+  tie <- recallWith cvc5 tautologyImpliesEval
+  nrt <- recall normalizeRespectsTruth
+  nc  <- recall normalizeCorrect
+  calc "soundness"
+    (\(Forall f) (Forall bindings) -> isTautology f .=> eval f bindings) $
+    \f bindings -> [isTautology f]
+      |- eval f bindings
+      ?? nrt `at` (Inst @"f" f, Inst @"bs" bindings)
+      =: eval (normalize f) bindings
+      ?? nc `at` Inst @"f" f
+      ?? tie `at` (Inst @"f" (normalize f),
+                   Inst @"a" bindings, Inst @"b" [])
+      =: sTrue
+      =: qed
+''',
+}
 for name, module, start in library:
     lines = (repo / module).read_text().splitlines()
     first = next((i for i, l in enumerate(lines) if re.match(start, l)), None)
@@ -64,7 +107,11 @@ for name, module, start in library:
         last += 1
     while not lines[last - 1].strip():
         last -= 1
-    snippets[name] = "\n".join(lines[first:last]) + "\n"
+    source = "\n".join(lines[first:last]) + "\n"
+    rendered = formatted_library.get(name, source)
+    if re.sub(r"\s+", "", source) != re.sub(r"\s+", "", rendered):
+        raise SystemExit(f"{name}: formatted listing differs from the library source")
+    snippets[name] = rendered
 
 used = set(re.findall(r"\\(?:lib)?snippet\*?\{(\w+)\}", (root / "sbv-tutorial.tex").read_text()))
 missing = sorted(used - snippets.keys())

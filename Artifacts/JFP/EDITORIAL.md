@@ -380,6 +380,107 @@ match their pre-copy hashes.
   freeze file, revise the source-snapshot wording, and rerun the checks. The
   GitHub URL does not need anonymization for JFP's single-anonymous review.
 - AI-disclosure work remains deferred at the author's request. The inherited
-  Preparation paragraph is unchanged; resolve its final wording later.
+  Preparation paragraph was removed at the author's request. Open submission
+  task: check the applicable disclosure policy and resolve any required final
+  wording. There is currently no disclosure statement in the manuscript.
 - Supply actual publication metadata only after acceptance; keep the approved
   acknowledgments visible. Select the tutorial category in the submission form.
+
+
+## November 2026: TP failures, tautology checker, and suggested project
+
+The former state-transition chapter is now an open-ended exercise under
+Suggested projects, after Connections. It supplies a concrete initial state,
+transition, safety goal, staged tasks, and hints linked to the pinned
+`ProofTools.BMC`, `ProofTools.Strengthen`, and `WeakestPreconditions.Basics`
+modules. It is not counted among the six exercises with companion solutions.
+The abstract and roadmap reflect this change of role.
+
+A new TP-failure section distinguishes refuted theorems, refuted intermediate
+steps in true theorems, and inconclusive results. Its wrong-length example is
+adapted from `TP.Basics`; the uninterpreted-predicate example runs that module's
+`forallDisjunctionNot` directly. Validation replays the actual printed models,
+including `observe` values and the finite descriptions of the predicates.
+
+The expanded tautology-checker section follows representation and evaluation,
+normalization and its lexicographic measure, the complete checking traversal,
+a worked implication example, generalized soundness, and constructive
+completeness. Listings come from the pinned library. An independent Haskell
+truth-table oracle checks 70 formulas, including nested conditions, and the
+companion still runs both universal correctness theorems with their dependencies.
+The Haskell Symposium copy remains unchanged; its companion and the JFP
+companion intentionally diverge.
+
+Verification snapshot, 2026-11-09, after append associativity, the incorrect
+hint, and the Bird project: the snapshot includes the expanded tautology checker
+and both suggested projects. Consult the current PDF and contents for section
+numbers and pagination in later revisions.
+The PDF has no overfull boxes
+or unresolved references, and the affected pages were inspected. The full
+companion validation passes, including replay of the actual TP diagnostic
+models, truth-table checks, both universal tautology proofs, and generated C.
+Two long library listings are reindented for readability; extraction verifies
+that their non-whitespace content matches the pinned source. HLint reports no
+hints, and validation builds with warnings treated as errors.
+
+The incorrect-justification example adds `?? (n .>= 0)` to a valid calculation
+of `n + n == 2*n`. The pinned TP engine proves Boolean hints separately before
+using them; `printAsms = True` exposes the otherwise quiet failing check.
+The diagnostic specifically says `assumptions for badJustification.1`, with a
+negative input. Validation replays that input against both the false hint and
+the true equality, distinguishing a bad justification from a bad step.
+
+Append associativity now follows the first inductive example in section 15.2.
+It makes the empty-list base case explicit in prose and shows two unfoldings,
+instantiation of the tail hypothesis at the current `ys` and `zs`, and a final
+folding step. The companion checks the universal theorem by list induction.
+
+Citation added to the Kadane section after the segment-oracle paragraph:
+Richard S. Bird, "Algebraic Identities for Program Calculation", The Computer
+Journal 32(2), 122–126 (1989), DOI 10.1093/comjnl/32.2.122. Bibliographic details
+were checked against Oxford's repository and Bird's publication list. The
+publisher PDF could not be retrieved, but the actual derivation is reproduced
+in Figure 9, page 14, of Jeremy Gibbons's "The School of Squiggol"
+(https://www.cs.ox.ac.uk/people/jeremy.gibbons/publications/squiggol-history.pdf),
+and that image was inspected. It uses map/fold promotion, Horner's rule, the
+scan lemma, and fold-scan fusion to reach a paired left fold. Its pair is our
+`(msf, meh)`. It is cited as the algebraic derivation of the same algorithm,
+alongside Bentley's existing algorithm citation. The comparison explicitly
+states that we have not mechanized Bird's derivation: the current proof checks
+the accumulator implementation against a recursive specification. A faithful
+TP rendition is expected to require more proof infrastructure, not claimed to
+be impossible. The pinned `TP.Lists` includes `foldrMapFusion` and `foldrFusion`,
+so the paragraph acknowledges existing higher-order support and links forward
+to our bookkeeping proof. The original notation is Miranda-like, not literally
+Haskell.
+
+Section 25.2 now proposes mechanizing Bird's maximum-segment-sum derivation as
+an advanced project. It starts from segment enumeration, proceeds through
+Horner's rule and a scan, and ends with a paired left fold connected to Kadane.
+Hints recommend pointwise statements, integer instances first, explicit lemma
+instantiation, and the existing fold-fusion examples as templates. It explicitly
+does not promise a companion solution or a proof as compact as Bird's paper.
+The roadmap, setup wording, and README now account for both open-ended projects.
+
+### 2026-11-09: pre-commit review checks
+
+Compared the normalization measure with the pinned `TautologyChecker.hs`:
+`ifDepth` is zero except for `If c _ _`, where it is `1 + ifDepth c`;
+`ifComplexity` is one except for `If c l r`, where it is `C(c)*(C(l)+C(r))`.
+For `If (If p q r) l r'`, the original complexity is
+`C(p)*(C(q)+C(r))*(C(l)+C(r'))`. The rewritten complexity is
+`C(p)*(C(q)*(C(l)+C(r')) + C(r)*(C(l)+C(r')))`, equal by distributivity.
+Depth changes from `2+D(p)` to `1+D(p)`. Since every complexity is a positive
+integer, `C(c)*(C(l)+C(r)) >= C(l)+C(r) > C(l)` and likewise for `r`.
+The manuscript's claims therefore hold exactly. The source comment above
+`normalize` saying the rewrite reduces complexity is imprecise; its definitions
+and `normalizePreservesComplexity` lemma confirm preservation of the first
+measure component. No change to the pinned library was made.
+
+Both suggested-project headings now say "Project", matching their role outside
+the six numbered exercises. The README documents validation's explicit `-fstrict`
+flag and its `-Werror` effect. `expectTPFailure` still requires the pinned
+exception format, but reports the actual exception if that format changes;
+a successful action where rejection was expected also gets a specific diagnostic.
+Disclosure-policy checking remains an open submission task; no disclosure was
+added to the manuscript.

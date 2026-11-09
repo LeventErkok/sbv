@@ -26,11 +26,13 @@
     \begin{minipage}{\linewidth}
     \lstinputlisting{build/snippets/#2.hs}
     \end{minipage}}\par}
-% Listings quoted verbatim from SBV's documentation modules, which use wider lines.
-\newcommand{\libsnippet}[1]{\par\noindent
-  \begin{minipage}{\linewidth}
-  \lstinputlisting[basicstyle=\footnotesize\ttfamily]{build/snippets/#1.hs}
-  \end{minipage}\par}
+% Listings extracted from SBV's documentation modules, which use wider lines.
+\NewDocumentCommand{\libsnippet}{s m}{\par\noindent
+  \IfBooleanTF{#1}{
+    \lstinputlisting[basicstyle=\footnotesize\ttfamily,breakatwhitespace=true]{build/snippets/#2.hs}}{
+    \begin{minipage}{\linewidth}
+    \lstinputlisting[basicstyle=\footnotesize\ttfamily,breakatwhitespace=true]{build/snippets/#2.hs}
+    \end{minipage}}\par}
 \newcounter{exercise}
 \newenvironment{exercise}{\refstepcounter{exercise}\par\medskip\noindent
   \textbf{Exercise~\theexercise.}\ }{\par\medskip}
@@ -63,8 +65,9 @@ formulate a question so that its answer means what we intend, how to represent
 programs and data so that a solver can reason about them, and how to structure
 an argument when automation alone is not enough. Counterexamples refine
 specifications, the same models support search, optimization, and synthesis, and
-induction and invariants extend proofs from simple properties to recursive and
-stateful programs. Recurring examples connect these ideas; a binary-search
+induction and invariants extend proofs from simple properties to recursive
+programs. A suggested project carries the method into stateful verification.
+Recurring examples connect these ideas; a binary-search
 overflow found as a counterexample, for instance, later becomes part of a
 correctness proof. We close by examining what a successful check establishes,
 from generated code to the limits of the model. No background in automated
@@ -160,20 +163,23 @@ their boundaries and context:
   Sections~\ref{sec:induction}--\ref{sec:tautology} combine equational calculations
   with induction. Generalization supplies the hypotheses needed for accumulator
   programs, including list reversal and Kadane's algorithm. Decreasing measures
-  support proofs about expression trees and binary search; invariant strengthening
-  carries the same lesson into stateful programs. Polymorphic and higher-order
-  proofs extend the method to reusable abstractions, and a verified tautology
-  checker brings these techniques into a larger development.
+  support proofs about expression trees and binary search. Failed TP obligations
+  show how to distinguish a counterexample to a theorem from one to an intermediate
+  step. Polymorphic and higher-order proofs extend the method to reusable
+  abstractions, and a verified tautology checker brings these techniques into a
+  larger development.
 \item \emph{Boundaries and context.}
-  Sections~\ref{sec:codegen}--\ref{sec:related} follow a verified function through
+  Sections~\ref{sec:codegen}--\ref{sec:projects} follow a verified function through
   C generation, then examine the execution model, termination obligations, and
   the scope of finite-data models. Diagnostics, solver selection, and proof
   dependencies help interpret successful and unsuccessful checks; connections
-  to other approaches place the method in context.
+  to other approaches place the method in context. Suggested projects transfer
+  invariant strengthening to stateful programs and explore the mechanization of
+  Bird's algebraic derivation of maximum segment sum.
 \end{itemize}
 Recurring examples connect the parts: the midpoint counterexample returns in the
 binary-search proof, expression trees connect search and synthesis to induction,
-and accumulator generalization becomes invariant strengthening for state transitions.
+and accumulator generalization guides the suggested project on state transitions.
 Readers primarily interested in induction can proceed from
 Sections~\ref{sec:first}--\ref{sec:specs} and \ref{sec:host} to
 Section~\ref{sec:induction}, returning to contracts, datatypes, and arrays as needed.
@@ -184,7 +190,6 @@ about mathematical integers or finite lists must not be silently transferred to
 machine integers, partial computations, or infinite lists. Making these choices
 explicit is part of the method, alongside writing and checking the proof.
 
-\clearpage
 \paragraph{Following along.}
 The standalone companion pins its dependencies, including an SBV 14.10 source
 snapshot, and declares the required language extensions. It was checked with
@@ -199,7 +204,8 @@ The session loads all imports, including \code{Data.SBV.List} qualified as
 \code{SL}, and enables the extensions used below. Run the checks with
 \code{cabal run tutorial-examples}; the README gives full validation instructions.
 The execution log records source hashes and exact tool versions.
-Each exercise names its checked solution in the companion.
+Each of the six numbered exercises names its checked solution in the companion;
+the suggested projects supply starting hints instead.
 
 Listings are extracted from checked sources; transcripts and elisions are marked
 separately. Model values and their order can vary between solver versions, so
@@ -865,12 +871,45 @@ the theorem as stated. The last line reports that the recursive functions used,
 including the library's \code{foldr} that underlies \code{SL.all}, were checked for
 termination. Section~\ref{sec:termination} explains how TP enforces this requirement.
 
+\subsection{Associativity of append}
+\label{sec:append-assoc}
+
+Before introducing accumulators, consider a structural property of lists:
+\[
+  (xs \mathbin{++} ys) \mathbin{++} zs
+  = xs \mathbin{++} (ys \mathbin{++} zs).
+\]
+Appending recurses on its first argument, so we induct on \code{xs}, keeping
+\code{ys} and \code{zs} universally quantified. Only the grouping changes;
+the order of the elements stays the same.
+
+The base case is immediate: replacing \code{xs} by \code{[]} reduces both
+sides to \code{ys SL.++ zs}. In the inductive case, write the first list as
+\code{x .: xs}. Unfolding append twice exposes an equality about the tail,
+where the induction hypothesis applies:
+\snippet*{appendAssoc}
+The first two links use \code{(x .: xs) SL.++ ys = x .: (xs SL.++ ys)}.
+The third uses the hypothesis
+\code{(xs SL.++ ys) SL.++ zs .== xs SL.++ (ys SL.++ zs)} beneath the
+outer cons. The expression \code{ih `at` (Inst @"ys" ys, Inst @"zs" zs)}
+specializes its two quantified parameters to the current lists; the tail
+\code{xs} is already fixed by induction. The last link folds the definition
+of append back into the required right-hand side.
+
+Running \code{runTP appendAssoc} checks the base case, these four links, and
+the final result. The proof needs no preconditions, hence the empty list before
+\code{|-}. Its hypothesis has exactly the shape exposed by unfolding the
+definition. Accumulator programs will require us to work harder to obtain
+that match.
+
 \subsection{Solver obligations in a calculation}
 
 Figure~\ref{fig:calculation} shows the queries under assumptions $A$, with
 facts $H_i$ supplied by hints $h_i$. Definitions are available in every query.
 SBV also checks that the chain establishes the stated theorem under its
-precondition. For failed steps, see Section~\ref{sec:troubleshooting}.
+precondition. Boolean hints must themselves follow from the local assumptions;
+Section~\ref{sec:bad-hint} shows what happens when one is wrong. For failed
+steps, see Section~\ref{sec:troubleshooting}.
 
 \begin{figure}[htbp]
 \centering
@@ -976,6 +1015,21 @@ and \code{kadane} against this oracle on all 3,906 lists of length at most five
 over $\{-2,-1,0,1,2\}$, plus the examples above. These tests check the connection
 to the intended specification; the theorem below establishes equivalence for
 every finite integer list.
+
+\citet{birdCalculation} derives the linear algorithm from a segment-enumerating
+specification using algebraic laws for higher-order functions, including
+Horner's rule, the scan lemma, and fold--scan fusion. The resulting paired fold
+maintains the same two quantities as our implementation. We expect a faithful
+TP rendition of that compact derivation to require considerably more proof
+infrastructure than the invariant proof below: laws must be instantiated,
+their side conditions discharged, and any missing supporting lemmas proved.
+TP can express such arguments---its list examples already include fusion
+lemmas, and Section~\ref{sec:higherorder} develops a related higher-order law---but
+the solver does not automatically supply this algebra of program transformations.
+We have not mechanized Bird's derivation here. Our proof establishes the
+accumulator implementation's equivalence to a recursive specification; it does
+not derive the implementation from the segment enumeration.
+Section~\ref{sec:bird-project} proposes that derivation as a further project.
 
 \subsection{Implementation}
 
@@ -1178,19 +1232,126 @@ index conversions and updates \code{mid+1} and \code{mid-1}.
 
 %==============================================================================
 
-% BEGIN proposed-outline:stateful-programs
-\section{State transitions and inductive invariants}
-\label{sec:stateful-programs}
+\section{Failed TP proofs and counterexamples}
+\label{sec:tp-failures}
 
-\subsection{Transition systems and bounded model checking}
-\label{sec:bounded-model-checking}
+A failed TP run is a diagnostic about an obligation, not a verdict on every
+statement in the script. A solver can refute the stated theorem, refute an
+intermediate equality, or leave an obligation unresolved. The examples below
+make these outcomes concrete; the companion runs the expected failures and
+checks their diagnostics. The first example adapts
+\code{Documentation.SBV.Examples.TP.Basics}.
 
-\subsection{Inductive invariants and strengthening}
-\label{sec:transition-invariants}
+\subsection{Concrete inputs and observed values}
 
-\subsection{Weakest preconditions and imperative programs}
-\label{sec:weakest-preconditions}
-% END proposed-outline:stateful-programs
+Suppose a length function returns 42 whenever its input has more than five
+elements and contains 42. This intentionally incorrect definition is compared
+with the library length function:
+\snippet{badLengthProof}
+\code{observe} names expressions to include in the model; it does not add a
+premise to the theorem. Running \code{runTPWith z3Timeout5 badLengthProof}
+produces the following diagnostic in our validation run, followed by a
+\code{Failed} exception:
+\begin{lstlisting}[style=output]
+Lemma: badLengthProof
+*** Failed to prove badLengthProof.
+Falsifiable. Counter-example:
+  xs   = [11,13,16,18,21,42] :: [Integer]
+  imp  =                  42 :: Integer
+  spec =                   6 :: Integer
+\end{lstlisting}
+The universal input \code{xs} has become a concrete finite list. The observations
+explain the disagreement: the implementation returns 42, while the specification
+returns 6. The elements other than 42 have no particular significance; another
+solver run may choose different ones. Evaluate both sides on the reported input
+before deciding whether the implementation or the specification needs repair.
+Validation checks the displayed model with ordinary list length and membership.
+TP does not return a \code{Proof} for a refuted obligation. Its validation driver
+catches the exception because failure is expected in this example.
+
+\subsection{A failed step in a true theorem}
+
+A calculation can fail even when its advertised theorem is true:
+\snippet{badCalculation}
+The theorem is the identity $n+n=2n$, but the first step incorrectly inserts 1.
+For \code{runTPWith z3Timeout5 badCalculation}, the relevant output is:
+\begin{lstlisting}[style=output]
+*** Failed to prove badCalculation.1.
+Falsifiable. Counter-example:
+  n = 0 :: Integer
+\end{lstlisting}
+This refutes the first equality, $n+n=2n+1$: its two sides are 0 and 1 at the
+reported input. It does not refute $n+n=2n$, which the companion proves separately.
+The suffix \code{.1} identifies the failing obligation. Remove the incorrect
+step and the calculation can establish its intended theorem.
+
+More generally, the model satisfies the assumptions and hints available to that
+step and falsifies its goal. A missing premise, a missing lemma, or an induction
+hypothesis instantiated at the wrong arguments can leave an obligation too weak.
+A model of such an obligation need not describe a reachable program execution.
+Inspect the local goal and its premises before treating it as a bug in the
+original program. Conversely, a timeout or \code{unknown} supplies no refuting
+model: the \code{revWeak} attempt in Section~\ref{sec:induction} is unresolved,
+not disproved. Termination-check failures concern admissibility of a definition
+and are a further, separate diagnostic (Section~\ref{sec:termination}).
+
+\subsection{An incorrect justification}
+\label{sec:bad-hint}
+
+A Boolean expression supplied with \code{??} is itself a proof obligation.
+SBV first checks that it follows from the local assumptions, before using it to
+justify the equality. For example, the following calculation inserts the
+unjustified claim that its arbitrary integer input is nonnegative:
+\snippet{badJustification}
+Both the stated theorem and the equality are valid, but the hint is not.
+To see the separate check of Boolean hints, enable \code{printAsms}:
+\snippet{showHintFailure}
+Running \code{showHintFailure} produces:
+\begin{lstlisting}[style=output]
+Lemma: badJustification
+  Asms: 1
+*** Failed to prove assumptions for badJustification.1.
+Falsifiable. Counter-example:
+  n = -1 :: Integer
+\end{lstlisting}
+At this input the proposed justification is false, although the equality still
+holds: both sides are $-2$. The words \emph{assumptions for} distinguish this
+failure from a refuted calculation step. Here the repair is simply to remove
+the hint. If a proof genuinely needs a nonnegative input, that restriction must
+be justified by the surrounding context or made a precondition of the theorem;
+inserting it with \code{??} does not establish it. Unlike a previously proved
+lemma supplied as a hint, a fresh Boolean hint must be discharged at its point
+of use. In the pinned SBV version these checks are normally quiet, including
+their failure diagnostics; \code{printAsms = True} exposes the counterexample.
+Validation checks that the reported integer refutes the hint while satisfying
+the equality.
+
+\subsection{Function interpretations as counterexamples}
+
+A model can also describe an uninterpreted operation. The library example
+\code{forall\allowbreak Disjunction\allowbreak Not} attempts the invalid equivalence
+\[
+ ((\forall x.\ p(x))\lor(\forall x.\ q(x)))
+ \quad\Longleftrightarrow\quad \forall x.\ (p(x)\lor q(x)).
+\]
+With \code{p} and \code{q} uninterpreted predicates on integers, TP reports:
+\begin{lstlisting}[style=output]
+p :: Integer -> Bool
+p 3 = True
+p _ = False
+
+q :: Integer -> Bool
+q 3 = False
+q _ = True
+\end{lstlisting}
+These are finite descriptions of total functions: the underscore gives the
+value at every unlisted input. At each integer at least one predicate is true,
+but neither predicate is true at every integer. Thus the right side holds and
+the left side fails. The exceptional integer need not be 3 in another run.
+The companion invokes the library example and checks this interpretation of its
+model. Models of functions, arrays, and datatypes should be read according to
+their symbolic domains, just as scalar counterexamples are.
+
 
 \section{Polymorphic and higher-order proofs}
 \label{sec:higherorder}
@@ -1307,86 +1468,171 @@ finite integer list.
 \section{A verified tautology checker}
 \label{sec:tautology}
 
-Larger developments are built from the same ingredients. SBV's documentation
-includes a verified tautology checker for propositional formulas in
-if-then-else form, after a classic development by \citet[Chapter~4]{boyermoore} that was
-later formalized in Imandra~\citep{imandraTautology}. We sketch its structure
-rather than its proofs; the full development is in the module
-\code{Documentation.\allowbreak SBV.\allowbreak Examples.\allowbreak TP.\allowbreak TautologyChecker}. The listings in this
-section are quoted from that module.
+The checker in this section is a small verified decision procedure for
+propositional logic. It accepts a finite formula exactly when the formula is
+true under every assignment, and it can produce a falsifying assignment when
+the answer is no. Its design follows a classic development by
+\citet[Chapter~4]{boyermoore}, later formalized in Imandra~\citep{imandraTautology}.
+The SBV development is
+\code{Documentation.\allowbreak SBV.\allowbreak Examples.\allowbreak TP.\allowbreak TautologyChecker}.
+We follow the algorithm and its main proof obligations; listings below are
+extracted from that module, with whitespace adjusted in the longer declarations.
+The companion imports it qualified as \code{Taut}.
 
-\paragraph{Formulas and normalization.}
-A formula is a constant, a variable, or a conditional:
+\subsection{Formulas, assignments, and evaluation}
+
+A formula is a constant, a variable identified by an integer, or a conditional:
 \libsnippet{tautFormula}
-The checker first normalizes a formula so that no conditional appears in the
-condition position of another conditional, by repeatedly rewriting
-\code{If (If p q r) l r'} to \code{If p (If q l r') (If r l r')}. Abbreviated
-slightly, the definition is:
-\begin{lstlisting}
-normalize :: SFormula -> SFormula
-normalize = smtFunctionWithMeasure "normalize"
-    ( \f -> tuple (ifComplexity f, ifDepth f)
-    , [measureLemma ifDepthNonNeg, measureLemma ifComplexityPos, ...] )
-  $ \f -> [sCase| f of
-             If (If p q r) l r' -> normalize (sIf p (sIf q l r') (sIf r l r'))
-             If c l r           -> sIf c (normalize l) (normalize r)
-             _                  -> f
-          |]
-\end{lstlisting}
-This function is the first new ingredient. Its termination is not structural:
-the rewrite in the first branch produces a \emph{larger} formula. Instead of
-letting SBV guess a measure, the definition supplies one through
-\code{smtFunctionWithMeasure}: a pair
-ordered lexicographically. To see why this works, write $C$ for
-\code{ifComplexity} and $D$ for \code{ifDepth}. On constants and variables,
-$C=1$ and $D=0$; on conditionals,
+Conditionals suffice to encode the familiar connectives. Writing $p$ and $q$
+for formulas, negation is \code{If p FFalse FTrue}, conjunction is
+\code{If p q FFalse}, and implication is \code{If p q FTrue}. These are formulas
+of the object language; \code{If} constructs a formula rather than evaluating
+a Haskell conditional.
+
+An assignment is a list of \code{Binding} values, each pairing a variable ID
+with a Boolean. \code{lookUp} uses the first matching binding and defaults to
+false if none is present. Evaluation is structural recursion:
+\libsnippet{tautEval}
+This gives the specification independently of the checking algorithm. A tautology
+must evaluate to true for \emph{every} assignment, not just the empty assignment.
+Defaults make evaluation total; they do not mean that a variable is fixed to
+false when asking whether a formula is a tautology. Every assignment to the
+finitely many variables of a formula can be represented by a finite binding list.
+
+We will follow two examples: $p\Rightarrow p$, represented by
+\code{If (Var 0) (Var 0) FTrue}, and $p\Rightarrow q$, represented by
+\code{If (Var 0) (Var 1) FTrue}. The first is a tautology. The second is false
+when variable 0 is true and variable 1 is false.
+
+\subsection{Normalization and a decreasing measure}
+
+The checking traversal expects a normal form in which the condition of every
+\code{If} is a constant or a variable. A conditional can occur in either branch,
+but not as another conditional's condition. Normalization repeatedly distributes
+a nested condition:
+\[
+ \mathit{If}\ (\mathit{If}\ p\ q\ r)\ l\ r'
+ \quad\longmapsto\quad
+ \mathit{If}\ p\ (\mathit{If}\ q\ l\ r')\ (\mathit{If}\ r\ l\ r').
+\]
+If $p$ is true, both sides choose between $l$ and $r'$ using $q$; otherwise they
+use $r$. The rewrite therefore preserves meaning. For example, the condition of
+$(p\land q)\Rightarrow q$ is initially an \code{If}; this rewrite exposes $p$
+as the outer test. The complete definition supplies both the measure and its
+supporting lemmas:
+\libsnippet*{tautNormalize}
+Termination is not structural: the first branch can produce a larger tree by
+duplicating $l$ and $r'$. The supplied measure is a lexicographically ordered
+pair. Write $C$ for \code{ifComplexity} and $D$ for \code{ifDepth}. On constants
+and variables, $C=1$ and $D=0$; on conditionals,
 \[
  C(\mathit{If}\ c\ l\ r)=C(c)\bigl(C(l)+C(r)\bigr),
  \qquad D(\mathit{If}\ c\ l\ r)=1+D(c).
 \]
-The distributive rewrite preserves $C$ exactly and reduces $D$ by one.
-Recursing into either branch of an ordinary conditional strictly reduces $C$,
-because every complexity is positive. Thus each recursive call decreases the
-pair, even though tree size may increase. These checks use proved facts supplied
-by \code{measureLemma}, including positivity of $C$. Termination and
-truth preservation remain separate obligations.
+The distributive rewrite preserves $C$ and reduces $D$ by one. Recursing into
+either branch of an ordinary conditional strictly reduces $C$, since every
+complexity is positive. Each call therefore decreases the pair even when tree
+size increases. Proved facts supplied through \code{measureLemma} justify these
+checks. Separate lemmas establish that normalization produces a normal formula
+and preserves its evaluation under every assignment.
 
-\paragraph{Checking.}
-On a normalized formula, the checker walks down the conditionals, recording an
-assumed value for each variable the first time it is tested. When it meets a
-variable that was already assigned, it follows the corresponding branch;
-otherwise it checks both branches, once under each assumption. The function
-\code{isTautology f} normalizes \code{f} and runs this walk with no assumptions.
+\subsection{Checking both branches consistently}
 
-\paragraph{The theorems.}
-Soundness says that a formula accepted by the checker evaluates to true under
-every assignment:
-\libsnippet{tautSoundness}
-Completeness says that if the checker rejects a formula, a companion function
-\code{falsify} produces an assignment under which the formula is false.
-Both top-level proofs are short because the work is in their lemmas. The
-development contains 21 TP lemmas. Several prove properties of variable lookup
-when assignments are extended; others establish that normalization produces a
-normal formula and preserves meaning. The central inductive lemmas, such as
-\code{tautologyImpliesEval}, use \emph{strong induction} via \code{sInduct}:
-the hypothesis is available for every formula with a smaller measure, not only
-for immediate subformulas, which matches the shape of the recursion in
-\code{isTautology'}. The lemmas use \code{recall} to reuse previously proved
-results; some obligations use CVC5. The companion checks both top-level
-theorems and their dependencies.
+The worker maintains bindings for variables already tested along the current
+path. Here is the complete traversal:
+\libsnippet*{tautCheck}
+Constants settle immediately. At an \code{If} whose condition is a known
+variable, the worker follows the branch fixed by its binding. For an unassigned
+variable it checks both branches, prepending a true binding for the left branch
+and a false binding for the right. Repeated occurrences must respect the same
+choice: they are not independent Boolean inputs. A bare variable is accepted
+only when its lookup is true; an unassigned bare variable is correctly rejected
+because choosing it false is a counterexample. The final case rejects a nested
+condition, which normalization rules out before the traversal starts:
+\libsnippet{tautTop}
 
-\paragraph{What to take away.}
-The development reuses every technique from the earlier sections at larger
-scale. Generalization appears again: the central lemma \code{tautologyImpliesEval} is
-stated for arbitrary variable assignments, not only for the empty list of
-assumptions with which \code{isTautology} starts. Here strong induction extends
-beyond immediate children, and termination uses an explicit lexicographic measure.
-The structure
-of the proof follows the structure of the program: one group of lemmas per
-auxiliary function, and top-level theorems assembled from them by short
-calculations. SBV's documentation contains about forty further TP developments,
-including sorting algorithms, a semantics-preserving constant folder, and a
-compiler from expressions to a stack machine.
+For $p\Rightarrow p$, the first test splits into two cases:
+\begin{center}
+\begin{tabular}{lll}
+\toprule
+Path assumption & Remaining formula & Result \\
+\midrule
+$p=\mathit{True}$  & $p$                & true by lookup \\
+$p=\mathit{False}$ & $\mathit{FTrue}$   & true immediately \\
+\bottomrule
+\end{tabular}
+\end{center}
+Both paths succeed. For $p\Rightarrow q$, the true branch reaches the unassigned
+variable $q$ and fails; the false branch still succeeds. The conjunction of the
+two results is false. This is a search through consistent assignments, with
+branches pruned when a variable already has a value; it can still explore
+exponentially many cases.
+
+The companion checks these examples and 70 formulas in total against an
+independent Haskell evaluator and all four assignments to variables 0 and 1.
+The collection includes nested conditions, so it also checks normalization and
+its truth preservation. These finite checks illustrate the algorithm; the
+following proofs establish the universal claims.
+
+\subsection{Soundness through a generalized invariant}
+
+The key lemma does not start with an empty environment. For every formula $f$,
+path bindings $b$, and further bindings $a$, it establishes
+\[
+ \mathit{isNormal}\ f\ \land\ \mathit{isTautology'}\ f\ b
+ \quad\Longrightarrow\quad \mathit{eval}\ f\ (b\mathbin{++}a).
+\]
+The leading bindings $b$ retain priority over the arbitrary completion $a$.
+This generalization is essential: recursive calls extend $b$, so a hypothesis
+only about the empty environment would not apply. It is the same design move
+used for the accumulator in reversal and Kadane's invariant.
+
+The proof uses \code{sInduct} with \code{ifComplexity}. In the unassigned-variable
+case, checking has established both branch results, one with the variable true
+and one with it false. Split on that variable's value in the arbitrary
+completion. Apply the induction hypothesis to the corresponding branch and
+use the binding lemmas to show that its extended environment agrees with the
+original evaluation. When the variable is already assigned, only its selected
+branch matters. Positivity and branch-decrease lemmas discharge the measure
+obligations. This isolates three groups of reusable facts: lookup under extension,
+normalization, and correctness of the traversal under path assumptions.
+
+The top-level soundness calculation assembles those facts:
+\libsnippet*{tautSoundness}
+First, \code{normalizeRespectsTruth} replaces evaluation of the original formula
+by evaluation of its normalization. Then \code{normalizeCorrect} supplies the
+normal-form premise, and \code{tautologyImpliesEval} is instantiated with empty
+path bindings and the arbitrary input assignment. The conclusion is true.
+The theorem covers every finite formula and every finite binding list; it is
+not limited to the formulas used in the concrete tests.
+
+\subsection{Completeness and a falsifying assignment}
+
+Rejection should also have a meaning. The function \code{falsify} normalizes
+its input and traverses it with bindings, like the checker, but seeks one
+failing path rather than requiring both paths to succeed. Its result records
+whether a counterexample was found and a list of bindings. A false constant
+returns the current bindings; an unassigned variable can be made false. At a
+new conditional test, the search tries the true branch and tries the false
+branch if the first attempt finds no counterexample.
+
+For $p\Rightarrow q$, this produces $p=\mathit{True},q=\mathit{False}$.
+Evaluating the \emph{original} formula under that assignment gives false. The
+completeness theorem establishes this behavior for every rejected formula:
+\libsnippet{tautCompleteness}
+The helper theorem establishes falsification of the normalized formula; truth
+preservation transfers that result back to the original input. Combined with
+soundness, rejection has a concrete witness and acceptance holds under every
+assignment. The returned bindings are produced by our verified traversal,
+whereas the counterexamples in Section~\ref{sec:tp-failures} are models supplied
+by the SMT solver when it refutes a proof obligation.
+
+The companion runs both top-level proofs and their dependencies, with some
+obligations using CVC5. The proof structure follows the program structure:
+small lemmas establish lookup and normalization facts, a generalized induction
+handles the traversal, and short final arguments expose the public guarantees.
+This makes a verified algorithm understandable without reproducing every helper
+proof in the tutorial.
 
 %==============================================================================
 
@@ -1542,6 +1788,8 @@ SMT-LIB. Replay it outside GHCi with \code{z3 sat-add.smt2}.
   on that equality, instantiate hypotheses explicitly, or split the step with
   an intermediate expression. If the recursive call changes an accumulator,
   generalize the statement as in Sections~\ref{sec:induction} and~\ref{sec:kadane}.
+  Section~\ref{sec:tp-failures} shows concrete TP diagnostics and how to interpret
+  the models of failed obligations.
 \end{description}
 
 \paragraph{Common pitfalls.}
@@ -1668,6 +1916,105 @@ Check which numeric domains, termination conditions, and notions of equality
 the target system uses. Our finite-data scope (Section~\ref{sec:finite-lists})
 and monomorphic theorem instances (Section~\ref{sec:polymorphic}) are part of the
 claim being proved, not incidental details of the proof script.
+
+%==============================================================================
+\section{Suggested projects}
+\label{sec:projects}
+
+\subsection{Project: from recursive invariants to state transitions}
+\label{sec:stateful-programs}
+
+Transfer the invariant-discovery method from Kadane's algorithm to a program
+represented by successive states. Begin with integer state $(x,y)=(1,1)$ and
+the simultaneous update
+\[
+ (x,y)\longmapsto(x+1,y+x).
+\]
+The safety property is $y\geq1$ after any number of steps. Work through the
+following stages; this is an open-ended project rather than an additional
+worked solution in the companion.
+\begin{enumerate}
+\item Encode the initial state, transition relation, and unsafe states. Search
+  for an execution reaching $y<1$ within a chosen bound. Explain why finding no
+  such execution establishes safety only up to that bound.
+\item Try to prove that $y\geq1$ holds initially and is preserved by every
+  transition from a state satisfying it. Inspect a counterexample to preservation
+  and decide whether it is reachable from $(1,1)$.
+\item Strengthen the invariant so that both initialization and preservation can
+  be proved. Explain why the strengthened invariant establishes safety at every
+  finite depth, and compare this strengthening with generalizing the accumulator
+  hypothesis in Section~\ref{sec:kadane}.
+\item As an extension, express a bounded loop performing the updates using the
+  weakest-precondition interface. Separate its safety assertion from the extra
+  argument needed to establish termination.
+\end{enumerate}
+
+\paragraph{Starting hints.}
+Use mathematical integers first, so overflow does not change the question.
+The next value of $y$ depends on $x$; a lower bound on $x$ may therefore be
+needed even though the requested safety property mentions only $y$.
+For example, $(-1,1)\longmapsto(0,0)$ refutes preservation of $y\geq1$ alone,
+but is not an execution starting from the specified initial state. A
+counterexample to inductiveness is an invitation to inspect the invariant,
+not automatically a counterexample to safety.
+
+For starting code, see these modules under
+\code{Documentation.\allowbreak SBV.\allowbreak Examples}:
+\begin{itemize}
+\item \code{ProofTools.\allowbreak BMC} demonstrates bounded reachability with
+  a state datatype and a transition relation.
+\item \code{ProofTools.\allowbreak Strengthen} contains this update and
+  examples of invariant strengthening.
+\item \code{WeakestPreconditions.\allowbreak Basics} introduces the
+  imperative-program interface.
+\end{itemize}
+Adapt the BMC example's state and
+goal to this system rather than expecting its original transition relation to
+match. Keep the concrete simulator independent of the symbolic encoding and
+compare short traces before attempting the universal argument.
+
+\subsection{Project: mechanizing Bird's maximum-segment-sum derivation}
+\label{sec:bird-project}
+
+Revisit maximum segment sum by following the algebraic derivation of
+\citet{birdCalculation}. The goal is to calculate an efficient implementation
+from a specification, with TP checking the intervening transformations.
+Start with finite lists of mathematical integers and the specification
+\code{maximum . map sum . segs}, where \code{segs} enumerates every contiguous
+segment, including the empty segment. This ensures a result of 0 for empty or
+all-negative inputs. Use the independent segment oracle from
+Section~\ref{sec:kadane} for initial concrete checks.
+
+\begin{enumerate}
+\item Express segment enumeration using prefixes and suffixes, and formulate
+  the transformations as equalities on an arbitrary symbolic input list.
+  Implement any missing symbolic prefix, suffix, or scan operations, with
+  their termination obligations.
+\item Prove the laws needed to reach a scan: addition distributes over binary
+  maximum, Horner's rule combines the suffix sums, and the scan lemma shares
+  work across prefixes. Begin with the integer instances needed here;
+  generalizing the laws to arbitrary operations is an optional extension.
+\item Fuse the scan and the final maximum into a paired left fold. Identify
+  its components with \code{msf} and \code{meh}: in the pair \code{(msf, meh)},
+  the first records the best sum seen so far and the second the best sum ending
+  at the current position; \code{kadaneHelper} takes these arguments in the
+  opposite order. Prove that the fold's first component agrees with \code{kadane}.
+  Assemble the intermediate theorems into an
+  end-to-end proof from segment enumeration to the paired fold.
+\end{enumerate}
+
+\paragraph{Starting hints.}
+Study \code{foldrMapFusion} and \code{foldrFusion} in
+\code{Documentation.\allowbreak SBV.\allowbreak Examples.\allowbreak TP.\allowbreak Lists}
+as examples of how to state and discharge fusion side conditions; Bird's
+left-fold calculation will need the corresponding laws for its chosen
+operations. State function equalities pointwise, and instantiate helper lemmas
+explicitly, as in the bookkeeping proof in Section~\ref{sec:higherorder}.
+Keep a record of which steps need a supplied lemma and which the solver closes
+from definitions. Compare the resulting proof effort with the accumulator
+invariant of Section~\ref{sec:kadane}. This is an advanced, open-ended project:
+the companion does not contain a mechanization of Bird's derivation, and its
+compact paper calculation should not be taken as an estimate of the TP work.
 
 %==============================================================================
 \section{Conclusion}

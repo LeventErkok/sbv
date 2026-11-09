@@ -12,10 +12,15 @@ local to this directory.
 The paper teaches a progression from choosing a semantic domain and writing an
 independent specification to finding counterexamples, structuring calculations,
 and discovering inductive invariants. Search, optimization, datatypes, and arrays
-illustrate modeling decisions; reversal, Kadane's algorithm, expression-tree
+illustrate modeling decisions; append associativity, reversal, Kadane's algorithm, expression-tree
 transformations, binary search over arrays, and higher-order laws develop proof
 guidance. Binary search first appears as a midpoint overflow bug, then returns
-as an example of induction on a decreasing interval. A final example
+as an example of induction on a decreasing interval. Failed TP obligations explain
+input models, observed values, incorrect Boolean hints, and function interpretations. The tautology-checker
+walkthrough covers evaluation, normalization, branching, and both correctness
+theorems. Stateful verification and mechanizing Bird's maximum-segment-sum
+derivation are open-ended suggested projects with starting hints and library
+examples. A final example
 follows a verified function through C generation. The research-context section
 connects these decisions to testing, symbolic evaluation, equational reasoning,
 refinement types, and invariant-based verification.
@@ -58,15 +63,17 @@ latexmk -pdf sbv-tutorial.tex
 
 `prepare.py` extracts listings into `build/snippets/` from two places: blocks
 between `-- BEGIN name` and `-- END name` in the companion, and a few
-declarations quoted verbatim from `Documentation/SBV/Examples/TP/TautologyChecker.hs`
+declarations extracted from `Documentation/SBV/Examples/TP/TautologyChecker.hs`
 and `Documentation/SBV/Examples/TP/BinarySearch.hs` in Cabal's pinned source checkout. `companion.py` locates that checkout from the
 build plan; neither extraction nor validation needs a surrounding SBV repository.
 It fails if the manuscript refers to a listing that has no source, including
 the breakable `\snippet*` form. `PAPER-ELIDE-BEGIN summary` and
 `PAPER-ELIDE-END` comments replace a span only in the printed listing; the full
 Haskell source is checked. The mirror proof uses this for its analogous `Mul`
-case. Edit the Haskell sources, never the generated snippets. Short `ghci` transcripts and the
-abbreviated `normalize` and internal-representation listings are typed directly
+case. Two long tautology-checker listings are reindented for the page; extraction
+checks that all non-whitespace characters match the pinned library source.
+Edit the Haskell sources, never the generated snippets. Short `ghci` transcripts and the
+internal-representation listing are typed directly
 in the manuscript; the behavior they show is exercised by the companion.
 
 ## Reproduce the examples
@@ -103,7 +110,9 @@ runTP mirrorCorrect
 binarySearchProof
 ```
 
-Each exercise names its solution in the paper. All six are checked by validation:
+Each of the six worked exercises names its solution in the paper, and validation
+checks all six. The state-transition and Bird-derivation projects in Suggested
+projects are open-ended; they give starting hints rather than companion solutions:
 
 | Exercise | Companion solutions |
 |---|---|
@@ -121,6 +130,21 @@ enumerated nonempty segments on all 3,905 lists of length one through five over
 `[-2..2]`, plus three examples, and runs the inductive proof. The optimization
 exercise's two priority orders are checked against all feasible integer plans.
 
+The new material can be checked separately:
+
+```sh
+cabal run tutorial-examples -- --tp-failures
+cabal run tutorial-examples -- --tautology-concrete
+cabal run tutorial-examples -- --tautology
+```
+
+The failure checks intentionally catch TP exceptions. Full validation also requires
+`Falsifiable` diagnostics and independently replays the displayed input, step,
+hint, and function models; an exception or timeout alone does not pass. The
+incorrect-hint example enables `printAsms` to expose its separate proof obligation.
+The tautology checks compare 70 formulas with an independent truth-table evaluator, verify the
+worked assignments, and run the library's soundness and completeness proofs.
+
 Run the examples or the complete validation:
 
 ```sh
@@ -129,7 +153,11 @@ python3 validate.py
 ```
 
 `make validate` runs the same script. After the initial build, validation uses
-`cabal build --offline`, the Cabal-built executable, and the pinned SBV sources.
+`cabal build --offline -fstrict tutorial-examples`, the Cabal-built executable,
+and the pinned SBV sources. The package's `strict` flag adds `-Werror` to its
+normal `-Wall` settings, so validation rejects compiler warnings. Ordinary
+builds do not enable this flag by default. To match validation when running
+examples directly, use `cabal run -fstrict tutorial-examples`.
 It records the companion's Git revision and working-tree status when available,
 the SBV revision and source-package hash, and hashes of the manuscript,
 bibliography, build configuration, and executable validation inputs. It also works outside
@@ -232,4 +260,6 @@ validated. Migration requires updating `cabal.project`, source lookup, the freez
 file, and the manuscript's source-snapshot wording together. Git and author
 identities are not anonymity problems for this venue. The companion license now
 names Levent Erkok. AI-disclosure work remains deferred at the author's request;
-the inherited Preparation paragraph has not been revised in this pass.
+the Preparation paragraph was removed at the author's request. Checking the
+applicable disclosure policy and resolving any required statement remain open
+submission tasks.
