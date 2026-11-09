@@ -1,34 +1,31 @@
 SBV JFP tutorial companion validation
-UTC: 2026-11-09T17:57:37.680826+00:00
+UTC: 2026-11-09T19:18:44.934170+00:00
 Scope: tutorial examples only; not the full repository test suite.
-Companion repository revision: ba7b7ad6fa518c5463fc675b3a633defcde2f23e
+Companion repository revision: 9fd8569d80aedf47423decfdc93038aa258f7f28
 Companion working-tree status (input hashes below identify this draft):
 
 $ git status --short -- .
  M EDITORIAL.md
  M README.md
+ M examples/ExpandedExamples.hs
  M examples/TutorialExamples.hs
- M prepare.py
- M references.bib
  M results/validation.txt
- M sbv-tutorial.cabal
  M sbv-tutorial.pdf
  M sbv-tutorial.tex
  M validate.py
-?? examples/ExpandedExamples.hs
 Exit status: 0; elapsed: 0.01s
 
 $ ghc --numeric-version
 9.14.1
-Exit status: 0; elapsed: 0.05s
+Exit status: 0; elapsed: 0.21s
 
 $ cabal --numeric-version
 3.16.1.0
-Exit status: 0; elapsed: 0.02s
+Exit status: 0; elapsed: 0.03s
 
 $ z3 --version
 Z3 version 5.3.2 - 64 bit - build hashcode b411c90217766c924e6ea3d0b51f452a89fd8fc2
-Exit status: 0; elapsed: 0.01s
+Exit status: 0; elapsed: 0.02s
 
 $ cvc5 --version
 cvc5 1.4.2 [git 282d5e0 on branch HEAD]
@@ -97,7 +94,7 @@ Apple clang version 21.0.0 (clang-2100.3.34.2)
 Target: arm64-apple-darwin25.6.0
 Thread model: posix
 InstalledDir: /Library/Developer/CommandLineTools/usr/bin
-Exit status: 0; elapsed: 0.01s
+Exit status: 0; elapsed: 0.03s
 
 $ cabal build --offline -fstrict tutorial-examples
 Resolving dependencies...
@@ -106,10 +103,9 @@ In order, the following will be built (use -v for more details):
  - sbv-tutorial-0.1.0.0 (exe:tutorial-examples) (file examples/TutorialExamples.hs changed)
 Preprocessing executable 'tutorial-examples' for sbv-tutorial-0.1.0.0...
 Building executable 'tutorial-examples' for sbv-tutorial-0.1.0.0...
-[1 of 2] Compiling ExpandedExamples ( examples/ExpandedExamples.hs, dist-newstyle/build/aarch64-osx/ghc-9.14.1/sbv-tutorial-0.1.0.0/x/tutorial-examples/noopt/build/tutorial-examples/tutorial-examples-tmp/ExpandedExamples.o, dist-newstyle/build/aarch64-osx/ghc-9.14.1/sbv-tutorial-0.1.0.0/x/tutorial-examples/noopt/build/tutorial-examples/tutorial-examples-tmp/ExpandedExamples.dyn_o ) [Source file changed]
 [2 of 2] Compiling Main             ( examples/TutorialExamples.hs, dist-newstyle/build/aarch64-osx/ghc-9.14.1/sbv-tutorial-0.1.0.0/x/tutorial-examples/noopt/build/tutorial-examples/tutorial-examples-tmp/Main.o, dist-newstyle/build/aarch64-osx/ghc-9.14.1/sbv-tutorial-0.1.0.0/x/tutorial-examples/noopt/build/tutorial-examples/tutorial-examples-tmp/Main.dyn_o ) [Source file changed]
 [3 of 3] Linking dist-newstyle/build/aarch64-osx/ghc-9.14.1/sbv-tutorial-0.1.0.0/x/tutorial-examples/noopt/build/tutorial-examples/tutorial-examples [Objects changed]
-Exit status: 0; elapsed: 8.79s
+Exit status: 0; elapsed: 9.85s
 
 SBV source revision: ef9b2c0daeabb0e378eae9c584bb8bdbd815ddc3
 SBV source package SHA-256: 4c0a04fbbef477df74f1e6771d8660b3abb6173593bc5ad41a755e9b9f6ca5fc
@@ -117,20 +113,20 @@ Library source changes relative to that revision (empty means clean):
 
 $ git status --short -- Data Documentation sbv.cabal
 
-Exit status: 0; elapsed: 0.01s
+Exit status: 0; elapsed: 0.02s
 
 SHA-256 of validation inputs:
-7960677aad091637064fded218d10bfebfe387a22bab8b61a62b2de6e711018a  examples/TutorialExamples.hs
-6c5ec3ce297abb65244a9075d4c6b6b00b0ea0ddf64ea304a17deffbdd606d01  examples/ExpandedExamples.hs
+13614d517a9c7bfc15891f56406fc09d1b0978986df6ece3443fc2ea8e3d605b  examples/TutorialExamples.hs
+c670fddf1be06eb209c6e2dbd2251f9064173f303db50c285088899d42cda99a  examples/ExpandedExamples.hs
 94bb964dbf0e9cb3d9ec1d8af6d4dc3a7f06b5399eae586c339fe061d4b92bc6  examples/adder-check.c
-223bdff18fe8e26be65ab11c1a9fe77eb57c945f4c15b07b0e46cdff1d1fb7e3  validate.py
+28f0a85b8629664cc6e65f7497f738cc71da9cda24e6381c9d1f029e0a5d9e94  validate.py
 8d59e28befe292d0a2d676614906290e2c0d6462a0d477df0d39d64ec29d3f0f  prepare.py
 85c0157065210a129d02ea0fca51d8f79c6d888f89c029c9a8840811827de8d2  companion.py
 25ecb8329dee3558d4ff47053e02f0b46f28dd6b8edf4f8562afe5f94c4b4bb7  sbv-tutorial.cabal
 d12b672fc2acd78c7a513e61c42f162aeab2d0e1c6056f6dd2d12e45a6200dea  cabal.project
 47a76c93961f585a55e006fdb698b089101e2813618bae0d98abcc7e3ca9254e  cabal.project.freeze
 c12e591cc839cd9ea1ea59ccb2a846df2731f2a7b3c5b6dbe9b4e27e45afecd7  jfp_format.py
-982c674226c0a0e11b6c1a859a3fc2426914b58bf0e5ff80a1e348ac2478c6e4  sbv-tutorial.tex
+918113e9ee20c454107900175afa8c0d12e52eb780f3dcab3b13955480cbb28b  sbv-tutorial.tex
 dd89a74f9f57b80a2af8bccf161611d71c52c6cd7d4367847fb71a146816d3ed  references.bib
 8eea7aeec13290d8aa1ae4fac9c78e92f98f4095790b8a75d2040fd839affc13  Makefile
 bcf4de26bb14e21af79675dfe323d2d6bc3c3e48940e54687fa646296e105bcf  LICENSE
@@ -149,18 +145,19 @@ a89b4aa1c33004079c0118fb527e5eceb0c94e240caf02f4519a796747bd3cfd  SBV/Data/SBV/S
 4eb4bef13bd5bc3694e9b2c77d0bc1f813085b03240a724383b63867dc83b06c  SBV/Data/SBV/RegExp.hs
 30d1cb072a98f76f5babeb3fb9fa7941eb5b005334918d6e8fca6d81e98eef71  SBV/Data/SBV/Rational.hs
 c3438fd2241ef64d08d298d438c62a64cc65d1a2cbdfc774fa77b1a62f9de7c7  SBV/Data/SBV/TP/Utils.hs
+cb7d16fd74e5e9f8010c67c6be9d24bded84e5ece5b3483161d552237b6acd55  SBV/Data/SBV/Client.hs
 
 Library package description:
 Name        : sbv
 Version     : 14.10
 
 $ /Library/Developer/CommandLineTools/usr/bin/python3 /Users/lerkok/Projects/sbv/Artifacts/JFP/prepare.py
-Extracted 75 listings (70 used by the manuscript)
-Exit status: 0; elapsed: 0.06s
+Extracted 78 listings (73 used by the manuscript)
+Exit status: 0; elapsed: 0.07s
 
 $ cabal list-bin tutorial-examples -v0
 /Users/lerkok/Projects/sbv/Artifacts/JFP/dist-newstyle/build/aarch64-osx/ghc-9.14.1/sbv-tutorial-0.1.0.0/x/tutorial-examples/noopt/build/tutorial-examples/tutorial-examples
-Exit status: 0; elapsed: 0.86s
+Exit status: 0; elapsed: 0.91s
 
 $ /Users/lerkok/Projects/sbv/Artifacts/JFP/dist-newstyle/build/aarch64-osx/ghc-9.14.1/sbv-tutorial-0.1.0.0/x/tutorial-examples/noopt/build/tutorial-examples/tutorial-examples
 PASS integer absolute value is nonnegative
@@ -424,7 +421,7 @@ Lemma: kadaneNonEmptyCorrect
   Result:                                   Q.E.D.
 Functions proven terminating: kadaneNonEmpty, kadaneNonEmptyHelper, mssBegin, mssNonEmpty
 PASS exercise 6: nonempty Kadane correctness
-Exit status: 0; elapsed: 30.29s
+Exit status: 0; elapsed: 30.51s
 
 $ /Users/lerkok/Projects/sbv/Artifacts/JFP/dist-newstyle/build/aarch64-osx/ghc-9.14.1/sbv-tutorial-0.1.0.0/x/tutorial-examples/noopt/build/tutorial-examples/tutorial-examples --expanded
 PASS byte field round trip
@@ -474,7 +471,7 @@ draftIdentity
 
 Just [sorry]
 PASS auditing a checked proof versus a draft
-Exit status: 0; elapsed: 6.04s
+Exit status: 0; elapsed: 6.21s
 
 $ /Users/lerkok/Projects/sbv/Artifacts/JFP/dist-newstyle/build/aarch64-osx/ghc-9.14.1/sbv-tutorial-0.1.0.0/x/tutorial-examples/noopt/build/tutorial-examples/tutorial-examples --synthesis
 Satisfiable. Model:
@@ -486,7 +483,7 @@ Candidate: (-3,1)
 Counterexample: -1
 Candidate: (3,1)
 PASS counterexample-guided expression synthesis
-Exit status: 0; elapsed: 0.06s
+Exit status: 0; elapsed: 0.08s
 
 $ /Users/lerkok/Projects/sbv/Artifacts/JFP/dist-newstyle/build/aarch64-osx/ghc-9.14.1/sbv-tutorial-0.1.0.0/x/tutorial-examples/noopt/build/tutorial-examples/tutorial-examples --tp-failures
 BEGIN badLengthProof
@@ -529,7 +526,7 @@ Falsifiable. Counter-example:
   q _ = True
 PASS TP reports a function model for the false quantified law
 END forallDisjunctionNot
-Exit status: 0; elapsed: 0.09s
+Exit status: 0; elapsed: 0.11s
 PASS TP diagnostics: replayed concrete, intermediate-step, and function models
 
 $ /Users/lerkok/Projects/sbv/Artifacts/JFP/dist-newstyle/build/aarch64-osx/ghc-9.14.1/sbv-tutorial-0.1.0.0/x/tutorial-examples/noopt/build/tutorial-examples/tutorial-examples --binary-search
@@ -551,7 +548,7 @@ Inductive lemma (strong): binarySearchCorrect
 Functions proven terminating: bsearch
 PASS binary-search TP contract: constructor, bounds, and value
 PASS binary-search results against a list oracle (10 cases)
-Exit status: 0; elapsed: 0.13s
+Exit status: 0; elapsed: 0.16s
 
 $ /Users/lerkok/Projects/sbv/Artifacts/JFP/dist-newstyle/build/aarch64-osx/ghc-9.14.1/sbv-tutorial-0.1.0.0/x/tutorial-examples/noopt/build/tutorial-examples/tutorial-examples --tautology
 PASS tautology checker against truth tables (70 formulas)
@@ -570,7 +567,7 @@ Lemma: completeness                                 Q.E.D.
 Functions proven terminating:
   eval, falsify', ifComplexity, ifDepth, isAssigned, isNormal, isTautology', lookUp, normalize
 PASS tautology checker completeness
-Exit status: 0; elapsed: 2.18s
+Exit status: 0; elapsed: 2.23s
 
 $ /Users/lerkok/Projects/sbv/Artifacts/JFP/dist-newstyle/build/aarch64-osx/ghc-9.14.1/sbv-tutorial-0.1.0.0/x/tutorial-examples/noopt/build/tutorial-examples/tutorial-examples --diagnostics /Users/lerkok/Projects/sbv/Artifacts/JFP/build/sat-add.smt2
 ** Calling: z3 -nw -in -smt2
@@ -613,7 +610,7 @@ $ /Users/lerkok/Projects/sbv/Artifacts/JFP/dist-newstyle/build/aarch64-osx/ghc-9
 *** Solver   : Z3
 *** Exit code: ExitSuccess
 PASS verbose proof with replayable transcript
-Exit status: 0; elapsed: 0.70s
+Exit status: 0; elapsed: 0.76s
 
 $ z3 /Users/lerkok/Projects/sbv/Artifacts/JFP/build/sat-add.smt2
 success
@@ -639,7 +636,7 @@ success
 success
 success
 unsat
-Exit status: 0; elapsed: 0.64s
+Exit status: 0; elapsed: 0.63s
 
 $ /Users/lerkok/Projects/sbv/Artifacts/JFP/dist-newstyle/build/aarch64-osx/ghc-9.14.1/sbv-tutorial-0.1.0.0/x/tutorial-examples/noopt/build/tutorial-examples/tutorial-examples --generate /Users/lerkok/Projects/sbv/Artifacts/JFP/build/c
 
@@ -647,11 +644,11 @@ Exit status: 0; elapsed: 0.02s
 
 $ cc -std=c11 -Wall -Wextra -Werror -O2 -fsanitize=undefined -fno-sanitize-recover=all -I/Users/lerkok/Projects/sbv/Artifacts/JFP/build/c /Users/lerkok/Projects/sbv/Artifacts/JFP/build/c/sat_add.c /Users/lerkok/Projects/sbv/Artifacts/JFP/examples/adder-check.c -o /Users/lerkok/Projects/sbv/Artifacts/JFP/build/adder-check
 
-Exit status: 0; elapsed: 0.07s
+Exit status: 0; elapsed: 0.09s
 
 $ /Users/lerkok/Projects/sbv/Artifacts/JFP/build/adder-check
 PASS generated C: all 65536 unsigned-byte input pairs
-Exit status: 0; elapsed: 3.13s
+Exit status: 0; elapsed: 0.20s
 
 VALIDATION PASSED: all tutorial checks (including random tests and exercise
 solutions and midpoint checks), all expanded semantic-domain and query examples,

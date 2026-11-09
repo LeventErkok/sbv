@@ -942,16 +942,95 @@ operation are available to clients, and which conclusions remain conditional
 on those properties.
 
 
+\subsection{Generating symbolic types with \texttt{mkSymbolic}}
+\label{sec:mk-symbolic}
+
+So far we have used types for which SBV already provides symbolic support.
+For a user-defined type, \code{mkSymbolic} generates that support from its
+Haskell declaration. It uses Template Haskell: GHC inspects the declaration at
+compile time and inserts generated declarations into the module. Consider an
+expression language with integer leaves and two kinds of binary node:
+\snippet{exprDeclaration}
+This single declaration gives us payload fields, several constructors, and
+recursive children. It will serve as a running example for search, synthesis,
+and induction. With the \code{TemplateHaskell} extension enabled, the two quotes
+in \code{''Expr} denote a Template Haskell \emph{type name},
+not a string or a value of type \code{Expr}. The list supplies the names of the
+types to process. This top-level call is a declaration splice, written in the
+form that permits omitting the explicit \code{\$(...)} wrapper. Place it after
+the datatype declaration and before code using the generated names. No solver
+is called at this stage.
+
+The generated alias is \code{SExpr = SBV Expr}, together with instances that let
+SBV represent symbolic expressions and decode solver models as ordinary
+\code{Expr} values. The generated interface lets us build and inspect expressions
+whose leaves or entire subtrees are unknown:
+\begin{center}
+\begin{tabularx}{\linewidth}{@{}lX@{}}
+\toprule
+Generated interface & Role \\
+\midrule
+\code{SExpr = SBV Expr} & Symbolic type alias. \\
+\code{sNum :: SInteger -> SExpr} & Construct a symbolic numeric leaf. \\
+\code{sAdd :: SExpr -> SExpr -> SExpr} & Construct an addition node. \\
+\code{isNum :: SExpr -> SBool} & Test a constructor symbolically. \\
+\code{getMul\_1 :: SExpr -> SExpr} & Select the first field of a multiplication node. \\
+\bottomrule
+\end{tabularx}
+\end{center}
+For example, \code{sAdd (sNum n) subtree} has a known outer constructor while
+\code{n :: SInteger} and \code{subtree :: SExpr} can both be symbolic.
+An arbitrary \code{e :: SExpr} may also have an unknown outer constructor;
+\code{isNum e} is therefore a symbolic proposition. Field accessors require
+the corresponding constructor condition: \code{getMul\_1 e} is meaningful as
+the left child only when \code{isMul e} holds. Section~\ref{sec:datatypes}
+uses this condition in a search.
+
+Generated case-analysis support lets \code{sCase} select a branch when the
+constructor is unknown. To see it in use, count binary nodes in an expression,
+then state that the count is nonnegative:
+\snippet{exprSizeInduction}
+We write the recursive function ourselves; \code{mkSymbolic} supplies the
+symbolic representation and case-analysis support it uses. The numeric leaf
+has size zero, and either binary node adds one to the sizes of both children.
+
+\code{mkSymbolic} also generates the \emph{structural induction principle} for
+datatypes with constructors. For \code{Expr}, proving a property of every
+\code{Num} leaf and proving it for \code{Add} and \code{Mul} assuming it for
+both children establishes it for every finite expression. TP's
+\code{inductiveLemma} uses this principle in \code{exprSizePos}. Its
+\code{Forall} binder states the property for every expression, and the empty
+list supplies no additional lemmas. For \code{Num}, the obligation is
+$0\geq 0$. For either binary constructor, the hypotheses give nonnegative
+child sizes, making their sum plus one nonnegative. The generated principle
+connects these three cases to the universal theorem. Running
+\code{runTP exprSizePos} checks the proof; Section~\ref{sec:induction} develops
+the TP interface in detail. The size function and its theorem return as the
+measure for the mirror proof in Section~\ref{sec:datatype-induction}.
+
+What is generated depends on the declaration. For an enumeration, induction
+reduces to checking each constructor. A constructor-free declaration instead
+introduces a nonempty opaque sort, with no constructor structure and no induction
+principle; we use one next. For recursive datatypes such as \code{Expr}, values
+are finite trees of unbounded size (Section~\ref{sec:finite-lists}). The generated
+schema supplies the induction rule, while the programmer supplies the property
+and any guidance needed to prove its cases. It does not translate arbitrary
+Haskell functions or automatically prove their properties.
+
+
 \subsection{Uninterpreted sorts and functions}
 \label{sec:uninterpreted-models}
 
-An uninterpreted sort supplies a domain of opaque values, and an uninterpreted
-function supplies an operation with a type but no defining equations:
+To hide a representation completely, give \code{mkSymbolic} a constructor-free
+declaration:
+\snippet{keySymbolic}
+This generates \code{SKey = SBV Key} for a nonempty uninterpreted sort, despite
+there being no ordinary Haskell constructors with which to build a key.
+An uninterpreted function supplies an operation on that domain with a type but
+no defining equations:
 \snippet{abstractKeys}
-\code{mkSymbolic} treats this constructor-free declaration as an uninterpreted
-sort, generating \code{SKey}. Despite the empty Haskell declaration, the solver's
-sort is nonempty; it is not a datatype with no inhabitants. We have specified
-neither a representation of keys nor a fixed number of distinct keys.
+We have specified neither a representation of keys nor a fixed number of
+distinct keys.
 
 \code{prove keyCongruence} succeeds because functions respect equality:
 equal keys have equal codes. The converse does not follow. The operation may
@@ -999,17 +1078,13 @@ laws as the theorem's premises.
 \section{Symbolic datatypes}
 \label{sec:datatypes}
 
-A datatype declaration can serve two roles in a solver-aided program: it defines
-the candidates a search may return, and the structures over which a theorem may
-quantify. We use one expression language for both roles, first synthesizing an
-expression and later proving that a transformation preserves its meaning
-(Section~\ref{sec:datatype-induction}). User-defined algebraic datatypes become
-symbolic with one line of Template Haskell:
+Return to the \code{Expr} datatype introduced in Section~\ref{sec:mk-symbolic}.
+Its constructors define both candidates for a search and structures over which
+a theorem may quantify. We now supply an evaluator and search for an expression
+with a specified value; later we prove that a transformation preserves evaluation
+(Section~\ref{sec:datatype-induction}):
 \snippet*{expr}
-The call \code{mkSymbolic [''Expr]} generates the type \code{SExpr}, symbolic
-constructors (\code{sNum}, \code{sAdd}, \code{sMul}), recognizers (\code{isNum},
-\code{isAdd}, \code{isMul}), and field accessors such as \code{getMul\_1}. The
-evaluator is an \code{smtFunction}, so it is a recursive definition in the
+The evaluator is an \code{smtFunction}, so it is a recursive definition in the
 logic, and \code{sCase} matches on an expression whose constructor may be
 unknown. The puzzle asks the solver to \emph{synthesize} an expression: a
 multiplication whose left argument is not a number, evaluating to 42.
@@ -1649,10 +1724,9 @@ multiplication node, preserving evaluation because both operations commute.
 Each binary case needs the hypothesis for both children before commutativity applies.
 The calculational \code{induct} interface supports integers and lists, so for
 this datatype we use \code{sInduct} with a size measure.
-Define \code{exprSize} to be zero at \code{Num} and one plus the
-two child sizes at \code{Add} or \code{Mul}. The companion proves nonnegativity
-as \code{exprSizePos}, using \code{inductiveLemma}: it applies the generated
-datatype induction principle without further guidance. Then
+Reuse \code{exprSize} and its nonnegativity theorem \code{exprSizePos} from
+Section~\ref{sec:mk-symbolic}. That theorem uses \code{inductiveLemma} to apply
+the generated datatype induction principle without further guidance. Here
 \code{exprSizeSmaller} uses this fact to show that each child is smaller than
 its parent. These facts justify applying the hypothesis to each child.
 The listing abbreviates the identical multiplication case; the companion

@@ -193,10 +193,12 @@ coreChecked = do
     then pure False
     else isTheorem $ \(x :: SInteger) -> sNot $ sAnd [p | (n,p) <- facts x, n `elem` names]
 
--- BEGIN abstractKeys
+-- BEGIN keySymbolic
 data Key
 mkSymbolic [''Key]
+-- END keySymbolic
 
+-- BEGIN abstractKeys
 keyCode :: SKey -> SInteger
 keyCode = uninterpret "keyCode"
 

@@ -84,7 +84,7 @@ with log_path.open("w") as log:
                         "Documentation/SBV/Examples/BitPrecise/BrokenSearch.hs",
                         "Documentation/SBV/Examples/BitPrecise/Adders.hs",
                         "Data/SBV/Set.hs", "Data/SBV/RegExp.hs", "Data/SBV/Rational.hs",
-                        "Data/SBV/TP/Utils.hs"]),
+                        "Data/SBV/TP/Utils.hs", "Data/SBV/Client.hs"]),
     ]:
         for name in names:
             record(f"{sha256((base / name).read_bytes()).hexdigest()}  {prefix}{name}")

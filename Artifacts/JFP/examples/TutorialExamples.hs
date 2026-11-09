@@ -358,13 +358,15 @@ largestBelow100 = runSMT $ do
 -- Section: Symbolic datatypes
 -------------------------------------------------------------------------------
 
--- BEGIN expr
+-- BEGIN exprDeclaration
 data Expr = Num Integer
           | Add Expr Expr
           | Mul Expr Expr
           deriving Show
 mkSymbolic [''Expr]
+-- END exprDeclaration
 
+-- BEGIN expr
 eval :: SExpr -> SInteger
 eval = smtFunction "eval" $ \e -> [sCase| e of
           Num n   -> n
@@ -834,6 +836,7 @@ mirror = smtFunction "mirror" $ \e -> [sCase| e of
   |]
 -- END exprMirror
 
+-- BEGIN exprSizeInduction
 exprSize :: SExpr -> SInteger
 exprSize = smtFunction "exprSize" $ \e -> [sCase| e of
   Num _   -> 0
@@ -844,6 +847,7 @@ exprSize = smtFunction "exprSize" $ \e -> [sCase| e of
 exprSizePos :: TP (Proof (Forall "e" Expr -> SBool))
 exprSizePos = inductiveLemma "exprSizePos"
   (\(Forall e) -> exprSize e .>= 0) []
+-- END exprSizeInduction
 
 exprSizeSmaller :: TP (Proof (Forall "a" Expr -> Forall "b" Expr -> SBool))
 exprSizeSmaller = do

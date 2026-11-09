@@ -540,8 +540,8 @@ synthesize/verify loop; its printed author order is used. Seshia's bibliographic
 page confirms venue, year, and pages, but lists the final two authors in the
 opposite order, so the PDF takes precedence. No unverified DOI was added.
 
-Completion checks for this revision: the existing main PDF was rebuilt and is
-57 pages at this snapshot; selected new pages were visually inspected. There are
+Completion checks for this earlier revision: the rebuilt main PDF had
+57 pages before the mkSymbolic subsection was added; selected new pages were visually inspected. There are
 no overfull boxes or unresolved references. Full `validate.py` passed, all 29
 recorded input hashes match, HLint reports no hints in either companion module,
 and `git diff --check` is clean. The refreshed Cabal source archive includes
@@ -573,6 +573,58 @@ https://manager.episciences.org/jfp/page/about . Neither sets a numerical tutori
 limit. The scope page describes regular papers as often 20–50 pages, explicitly
 allowing shorter or longer papers. That range is not a tutorial cap. The tutorial
 criteria instead emphasize gradual introduction, coherent presentation, and
-careful writing. The draft's 57 pages including references call for an editorial
-length review before submission; absence of a numerical cap does not establish
-that the present length will satisfy the editors.
+careful writing. At this review, the draft had 57 pages including references,
+before the mkSymbolic addition. An editorial length review remains necessary
+before submission; absence of a numerical cap does not establish that the
+manuscript's length will satisfy the editors.
+
+### 2026-11-09: introducing mkSymbolic before its first use
+
+Added "Generating symbolic types with mkSymbolic" as the first subsection of
+Abstraction through contracts. It explains compile-time declaration generation,
+Template Haskell type-name quotation, the top-level splice syntax, symbolic type
+aliases and instances, and the constructor/tester/accessor interface. The existing
+Key declaration is now its own extracted listing; the following opaque-function
+example reuses it. The Expr section calls back instead of repeating the interface.
+
+The induction paragraph is explicit: mkSymbolic generates the structural induction
+schema consumed by inductiveLemma for enumerations and constructor datatypes;
+constructor-free uninterpreted sorts receive none. Expr supplies a concrete
+explanation of constructor obligations and hypotheses for both children, with a
+forward link to exprSizePos and the guided mirror proof. This is distinct from
+the calculational induct interface for integers and lists. No new algorithm or
+unchecked example was introduced.
+
+Checked against the pinned Data/SBV/Client.hs: mkSymbolicADT/mkADT generate the
+alias, value instances, constructors, accessors, testers and case analyzer;
+mkInductionSchema constructs HasInductionSchema instances, with ADTUninterpreted
+explicitly excluded. TP/Kernel.hs confirms that inductiveLemmaWith supplies
+inductionSchema to lemmaWith. Client.hs is now included in validation's input
+hashes. The updated PDF is 58 pages at this snapshot; the new material occupies
+roughly one page across pages 20–21. These pages were visually inspected, with
+no overfull boxes or unresolved references.
+
+### 2026-11-09: replacing the introductory opaque-type example
+
+The initial mkSymbolic example was too small to demonstrate its main benefits.
+The subsection now starts with the existing recursive Expr declaration, moving
+that checked listing ahead of its evaluator rather than adding another datatype.
+It follows generated constructors and guarded selectors with the existing
+exprSize function and exprSizePos proof. The explanation makes the Num obligation
+and the two recursive-child hypotheses explicit. Thus the generated induction
+principle has a worked application at its introduction. Key is retained only as
+the contrasting opaque-sort example in the next subsection.
+
+The search section now starts from the already introduced Expr; the later mirror
+proof reuses the introduced size and theorem. Listing markers changed, but the
+Haskell definitions and proofs did not. This supersedes the earlier note about
+using Key as the first example. The revised material spans pages 20–22 at this
+snapshot; the complete PDF remains 58 pages. These pages were visually checked,
+with no overfull boxes or unresolved references.
+
+The earlier 57-page entries now explicitly describe their historical snapshots.
+The current PDF's outline was inspected with PDFKit: the bookmark is exactly
+"10.1 Generating symbolic types with mkSymbolic". The contents entry on page 2
+was also visually checked; mkSymbolic renders correctly there. No title-macro
+change was needed, and the current placement is retained. This check changed
+only the editorial log, so the manuscript and validation inputs remain unchanged.
