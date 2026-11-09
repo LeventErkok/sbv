@@ -36,7 +36,8 @@ checks, and standalone companion are retained from the original tutorial.
 - `EDITORIAL.md` (repository only): submission notes, evidence map, and open items for the author.
 - `sbv-tutorial.cabal`, `cabal.project`, `cabal.project.freeze`: standalone package,
   pinned SBV revision, dependency versions, and language extensions.
-- `examples/TutorialExamples.hs`: executable companion; source of the listings.
+- `examples/TutorialExamples.hs`: executable companion, inductive proofs, and synthesis loop.
+- `examples/ExpandedExamples.hs`: worked domain, query, contract, string/set, and proof-audit examples.
 - `examples/adder-check.c`: independent exhaustive oracle for generated C.
 - `results/validation.txt`: execution record, source revision, input hashes, and tool versions.
 
@@ -62,12 +63,12 @@ latexmk -pdf sbv-tutorial.tex
 ```
 
 `prepare.py` extracts listings into `build/snippets/` from two places: blocks
-between `-- BEGIN name` and `-- END name` in the companion, and a few
+between `-- BEGIN name` and `-- END name` in both companion modules, and a few
 declarations extracted from `Documentation/SBV/Examples/TP/TautologyChecker.hs`
 and `Documentation/SBV/Examples/TP/BinarySearch.hs` in Cabal's pinned source checkout. `companion.py` locates that checkout from the
 build plan; neither extraction nor validation needs a surrounding SBV repository.
 It fails if the manuscript refers to a listing that has no source, including
-the breakable `\snippet*` form. `PAPER-ELIDE-BEGIN summary` and
+the breakable `\snippet*` form, and rejects duplicate snippet names across modules. `PAPER-ELIDE-BEGIN summary` and
 `PAPER-ELIDE-END` comments replace a span only in the printed listing; the full
 Haskell source is checked. The mirror proof uses this for its analogous `Mul`
 case. Two long tautology-checker listings are reindented for the page; extraction
@@ -133,10 +134,32 @@ exercise's two priority orders are checked against all feasible integer plans.
 The new material can be checked separately:
 
 ```sh
+cabal run tutorial-examples -- --expanded
+cabal run tutorial-examples -- --synthesis
 cabal run tutorial-examples -- --tp-failures
 cabal run tutorial-examples -- --tautology-concrete
 cabal run tutorial-examples -- --tautology
 ```
+
+The `--expanded` group checks byte-field packing, a power-of-two bit trick,
+exact rational and algebraic arithmetic, floating-point rounding and a finite
+associativity counterexample, weighted soft constraints, ripple/lookahead circuit
+equivalence, scoped queries, unsat-core replay, contracts, optional operations,
+regex validation, set invariants, quantifier order, an encoding bridge, and proof
+dependencies. Byte examples have exhaustive 256-input concrete checks; the soft
+optimum is compared with all feasible choices. The circuit proof fixes eight bits.
+
+The `--synthesis` group reuses `Expr` in a bounded affine template. Its candidate
+solver keeps samples incrementally, and a separate verifier searches for an
+arbitrary integer counterexample. Validation checks a rejected candidate against
+`evalC`, enumerates all 49 coefficient pairs independently, checks the returned
+program on 201 concrete inputs, and reruns universal verification. The grammar
+is finite but the verification input domain is not bounded. A solver's unknown
+answer is an error, never acceptance of a candidate.
+
+In GHCi, bring the new worked examples into scope with
+`:module + ExpandedExamples`. That module explicitly exports the tutorial's
+examples and validation entry point; `Main` imports only `expandedChecks`.
 
 The failure checks intentionally catch TP exceptions. Full validation also requires
 `Falsifiable` diagnostics and independently replays the displayed input, step,
@@ -254,6 +277,10 @@ submitted. For arXiv, build a separate copy with `review=false` (no line numbers
 and provide JFP with the review copy as its instructions describe. The guide
 states no fixed tutorial page limit; page count must still be checked after
 formatting changes rather than carried over from the conference version.
+Rechecked on 2026-11-09: the [scope page](https://manager.episciences.org/jfp/page/about)
+describes 20–50 pages as common for regular papers, with shorter and longer papers
+allowed; it gives no numerical tutorial limit. The current draft's 57 pages
+therefore warrant an editorial length review, rather than a cut to a stated cap.
 
 Keep the pinned SBV source snapshot until the matching Hackage release has been
 validated. Migration requires updating `cabal.project`, source lookup, the freeze

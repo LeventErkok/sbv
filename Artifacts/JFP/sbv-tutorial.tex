@@ -406,31 +406,194 @@ and induction.
 
 
 
-% BEGIN proposed-outline:arithmetic
 \section{Bit-vectors and machine-word reasoning}
 \label{sec:bit-vectors}
+
+The midpoint bug showed why the arithmetic domain belongs in the specification.
+Machine words also carry representations: a byte may encode several fields, and
+an arithmetic identity may be used as a bit trick. This section moves from
+choosing the word's interpretation to proving that an encoding implements its
+intended operation. Each example has a small, independent specification.
+
 
 \subsection{Widths, signedness, and modular arithmetic}
 \label{sec:bit-vector-semantics}
 
+An $n$-bit word has $2^n$ bit patterns. \code{SWord8} interprets them as
+$0,\ldots,255$; \code{SInt8} interprets them as $-128,\ldots,127$.
+Addition and multiplication retain the low eight bits in either case, but
+comparison and division depend on signedness. Thus the pattern \code{0x80}
+denotes 128 as an unsigned byte and $-128$ as a signed byte. Ordinary arithmetic
+on these symbolic types wraps; the checked operators used in the midpoint
+example add separate overflow obligations. The underlying bit-vector theory
+makes this modular behavior precise~\citep{smtbitvectors}.
+
+Widths are part of the Haskell type. Besides the standard widths, \code{SWord 12}
+and \code{SInt 12} describe unsigned and signed twelve-bit words. A property
+checked at one width does not establish it at every width: a polymorphic helper
+can construct many instances, but each solver call fixes a width. We use bytes
+here so that the companion can also exhaust small input spaces independently.
+
+The practical question is which behavior to specify. For a checksum, wraparound
+may be the intended operation. For an address or array bound, it may be a bug.
+Choosing \code{SInteger} merely to avoid overflow would change the latter
+verification problem; a faithful abstraction needs an explicit range condition
+or a proof relating the two representations.
+
+
 \subsection{Masks, shifts, rotations, and bit fields}
 \label{sec:bit-operations}
+
+Suppose a byte stores two four-bit fields. A mask selects the low field, a shift
+exposes the high field, and packing places them back in their positions:
+\snippet{byteFields}
+\code{prove fieldRoundTrip} establishes the round trip for every byte. The
+masks in \code{packNibbles} also define what happens when callers supply values
+larger than 15: their high bits are discarded. If rejection is intended instead,
+that requires a different contract. The companion compares extraction with
+ordinary division and remainder on all 256 inputs.
+
+The shift count in \code{shiftR x 4} is an ordinary Haskell \code{Int}.
+For a symbolic count, use operations such as \code{sShiftRight}; keep the
+count's domain explicit. Right shift of an unsigned word fills with zeros,
+whereas right shift of a signed word preserves its sign: shifting unsigned 128
+right once gives 64, while shifting signed $-128$ gives $-64$.
+A rotation wraps discarded bits around instead of losing them. For example,
+the companion proves that rotating a byte left by three and then right by
+three restores it.
+
+These operations manipulate bit patterns, while \code{.\&\&} combines symbolic
+Boolean propositions. Likewise \code{sTestBit x i} returns an \code{SBool};
+Haskell's ordinary \code{testBit} cannot return a concrete \code{Bool} when
+\code{x} is unknown. This is another instance of the host/symbolic distinction
+we develop in Section~\ref{sec:host}.
+
 
 \subsection{Widening, narrowing, and checked arithmetic}
 \label{sec:bit-representations}
 
+Conversion is part of an algorithm, not a proof that a value fits. Narrowing an
+integer to a byte retains its residue modulo 256. Widening that byte back to an
+integer recovers the original value only within the representable range:
+\snippet{narrowExact}
+\code{prove narrowExact} checks this representation invariant. The precondition
+is a requirement to establish at a conversion boundary. Assuming it in a
+caller would hide a possible truncation bug.
+
+The position of a conversion matters too. Widening \code{x + y} after byte
+addition preserves its already-wrapped result. Widening \code{x} and \code{y}
+first performs the addition in the wider domain. For two unsigned bytes,
+\code{SWord16} suffices to hold their sum without overflow; an arbitrary longer
+chain of additions needs its own bound. Section~\ref{sec:specs}'s saturating
+adder uses this distinction to compare the machine implementation with an
+integer specification, while its midpoint example uses checked arithmetic to
+expose precisely where overflow can occur.
+
+A useful workflow is to state the range invariant at the representation
+boundary, prove the arithmetic within that range, and check each narrowing
+operation. If overflow is intended, specify its modular effect instead of
+adding an unnecessary range restriction.
+
+
 \subsection{Bit tricks and independent specifications}
 \label{sec:bit-tricks}
+
+A familiar test recognizes powers of two by clearing the lowest set bit.
+Rather than specifying this trick using another bit manipulation, enumerate
+the eight values it should accept:
+\snippet{powerOfTwo}
+\code{prove powerOfTwoCorrect} proves equivalence for all bytes. Subtracting one
+turns the lowest set bit to zero and every lower zero to one; intersecting with
+the original word removes that bit. The result is zero exactly when no other
+bit was set. The explicit nonzero test matters: zero also satisfies the masked
+equality, since its predecessor wraps to 255.
+
+The finite specification describes unsigned byte powers of two, including 128.
+Changing the type to signed bytes while retaining a numerical ``positive power
+of two'' interpretation would require revisiting that last value. The companion
+also compares the implementation with Haskell's population count on all 256
+bytes, independently of the symbolic enumeration.
+
+This pattern scales to less transparent code: identify a simple specification,
+then ask whether the optimized bit-level implementation differs anywhere.
+\code{Documentation.\allowbreak SBV.\allowbreak Examples.\allowbreak BitPrecise.\allowbreak BitTricks} contains further examples;
+\code{PEXT\_PDEP} studies extraction and deposition of selected bits. The lesson
+is to let the specification explain the operation rather than mirror the trick.
+
 
 \section{Exact and floating-point arithmetic}
 \label{sec:arithmetic-models}
 
+A choice between integers and machine words changes overflow behavior. Choosing
+between exact reals and floating point changes the arithmetic laws themselves.
+We now keep the expression nearly unchanged and observe what happens when its
+domain changes. This is useful both for numerical algorithms and for deciding
+what a real-valued model says about an eventual machine implementation.
+
+
 \subsection{Rationals and algebraic reals}
 \label{sec:exact-arithmetic}
 
+\code{SReal} denotes exact mathematical reals, not a floating-point approximation.
+Rational constants and polynomial constraints can be expressed without rounding:
+\snippet{exactReal}
+The first property is valid for every real input. The second query asks for the
+positive square root of two. Its result is an algebraic number, represented by
+SBV as an \code{AlgReal}; the printed decimal prefix is only a display of that
+value. The companion rechecks the returned model against the defining equations
+without converting it to \code{Double}.
+
+Exact rational arithmetic can also be modeled with \code{SRational}, whose
+values are ratios of integers. The constructor \code{n .\% d} forms such a
+value from a numerator and denominator; for example, three copies of
+\code{1 .\% 3} sum exactly to one. Use a nonzero denominator. A rational domain
+excludes the square root of two, whereas \code{SReal} includes it. These domains
+are therefore not interchangeable merely because both represent one third
+exactly. Symbolic rational encodings also introduce integer arithmetic on their
+components, so exactness alone says nothing about solver difficulty.
+
+Nor does \code{SReal} make arbitrary real analysis automatic. The polynomial
+constraint above is very different from a specification involving a general
+transcendental function. Establish which operations the chosen theory models,
+and retain the distinction between an exact real proof and a floating-point
+implementation. The extension-field bounds in Section~\ref{sec:optimization}
+address yet another question: whether an optimization bound is attained.
+
+
 \subsection{Rounding modes and the limits of floating-point identities}
 \label{sec:floating-point}
-% END proposed-outline:arithmetic
+
+\code{SFloat} and \code{SDouble} model binary floating-point values and
+operations, including signed zeros, infinities, and NaN. SBV exposes the
+rounding mode through operations such as \code{fpAdd}; ordinary \code{(+)}
+uses round-to-nearest, ties-to-even. SMT-LIB's floating-point theory specifies
+these operations separately from real arithmetic~\citep{smtfloatingpoint}.
+
+At $2^{24}$, consecutive binary32 numbers are two units apart. Adding one lies
+halfway between them: ties-to-even rounds down here, while rounding toward
+positive infinity rounds up. We can also state associativity while requiring
+all inputs and intermediate results to be finite:
+\snippet{floatRounding}
+The companion proves \code{roundingExample} and refutes
+\code{finiteAssociativity} at the fixed instance
+$x=2^{24}$, $y=1$, and $z=-2^{24}$, which satisfies the finiteness restrictions:
+\[
+ (x+y)+z=0, \qquad x+(y+z)=1.
+\]
+In the left expression, the first addition loses the unit. In the right,
+$1-2^{24}$ is exactly representable, so the final addition recovers it.
+No NaN, infinity, or overflow is needed. This is why a real-valued algebraic
+simplification can invalidate a floating-point algorithm.
+
+Exceptional values still deserve explicit treatment. \code{fpIsPoint} excludes
+NaN and infinities but includes signed zeros and subnormal values. IEEE equality
+makes NaN unequal to itself and equates positive and negative zero. If the
+property concerns floating-point objects rather than numerical equality, inspect
+\code{fpIsEqualObject} and state the intended distinction. An error-bound proof
+needs assumptions about inputs and the rounding of each operation; replacing
+all operands by \code{SReal} silently removes those obligations. The library's
+\code{Examples.Misc.Floating} module offers further counterexamples.
+
 
 \section{Constraint solving and model enumeration}
 \label{sec:finding}
@@ -549,10 +712,32 @@ Solutions: \code{productionLex} for the original order and
 
 
 
-% BEGIN proposed-outline:soft-constraints
 \subsection{Soft constraints, weights, and objective priorities}
 \label{sec:soft-constraints}
-% END proposed-outline:soft-constraints
+
+A soft constraint is a preference that the solver may violate at a cost.
+Hard constraints still determine feasibility. Suppose a choice must be 0, 1,
+or 2, and two competing preferences favor opposite ends of this range:
+\snippet{softPreferences}
+\code{Penalty 2 Nothing} charges two units when its Boolean assertion is false;
+\code{Nothing} places it in the default objective group. The two penalties in
+this example add. Choosing 0 costs 3, choosing 1 costs 5, and choosing 2 costs 2,
+so the optimum is 2. The companion checks that answer against all feasible
+choices, not merely against the objective value reported by the solver.
+
+Weights express tradeoffs within a group. A sufficiently large collection of
+lower-weight preferences can outweigh a higher-weight one. This differs from
+lexicographic objectives, where no improvement in a later objective compensates
+for worsening an earlier one. Penalties can also be assigned named groups,
+which become separate objectives; choose the optimization style and objective
+order deliberately when combining groups with explicit measures.
+
+Keep a requirement hard if no amount of benefit elsewhere should justify
+breaking it. Conversely, encoding every preference with \code{constrain} can
+make an otherwise useful planning problem infeasible. A satisfying model, a
+minimum total penalty, and a lexicographically preferred model answer different
+questions, even when their Haskell predicates look similar.
+
 
 \outlinepart{II. Choosing representations}
 \section{Host evaluation and symbolic structure}
@@ -616,10 +801,34 @@ that the resulting solver query will be easy.
 
 %==============================================================================
 
-% BEGIN proposed-outline:circuits
 \subsection{Circuit equivalence through host-language recursion}
 \label{sec:circuit-equivalence}
-% END proposed-outline:circuits
+
+A circuit gives a concrete use for recursion over host-language structure.
+The following ripple-carry adder consumes a Haskell list of bit pairs, from
+least to most significant. Each recursive call constructs one full-adder stage;
+the carry is symbolic, but the number of stages is known:
+\snippet{addersImport}
+\snippet*{rippleCircuit}
+\code{blastLE} exposes the eight bits of each byte as a fixed Haskell list,
+and \code{fromBitsLE} reconstructs the result. Dropping the final carry implements
+addition modulo 256. A specification of the full nine-bit result would instead
+retain that carry.
+
+The library's \code{lookaheadAdd} constructs carries from the generate and
+propagate signals of lower positions. Unlike the ripple construction, its
+carry expressions do not follow a sequential chain of intermediate carries.
+\code{prove circuitEquivalence} checks both the ripple adder against native
+byte addition and its agreement with the lookahead circuit. It establishes
+functional equivalence, not a physical timing or gate-area claim.
+
+Haskell has already traversed the eight positions before the solver sees the
+formula. There is no list induction in this proof: it is a finite circuit
+question. The same generator can build a different fixed width, but that gives
+a different theorem. For a proof covering all widths together, see
+\code{Documentation.SBV.Examples.TP.Adder}; the induction techniques later in
+this tutorial explain why that is a different task.
+
 
 \section{Incremental solver interaction}
 \label{sec:queries}
@@ -671,22 +880,121 @@ is 94.) Solution: \code{largestBelow100}.
 
 
 
-% BEGIN proposed-outline:abstraction
 \subsection{Scoped assumptions and solver state}
 \label{sec:scoped-assumptions}
+
+Incremental constraints persist until they are explicitly retracted. A scope
+allows a speculative branch to add facts without changing the surrounding
+problem:
+\snippet{scopedQuery}
+The result is \code{[Unsat, Sat, Sat]}. Within the pushed scope, \code{x < 0}
+conflicts with the permanent nonnegative bound. \code{pop 1} removes that
+constraint. Each \code{checkSatAssuming} then supplies an assumption for just
+that check: asking for 3 does not prevent the following check from asking for 4.
+This is useful for exploring alternatives against one shared background model.
+
+A model belongs to the check that produced it. Call \code{getValue} only after
+a satisfiable answer, and read needed values before changing constraints or
+popping their scope. A value already returned to Haskell is concrete data; it
+does not become an additional solver constraint unless reintroduced with
+\code{literal}. This distinction is what lets \code{smallest} remember its
+previous candidate while excluding that candidate from later checks.
+
+Balance pushes and pops along every control-flow path. A forgotten pop can
+turn a later query into an unintentionally stronger problem. Treat \code{unknown}
+as a separate outcome rather than backtracking as if a branch had been proved
+impossible. The synthesis loop in Section~\ref{sec:synthesis} uses these same
+query operations to accumulate new examples.
+
 
 \subsection{Unsatisfiable cores and explanations of failure}
 \label{sec:unsat-cores}
 
+An unsatisfiable answer says there is no model, but does not by itself explain
+which requirements conflict. Name the constraints and request an unsat core:
+\snippet{coreExample}
+In the checked run the core contains \code{nonnegative} and \code{negative}.
+Those two bounds already contradict each other; \code{upper} adds nothing to
+that explanation. The returned names refer to assertions in this solver session,
+not to Haskell source locations or to a diagnosis of the programmer's intent.
+
+A core is a sufficient conflicting subset, not necessarily the smallest one or
+even a minimal one. Do not make application logic depend on a particular order
+or on the exclusion of redundant constraints. The companion accepts a returned
+subset of the known names and independently rechecks that subset for
+unsatisfiability. Unnamed background assertions remain part of the context in
+which a core is sufficient.
+
+This turns the earlier vacuity warning into a diagnostic technique. Before
+trusting a theorem under elaborate assumptions, check those assumptions for
+satisfiability. If they conflict, a core can isolate the requirements to inspect.
+The repair is a modeling decision: weakening whichever constraint is easiest
+to remove may change the intended problem.
+
+
 \section{Abstraction through contracts}
 \label{sec:abstraction}
+
+Sometimes the implementation of an operation is unavailable, expensive to
+encode, or intentionally hidden behind an interface. We can reason about its
+observable contract instead. The modeling decision is which properties of the
+operation are available to clients, and which conclusions remain conditional
+on those properties.
+
 
 \subsection{Uninterpreted sorts and functions}
 \label{sec:uninterpreted-models}
 
+An uninterpreted sort supplies a domain of opaque values, and an uninterpreted
+function supplies an operation with a type but no defining equations:
+\snippet{abstractKeys}
+\code{mkSymbolic} treats this constructor-free declaration as an uninterpreted
+sort, generating \code{SKey}. Despite the empty Haskell declaration, the solver's
+sort is nonempty; it is not a datatype with no inhabitants. We have specified
+neither a representation of keys nor a fixed number of distinct keys.
+
+\code{prove keyCongruence} succeeds because functions respect equality:
+equal keys have equal codes. The converse does not follow. The operation may
+map every key to the same integer unless an additional contract rules that out.
+Likewise, naming two symbolic keys does not assert that they differ; use an
+explicit disequality when the model needs distinct objects.
+
+This is useful abstraction when a client's theorem depends only on a few laws.
+The solver is free to choose any interpretation compatible with those laws,
+so a theorem must hold for all such interpretations. A counterexample can
+therefore expose a missing interface condition even when the intended concrete
+implementation would never exhibit the reported behavior. Section~\ref{sec:tp-failures}
+shows how to read function interpretations in counterexamples.
+
+
 \subsection{Explicit assumptions and consistent contracts}
 \label{sec:consistent-contracts}
-% END proposed-outline:abstraction
+
+Consider an integer operation that promises strict progress. Its implementation
+is hidden, but its contract suffices to prove progress after two calls:
+\snippet{advanceContract}
+\code{quantifiedBool} turns the quantified property into an \code{SBool} that
+can be used as a premise. The solver instantiates it at \code{n} and at
+\code{advance n}. Because the domain is integers, each strict increase is at
+least one; hence the total increase is at least two. The same premise over reals
+would not justify that numerical bound.
+
+The theorem is conditional. To use it for a concrete implementation, establish
+that implementation's contract as a separate obligation. The function
+\code{(+1)} supplies a simple consistency witness, and the companion proves it
+satisfies \code{advanceContract}. Adding the requirement \code{advance 0 .== 0}
+would contradict the contract at zero. Under both premises every conclusion
+would be vacuously true; the companion checks this contradiction as well.
+
+For a larger collection of contracts, use a satisfiability check and named
+constraints as above. Quantified satisfiability can itself be inconclusive;
+a concrete implementation satisfying the contracts can provide a constructive
+consistency argument. Keep these explicit premises distinct from TP's
+\code{axiom}: an axiom is a trusted dependency, whose use is recorded in the
+proof's trust information (Section~\ref{sec:proof-audits}). The bookkeeping proof
+later uses an arbitrary operation in just this modular way, with its algebraic
+laws as the theorem's premises.
+
 
 \section{Symbolic datatypes}
 \label{sec:datatypes}
@@ -732,10 +1040,34 @@ need induction. Infinite or partial trees are outside the model
 
 
 
-% BEGIN proposed-outline:partiality
 \subsection{Optional results and partial operations}
 \label{sec:partial-operations}
-% END proposed-outline:partiality
+
+The symbolic model needs a meaning even at inputs where an ordinary Haskell
+operation would fail. For example, \code{SL.head []} is unspecified rather than
+an exception to be caught by the solver. A theorem that relies on that value
+would not establish a property of Haskell's partial \code{head}. Expose the
+missing-result case in the interface instead:
+\snippet{optionalOperations}
+\code{headOptionSpec} states exactly when a head exists; when it does,
+\code{SM.fromJust} retrieves that head. The other function returns \code{Nothing}
+for a zero divisor and wraps integer division otherwise. The companion proves
+both its constructor condition and its value on nonzero divisors. Our contract
+therefore does not depend on any totalized division-by-zero behavior.
+
+\code{ite} constructs a symbolic choice, so its branches must be buildable
+symbolic expressions. It cannot make an ordinary Haskell exception in a branch
+safe merely because a solver will later rule that branch out. The operations
+above use symbolic head and division, not host-language attempts to destruct an
+unknown list or evaluate a partial concrete expression.
+
+There are two useful proof styles: prove a property under a domain precondition,
+or return an explicit result such as \code{SMaybe} and specify both constructors.
+Choose the one that matches the public API. The binary search in
+Section~\ref{sec:binary-search} uses the second style: absence of a matching
+index is represented by \code{Nothing}, while the contract for \code{Just i}
+also establishes bounds and the value at that index.
+
 
 \section{Arrays and symbolic memory}
 \label{sec:arrays}
@@ -790,28 +1122,176 @@ write, for every array, address, and pair of values. Solution: \code{lastWriteWi
 
 
 
-% BEGIN proposed-outline:representations-and-synthesis
 \section{Constraints over strings and sets}
 \label{sec:strings-and-sets}
+
+Representations can expose a specification directly. A string validator can be
+compared with a regular language, while an access-control invariant can be
+stated as set inclusion. These examples use solver theories to express the
+question at the level of the intended data, without first encoding characters
+or membership tables as integer arithmetic.
+
 
 \subsection{Regular expressions as specifications}
 \label{sec:strings-regex}
 
+Suppose a protocol accepts identifiers consisting of exactly three lowercase
+ASCII letters. One implementation checks the length and each character; an
+independent specification uses a regular expression:
+\snippet{regexImport}
+\snippet{regexValidator}
+\code{RE.Loop 3 3} means exactly three repetitions. Matching covers the whole
+string, not a substring. \code{prove identifierSpec} checks both directions:
+every accepted string belongs to the language, and every string in the language
+is accepted. A one-way implication would leave either rejection of valid
+identifiers or acceptance of invalid ones unexplained.
+
+String operations are available through \code{Data.SBV.List}. Here Haskell
+enumerates three positions in a symbolic string. The length check puts these
+positions within bounds whenever validation succeeds. The companion compares
+the validator with a separate Haskell predicate on ordinary strings, including
+empty strings, uppercase letters, digits, and non-ASCII characters.
+
+Regular languages give useful specifications for lexical formats. SMT-LIB
+provides string and regular-expression operations~\citep{smtstrings}, but a
+pattern is not a complete parser for an application protocol. This example
+intentionally chooses ASCII letters; it asserts nothing about case folding,
+Unicode normalization, or byte encodings. Make such transformations explicit
+when a production validator depends on them. The library's
+\code{Examples.Strings.RegexCrossword} and \code{SQLInjection} demonstrate
+larger combinations of symbolic strings and constraints.
+
+
 \subsection{Set membership and representation invariants}
 \label{sec:sets}
+
+Suppose \code{active} contains enabled users and \code{allowed} contains those
+permitted by policy. Their representation invariant is inclusion. Enabling one
+user preserves it if that user is allowed:
+\snippet{setImport}
+\snippet{setInvariant}
+The theorem covers every pair of sets and every integer user ID. A membership
+argument explains it: a member of the updated set was either already active or
+is the newly inserted user. In either case the premises place it in
+\code{allowed}. Unlike a list representation, a set has no meaningful element
+order or duplicates; equality compares membership.
+
+\code{SSet Integer} can denote infinite sets, including the universal set and
+complements of finite sets. Do not assume it can be enumerated or converted to
+a finite Haskell list. A model may describe a set by finitely many exceptions
+to a default membership value, much like the function models later in the paper.
+This is different from the finite recursive structure of an ADT. If the domain
+is \code{Word8}, there are only 256 possible members, but the choice of finite
+domain is still part of the specification.
+
+Sets are a good fit when the observable operations are membership, union,
+intersection, difference, and inclusion. A queue or ordered collection needs a
+representation that preserves more information. Choosing a set because it
+simplifies the solver query would be unsound if ordering matters to the client.
+
 
 \section{Quantifiers and program synthesis}
 \label{sec:synthesis}
 
+So far, counterexamples have helped repair a supplied implementation. They can
+also guide the construction of one. We will synthesize the coefficients of an
+expression template, verify the resulting candidate on every integer input,
+and feed any counterexample back into the search. The expression language from
+Section~\ref{sec:datatypes} and the query machinery from Section~\ref{sec:queries}
+now serve one combined purpose.
+
+
 \subsection{Quantifier order and witness dependence}
 \label{sec:quantifiers}
+
+Quantifier order states which choices may depend on which inputs. Compare one
+offset that works for every integer with an offset chosen after seeing the input:
+\snippet{quantifierOrder}
+The first query is unsatisfiable: the same offset cannot equal both 1 at input
+0 and 2 at input 1. The second is satisfiable, with the input-dependent choice
+$x+1$. \code{Exists} and \code{Forall} specify logical quantifiers; the Haskell
+type annotations give their names and sorts. They are different from Haskell's
+\code{forall}, which quantifies type variables.
+
+Program synthesis usually requires $\exists p.\,\forall x.\,\mathit{correct}(p,x)$:
+choose one program that works on every input. Reversing the quantifiers may
+allow a different program for each input and therefore solve a weaker problem.
+The synthesis parameters need not determine a constant output; they determine
+a program that subsequently receives \code{x}. Quantifier order controls the
+dependence of the \emph{choice of program}, not whether the program can read
+its argument.
+
+The companion checks both offset queries. General quantified formulas are harder
+than these examples, and a satisfying quantified formula need not provide a
+convenient executable witness. The following loop separates candidate search
+and verification into simpler calls and returns ordinary Haskell coefficients.
+
 
 \subsection{Expression search from examples}
 \label{sec:expression-search}
 
+Reuse \code{Expr} to build a family of affine expressions. A candidate has the
+shape $a x+b$; the input is supplied as a numeric leaf when the expression is
+built. We search for coefficients between $-3$ and 3:
+\snippet{affineTemplate}
+This is template synthesis: the tree shape is fixed by Haskell, while two
+constants are unknown. It is not an unrestricted search over expression trees.
+There are 49 possible coefficient pairs, but each denotes a function on all
+integers. \code{targetAt} supplies an independent expression for the desired
+behavior rather than reusing \code{affineAt}.
+
+First require agreement on a finite collection of examples:
+\snippet{exampleSearch}
+\code{exampleSearch [0]} fixes $b=1$ and leaves $a$ unconstrained within its
+range. For instance, $a=-3,b=1$ fits that example but fails at $x=1$.
+Adding examples improves the specification of the candidate; it is not in
+general a universal correctness proof. The companion re-evaluates the returned
+coefficients using the ordinary Haskell interpreter \code{evalC}.
+
+A grammar is a modeling choice. If it excludes every correct implementation,
+an unsatisfiable search means only that no candidate in this family fits the
+examples. Conversely, extending the grammar can make search much harder. We
+keep it small so that the feedback loop, rather than expression-generation
+machinery, is the main idea.
+
+
 \subsection{Counterexample-guided expression synthesis}
 \label{sec:synthesis-candidates}
-% END proposed-outline:representations-and-synthesis
+
+Once the coefficients are concrete, verification asks for an input on which the
+candidate disagrees with the specification:
+\snippet{candidateCounterexample}
+A satisfiable answer returns a new example. An unsatisfiable answer establishes
+agreement on every integer, since the query searched for an arbitrary violating
+input. An unknown answer establishes neither, so the helper reports it as
+inconclusive. The coefficients are fixed during this check: allowing them to
+change would ask the wrong question.
+
+The candidate solver retains all examples accumulated so far:
+\snippet*{synthesizeAffine}
+\code{io} runs the verification helper in a separate solver session and returns
+its ordinary Haskell result to the candidate query. A refuting input is lifted
+back with \code{literal} and added as a permanent constraint. In the checked
+run, the first candidate is $(-3,1)$, the verifier returns $-1$, and the next
+candidate is $(3,1)$; the final check is unsatisfiable. Candidate and
+counterexample order are solver choices, not part of the algorithm's contract.
+
+Each counterexample excludes the current candidate and never excludes a correct
+one. With 49 candidates, the loop has finitely many refinements provided every
+solver call returns a conclusive answer. An unbounded grammar would lose this
+termination argument. Here candidate constraints use concrete sample inputs,
+and verification uses concrete coefficients, so each call avoids multiplying
+two unknown integer quantities even though the combined synthesis problem
+mentions $a x$.
+
+The companion checks the solution against an enumeration of the entire template
+space and re-evaluates concrete expressions independently. The universal
+verification call remains essential: agreement on tested inputs alone is not
+the acceptance condition. This is counterexample-guided inductive
+synthesis~\citep{sketch};
+the ``inductive'' step here learns from examples and is distinct from the
+structural induction proofs introduced next.
+
 
 \outlinepart{III. Structuring arguments}
 \section{Proofs by induction}
@@ -1826,13 +2306,66 @@ input domain, rather than verifying either compiler in general.
 
 
 
-% BEGIN proposed-outline:proof-diagnostics
 \subsection{Encodings and solver selection}
 \label{sec:encodings-and-solvers}
 
+Solver selection starts with the meaning of the formula. Integer addition and
+byte addition are not interchangeable encodings of the same operation unless
+the relationship is stated. For example, this bridge theorem relates modular
+byte addition to an integer expression:
+\snippet{encodingBridge}
+\code{prove byteAdditionBridge} checks the connection rather than assuming it.
+If an abstraction omits the modulus, it needs a no-overflow precondition.
+Similarly, replacing a finite list by an integer-indexed array introduces a
+total memory model; length and bounds must be carried separately.
+
+After fixing semantics, compare formulations by inspecting the emitted problem
+and measuring the actual obligations. A finite Boolean circuit, quantified
+integer formula, and recursive sequence definition expose different work to a
+solver. No universal ranking of backends follows. The companion checks the byte
+field theorem with both \code{proveWith z3 fieldRoundTrip} and
+\code{proveWith cvc5 fieldRoundTrip}; changing the backend does not change the
+intended statement, but support and effectiveness depend on the theories used.
+Optimization remains a Z3-specific SBV interface in this tutorial.
+
+When a formulation stalls, first identify whether the difficulty is recursion,
+quantifier instantiation, nonlinear arithmetic, or the size of a finite encoding.
+Then try a justified reformulation or supply a lemma. Keep the model and its
+oracle unchanged while comparing attempts, preserve timeouts, and record solver
+versions and transcripts. A faster answer to a weakened property is not a
+successful optimization of the proof task.
+
+
 \subsection{Model validation and proof dependencies}
 \label{sec:proof-audits}
-% END proposed-outline:proof-diagnostics
+
+A printed \code{Q.E.D.} is only part of the report. TP also records dependencies,
+including unproved steps and user axioms. The following deliberately checks the
+same true identity twice, once normally and once with \code{sorry} supplied:
+\snippet*{auditProofs}
+The normal proof has \code{RootOfTrust Nothing}; the draft has a nonempty root
+of trust and is displayed as \code{Modulo: sorry}. The dependency tree shows the
+path from \code{draftIdentity} to \code{sorry}. This remains a draft even though
+its statement happens to be true. Removing the placeholder and rerunning the
+proof is what establishes the checked version.
+
+\code{showProofTree True} compresses repeated uses of a dependency; use
+\code{False} to retain them. \code{rootOfTrust} identifies the outstanding
+trusted dependencies. \code{axiom} introduces a proposition without proving it,
+and bypassing a function's termination check creates another trust dependency.
+These are different from explicit premises of a conditional theorem, whose
+logical role is visible in the statement. Inspect both the theorem and its
+root of trust before reusing it.
+
+For refutations, audit the witness as well. Re-evaluate concrete inputs with an
+independent interpreter or arithmetic calculation, check function defaults and
+array updates, and distinguish a local proof-step model from a program input.
+The validation driver does this for the examples in Section~\ref{sec:tp-failures}.
+For successful checks, dependencies explain what was assumed; they do not
+replace the solver and translation components of the trusted base described
+above. Keep the checked source, solver configuration, and validation record
+together so the claim remains reproducible.
+
 
 \section{Connections to program reasoning}
 \label{sec:related}

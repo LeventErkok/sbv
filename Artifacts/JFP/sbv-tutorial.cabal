@@ -30,6 +30,7 @@ flag strict
 executable tutorial-examples
   main-is: TutorialExamples.hs
   hs-source-dirs: examples
+  other-modules: ExpandedExamples
   build-depends:
     base >=4.19.2 && <5,
     sbv ==14.10

@@ -1,7 +1,7 @@
 SBV JFP tutorial companion validation
-UTC: 2026-11-09T17:25:04.062586+00:00
+UTC: 2026-11-09T17:57:37.680826+00:00
 Scope: tutorial examples only; not the full repository test suite.
-Companion repository revision: 9cea5ca4c744a5a1977fc3eb9543e9ef50d2eb66
+Companion repository revision: ba7b7ad6fa518c5463fc675b3a633defcde2f23e
 Companion working-tree status (input hashes below identify this draft):
 
 $ git status --short -- .
@@ -11,22 +11,24 @@ $ git status --short -- .
  M prepare.py
  M references.bib
  M results/validation.txt
+ M sbv-tutorial.cabal
  M sbv-tutorial.pdf
  M sbv-tutorial.tex
  M validate.py
+?? examples/ExpandedExamples.hs
 Exit status: 0; elapsed: 0.01s
 
 $ ghc --numeric-version
 9.14.1
-Exit status: 0; elapsed: 0.09s
+Exit status: 0; elapsed: 0.05s
 
 $ cabal --numeric-version
 3.16.1.0
-Exit status: 0; elapsed: 0.04s
+Exit status: 0; elapsed: 0.02s
 
 $ z3 --version
 Z3 version 5.3.2 - 64 bit - build hashcode b411c90217766c924e6ea3d0b51f452a89fd8fc2
-Exit status: 0; elapsed: 0.04s
+Exit status: 0; elapsed: 0.01s
 
 $ cvc5 --version
 cvc5 1.4.2 [git 282d5e0 on branch HEAD]
@@ -88,7 +90,7 @@ See licenses/gpl-3.0.txt for more information.
 See the file COPYING (distributed with the source code, and with
 all binaries) for the full cvc5 copyright, licensing, and (lack of)
 warranty information.
-Exit status: 0; elapsed: 0.03s
+Exit status: 0; elapsed: 0.01s
 
 $ cc --version
 Apple clang version 21.0.0 (clang-2100.3.34.2)
@@ -101,10 +103,13 @@ $ cabal build --offline -fstrict tutorial-examples
 Resolving dependencies...
 Build profile: -w ghc-9.14.1 -O1
 In order, the following will be built (use -v for more details):
- - sbv-tutorial-0.1.0.0 (exe:tutorial-examples) (file sbv-tutorial.tex changed)
+ - sbv-tutorial-0.1.0.0 (exe:tutorial-examples) (file examples/TutorialExamples.hs changed)
 Preprocessing executable 'tutorial-examples' for sbv-tutorial-0.1.0.0...
 Building executable 'tutorial-examples' for sbv-tutorial-0.1.0.0...
-Exit status: 0; elapsed: 1.89s
+[1 of 2] Compiling ExpandedExamples ( examples/ExpandedExamples.hs, dist-newstyle/build/aarch64-osx/ghc-9.14.1/sbv-tutorial-0.1.0.0/x/tutorial-examples/noopt/build/tutorial-examples/tutorial-examples-tmp/ExpandedExamples.o, dist-newstyle/build/aarch64-osx/ghc-9.14.1/sbv-tutorial-0.1.0.0/x/tutorial-examples/noopt/build/tutorial-examples/tutorial-examples-tmp/ExpandedExamples.dyn_o ) [Source file changed]
+[2 of 2] Compiling Main             ( examples/TutorialExamples.hs, dist-newstyle/build/aarch64-osx/ghc-9.14.1/sbv-tutorial-0.1.0.0/x/tutorial-examples/noopt/build/tutorial-examples/tutorial-examples-tmp/Main.o, dist-newstyle/build/aarch64-osx/ghc-9.14.1/sbv-tutorial-0.1.0.0/x/tutorial-examples/noopt/build/tutorial-examples/tutorial-examples-tmp/Main.dyn_o ) [Source file changed]
+[3 of 3] Linking dist-newstyle/build/aarch64-osx/ghc-9.14.1/sbv-tutorial-0.1.0.0/x/tutorial-examples/noopt/build/tutorial-examples/tutorial-examples [Objects changed]
+Exit status: 0; elapsed: 8.79s
 
 SBV source revision: ef9b2c0daeabb0e378eae9c584bb8bdbd815ddc3
 SBV source package SHA-256: 4c0a04fbbef477df74f1e6771d8660b3abb6173593bc5ad41a755e9b9f6ca5fc
@@ -115,17 +120,18 @@ $ git status --short -- Data Documentation sbv.cabal
 Exit status: 0; elapsed: 0.01s
 
 SHA-256 of validation inputs:
-930f557f35adec902f062e3897b0ce7f83d6c2f60711f30d5c2a345e6d361366  examples/TutorialExamples.hs
+7960677aad091637064fded218d10bfebfe387a22bab8b61a62b2de6e711018a  examples/TutorialExamples.hs
+6c5ec3ce297abb65244a9075d4c6b6b00b0ea0ddf64ea304a17deffbdd606d01  examples/ExpandedExamples.hs
 94bb964dbf0e9cb3d9ec1d8af6d4dc3a7f06b5399eae586c339fe061d4b92bc6  examples/adder-check.c
-9268ffd8519e980850f4409e8a7544d5e30681ef6775dc3c60772f5e913d6240  validate.py
-6e12eca61712ee5cfd3bc035b8b57d1a415113a5ac4d61d791333b8c2f3bbdce  prepare.py
+223bdff18fe8e26be65ab11c1a9fe77eb57c945f4c15b07b0e46cdff1d1fb7e3  validate.py
+8d59e28befe292d0a2d676614906290e2c0d6462a0d477df0d39d64ec29d3f0f  prepare.py
 85c0157065210a129d02ea0fca51d8f79c6d888f89c029c9a8840811827de8d2  companion.py
-0cadc136e3d9a38f1812af07b397b2bc2174bcca08b489f8a52a587d92f85ebb  sbv-tutorial.cabal
+25ecb8329dee3558d4ff47053e02f0b46f28dd6b8edf4f8562afe5f94c4b4bb7  sbv-tutorial.cabal
 d12b672fc2acd78c7a513e61c42f162aeab2d0e1c6056f6dd2d12e45a6200dea  cabal.project
 47a76c93961f585a55e006fdb698b089101e2813618bae0d98abcc7e3ca9254e  cabal.project.freeze
 c12e591cc839cd9ea1ea59ccb2a846df2731f2a7b3c5b6dbe9b4e27e45afecd7  jfp_format.py
-b6713e254d9640eba9ab2db6c655e0142ecf3cbb9707fc4f3fe0a4c9498ea74d  sbv-tutorial.tex
-7f4dde46eab4e74ad25a57d49853188455b9ac7a686bd0d2257cad9f4f804c16  references.bib
+982c674226c0a0e11b6c1a859a3fc2426914b58bf0e5ff80a1e348ac2478c6e4  sbv-tutorial.tex
+dd89a74f9f57b80a2af8bccf161611d71c52c6cd7d4367847fb71a146816d3ed  references.bib
 8eea7aeec13290d8aa1ae4fac9c78e92f98f4095790b8a75d2040fd839affc13  Makefile
 bcf4de26bb14e21af79675dfe323d2d6bc3c3e48940e54687fa646296e105bcf  LICENSE
 f346d68da03c07968a810eeb08610b9c2aa630324e7387ddf55a4af0a64888f9  SBV/sbv.cabal
@@ -138,18 +144,23 @@ c2ed83ea80d05514fd2838c5cd3c45003cb1a1e598c446220d9075828229953d  SBV/Documentat
 bc71db89cd62819f3b6e4b6cfe9a9e3d3bec47e0142eda6e7b5587f54f4be93c  SBV/Documentation/SBV/Examples/WeakestPreconditions/Basics.hs
 a74fe65b4ebfe7c34f1b4985fa3833cc5f0248f90b9ceb6e25339683eb7ea847  SBV/Documentation/SBV/Examples/TP/BinarySearch.hs
 4e796a7e532e4bcec75299a6f08d0c96b4d8c8d7b22da170999889d1181da431  SBV/Documentation/SBV/Examples/BitPrecise/BrokenSearch.hs
+7662c554f724800f81a4376a85f9f9821dda79f54e8d1928b4cd652cecd97083  SBV/Documentation/SBV/Examples/BitPrecise/Adders.hs
+a89b4aa1c33004079c0118fb527e5eceb0c94e240caf02f4519a796747bd3cfd  SBV/Data/SBV/Set.hs
+4eb4bef13bd5bc3694e9b2c77d0bc1f813085b03240a724383b63867dc83b06c  SBV/Data/SBV/RegExp.hs
+30d1cb072a98f76f5babeb3fb9fa7941eb5b005334918d6e8fca6d81e98eef71  SBV/Data/SBV/Rational.hs
+c3438fd2241ef64d08d298d438c62a64cc65d1a2cbdfc774fa77b1a62f9de7c7  SBV/Data/SBV/TP/Utils.hs
 
 Library package description:
 Name        : sbv
 Version     : 14.10
 
 $ /Library/Developer/CommandLineTools/usr/bin/python3 /Users/lerkok/Projects/sbv/Artifacts/JFP/prepare.py
-Extracted 51 listings (46 used by the manuscript)
-Exit status: 0; elapsed: 0.05s
+Extracted 75 listings (70 used by the manuscript)
+Exit status: 0; elapsed: 0.06s
 
 $ cabal list-bin tutorial-examples -v0
 /Users/lerkok/Projects/sbv/Artifacts/JFP/dist-newstyle/build/aarch64-osx/ghc-9.14.1/sbv-tutorial-0.1.0.0/x/tutorial-examples/noopt/build/tutorial-examples/tutorial-examples
-Exit status: 0; elapsed: 0.87s
+Exit status: 0; elapsed: 0.86s
 
 $ /Users/lerkok/Projects/sbv/Artifacts/JFP/dist-newstyle/build/aarch64-osx/ghc-9.14.1/sbv-tutorial-0.1.0.0/x/tutorial-examples/noopt/build/tutorial-examples/tutorial-examples
 PASS integer absolute value is nonnegative
@@ -167,14 +178,14 @@ Falsifiable. Counter-example:
   x = 223 :: Word8
   y = 124 :: Word8
 PASS incorrect overflow guard is refuted, checked by an oracle
-examples/TutorialExamples.hs:92:32:+!: SInt32 addition overflows: Violated. Model:
+examples/TutorialExamples.hs:93:32:+!: SInt32 addition overflows: Violated. Model:
   low  = 1073741832 :: Int32
   high = 1107296257 :: Int32
-examples/TutorialExamples.hs:92:41:/!: SInt32 division overflows: No violations detected
+examples/TutorialExamples.hs:93:41:/!: SInt32 division overflows: No violations detected
 PASS binary-search midpoint overflow model checked independently
-examples/TutorialExamples.hs:93:41:-!: SInt32 subtraction overflows: No violations detected
-examples/TutorialExamples.hs:93:49:/!: SInt32 division overflows: No violations detected
-examples/TutorialExamples.hs:93:31:+!: SInt32 addition overflows: No violations detected
+examples/TutorialExamples.hs:94:41:-!: SInt32 subtraction overflows: No violations detected
+examples/TutorialExamples.hs:94:49:/!: SInt32 division overflows: No violations detected
+examples/TutorialExamples.hs:94:31:+!: SInt32 addition overflows: No violations detected
 PASS repaired midpoint has no arithmetic violations
 PASS repaired midpoint equals the 64-bit specification
 PASS printed midpoint counterexample at 2^30
@@ -413,7 +424,69 @@ Lemma: kadaneNonEmptyCorrect
   Result:                                   Q.E.D.
 Functions proven terminating: kadaneNonEmpty, kadaneNonEmptyHelper, mssBegin, mssNonEmpty
 PASS exercise 6: nonempty Kadane correctness
-Exit status: 0; elapsed: 29.96s
+Exit status: 0; elapsed: 30.29s
+
+$ /Users/lerkok/Projects/sbv/Artifacts/JFP/dist-newstyle/build/aarch64-osx/ghc-9.14.1/sbv-tutorial-0.1.0.0/x/tutorial-examples/noopt/build/tutorial-examples/tutorial-examples --expanded
+PASS byte field round trip
+PASS byte field round trip with CVC5
+PASS nibble masking and arithmetic oracle (all 256 bytes)
+PASS rotation inverse and signed versus unsigned shifts
+PASS narrowing with a range contract
+PASS power-of-two bit trick
+PASS power-of-two against concrete popcount (all 256 bytes)
+PASS symbolic rational construction
+PASS exact rational arithmetic
+Satisfiable. Model:
+  root = root(2, x^2 = 2) = 1.414213562373095... :: Real
+PASS exact algebraic root model
+PASS explicit floating-point rounding
+Falsifiable. Counter-example:
+  z = -1.6777216e7 :: Float
+PASS finite floating-point associativity counterexample
+Optimal model:
+  choice      =     2 :: Integer
+  prefer-zero = False :: Bool
+  prefer-two  =  True :: Bool
+PASS weighted soft constraints versus enumerated costs
+PASS ripple, lookahead, and machine addition agree at eight bits
+PASS query scope is restored
+["nonnegative","negative"]
+PASS unsat core replay
+PASS uninterpreted function congruence
+PASS contract implies progress after two calls
+PASS contract has a concrete implementation
+PASS contradictory contract detected
+PASS optional list head constructor contract
+PASS optional division constructor and value
+PASS identifier validator agrees with regex
+PASS identifier validator concrete oracle
+PASS activation preserves allowed-set invariant
+PASS set operation concrete membership oracle
+Unsatisfiable
+PASS existential before universal has no offset
+Satisfiable
+PASS existential after universal permits input-dependent offset
+PASS bit-vector/integer encoding bridge
+Lemma: checkedIdentity    Q.E.D.
+Lemma: draftIdentity    Q.E.D. [Modulo: sorry]
+draftIdentity
+ └╴sorry
+
+Just [sorry]
+PASS auditing a checked proof versus a draft
+Exit status: 0; elapsed: 6.04s
+
+$ /Users/lerkok/Projects/sbv/Artifacts/JFP/dist-newstyle/build/aarch64-osx/ghc-9.14.1/sbv-tutorial-0.1.0.0/x/tutorial-examples/noopt/build/tutorial-examples/tutorial-examples --synthesis
+Satisfiable. Model:
+  a = -3 :: Integer
+  b =  1 :: Integer
+PASS expression search fits examples but need not prove a program
+PASS bad affine candidate has a concrete independently checked input
+Candidate: (-3,1)
+Counterexample: -1
+Candidate: (3,1)
+PASS counterexample-guided expression synthesis
+Exit status: 0; elapsed: 0.06s
 
 $ /Users/lerkok/Projects/sbv/Artifacts/JFP/dist-newstyle/build/aarch64-osx/ghc-9.14.1/sbv-tutorial-0.1.0.0/x/tutorial-examples/noopt/build/tutorial-examples/tutorial-examples --tp-failures
 BEGIN badLengthProof
@@ -456,7 +529,7 @@ Falsifiable. Counter-example:
   q _ = True
 PASS TP reports a function model for the false quantified law
 END forallDisjunctionNot
-Exit status: 0; elapsed: 0.11s
+Exit status: 0; elapsed: 0.09s
 PASS TP diagnostics: replayed concrete, intermediate-step, and function models
 
 $ /Users/lerkok/Projects/sbv/Artifacts/JFP/dist-newstyle/build/aarch64-osx/ghc-9.14.1/sbv-tutorial-0.1.0.0/x/tutorial-examples/noopt/build/tutorial-examples/tutorial-examples --binary-search
@@ -478,7 +551,7 @@ Inductive lemma (strong): binarySearchCorrect
 Functions proven terminating: bsearch
 PASS binary-search TP contract: constructor, bounds, and value
 PASS binary-search results against a list oracle (10 cases)
-Exit status: 0; elapsed: 0.16s
+Exit status: 0; elapsed: 0.13s
 
 $ /Users/lerkok/Projects/sbv/Artifacts/JFP/dist-newstyle/build/aarch64-osx/ghc-9.14.1/sbv-tutorial-0.1.0.0/x/tutorial-examples/noopt/build/tutorial-examples/tutorial-examples --tautology
 PASS tautology checker against truth tables (70 formulas)
@@ -497,7 +570,7 @@ Lemma: completeness                                 Q.E.D.
 Functions proven terminating:
   eval, falsify', ifComplexity, ifDepth, isAssigned, isNormal, isTautology', lookUp, normalize
 PASS tautology checker completeness
-Exit status: 0; elapsed: 2.25s
+Exit status: 0; elapsed: 2.18s
 
 $ /Users/lerkok/Projects/sbv/Artifacts/JFP/dist-newstyle/build/aarch64-osx/ghc-9.14.1/sbv-tutorial-0.1.0.0/x/tutorial-examples/noopt/build/tutorial-examples/tutorial-examples --diagnostics /Users/lerkok/Projects/sbv/Artifacts/JFP/build/sat-add.smt2
 ** Calling: z3 -nw -in -smt2
@@ -540,7 +613,7 @@ $ /Users/lerkok/Projects/sbv/Artifacts/JFP/dist-newstyle/build/aarch64-osx/ghc-9
 *** Solver   : Z3
 *** Exit code: ExitSuccess
 PASS verbose proof with replayable transcript
-Exit status: 0; elapsed: 0.74s
+Exit status: 0; elapsed: 0.70s
 
 $ z3 /Users/lerkok/Projects/sbv/Artifacts/JFP/build/sat-add.smt2
 success
@@ -566,22 +639,23 @@ success
 success
 success
 unsat
-Exit status: 0; elapsed: 0.67s
+Exit status: 0; elapsed: 0.64s
 
 $ /Users/lerkok/Projects/sbv/Artifacts/JFP/dist-newstyle/build/aarch64-osx/ghc-9.14.1/sbv-tutorial-0.1.0.0/x/tutorial-examples/noopt/build/tutorial-examples/tutorial-examples --generate /Users/lerkok/Projects/sbv/Artifacts/JFP/build/c
 
-Exit status: 0; elapsed: 0.03s
+Exit status: 0; elapsed: 0.02s
 
 $ cc -std=c11 -Wall -Wextra -Werror -O2 -fsanitize=undefined -fno-sanitize-recover=all -I/Users/lerkok/Projects/sbv/Artifacts/JFP/build/c /Users/lerkok/Projects/sbv/Artifacts/JFP/build/c/sat_add.c /Users/lerkok/Projects/sbv/Artifacts/JFP/examples/adder-check.c -o /Users/lerkok/Projects/sbv/Artifacts/JFP/build/adder-check
 
-Exit status: 0; elapsed: 0.10s
+Exit status: 0; elapsed: 0.07s
 
 $ /Users/lerkok/Projects/sbv/Artifacts/JFP/build/adder-check
 PASS generated C: all 65536 unsigned-byte input pairs
-Exit status: 0; elapsed: 0.30s
+Exit status: 0; elapsed: 3.13s
 
 VALIDATION PASSED: all tutorial checks (including random tests and exercise
-solutions and midpoint checks), the strengthened binary-search TP proof,
+solutions and midpoint checks), all expanded semantic-domain and query examples,
+counterexample-guided synthesis and its independent oracles, the strengthened binary-search TP proof,
 binary-search concrete oracles, TP counterexample replay, verbose diagnostics and SMT-LIB transcript replay, the
 tautology checker's truth-table checks, soundness and completeness proofs, and exhaustive
 generated-C checking. Timings are single-run diagnostics, not benchmarks.

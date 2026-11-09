@@ -16,9 +16,10 @@ module Main (main) where
 import Control.Exception (ErrorCall, displayException, try)
 import Control.Monad (replicateM, unless, void)
 import Data.List (inits, isInfixOf, sort, tails)
-import Data.Maybe (fromMaybe)
+import Data.Maybe (fromMaybe, isNothing)
 import System.Environment (getArgs)
 import qualified System.Timeout as Timeout
+import ExpandedExamples (expandedChecks)
 
 -- BEGIN imports
 import Data.SBV
@@ -390,6 +391,65 @@ puzzleChecked = do
     _                                 -> False
   where isNumC Num{} = True
         isNumC _     = False
+
+-- BEGIN affineTemplate
+-- The input is inserted as a numeric leaf in the existing Expr language.
+affineAt :: SInteger -> SInteger -> SInteger -> SInteger
+affineAt a b x = eval (sAdd (sMul (sNum a) (sNum x)) (sNum b))
+
+targetAt :: SInteger -> SInteger
+targetAt x = x + x + x + 1
+
+affineParameters :: Symbolic (SInteger, SInteger)
+affineParameters = do
+  a <- sInteger "a"
+  b <- sInteger "b"
+  constrain $ sAnd [(-3) .<= a, a .<= 3, (-3) .<= b, b .<= 3]
+  pure (a,b)
+-- END affineTemplate
+
+-- BEGIN exampleSearch
+exampleSearch :: [Integer] -> IO SatResult
+exampleSearch inputs = satWith z3Timeout5 $ do
+  (a,b) <- affineParameters
+  pure $ sAnd [affineAt a b (literal x) .== targetAt (literal x) | x <- inputs]
+-- END exampleSearch
+
+-- BEGIN candidateCounterexample
+candidateCounterexample :: (Integer, Integer) -> IO (Maybe Integer)
+candidateCounterexample (a,b) = runSMTWith z3Timeout5 $ do
+  x <- sInteger "input"
+  constrain $ affineAt (literal a) (literal b) x ./= targetAt x
+  query $ do
+    result <- checkSat
+    case result of
+      Sat   -> Just <$> getValue x
+      Unsat -> pure Nothing
+      _     -> io $ fail "candidate verification was inconclusive"
+-- END candidateCounterexample
+
+-- BEGIN synthesizeAffine
+synthesizeAffine :: IO (Integer, Integer)
+synthesizeAffine = runSMTWith z3Timeout5 $ do
+  (a,b) <- affineParameters
+  constrain $ affineAt a b 0 .== targetAt 0
+  query $ let loop = do
+                result <- checkSat
+                case result of
+                  Sat -> do
+                    candidate <- (,) <$> getValue a <*> getValue b
+                    io $ putStrLn $ "Candidate: " ++ show candidate
+                    witness <- io $ candidateCounterexample candidate
+                    case witness of
+                      Nothing -> pure candidate
+                      Just x  -> do
+                        io $ putStrLn $ "Counterexample: " ++ show x
+                        constrain $ affineAt a b (literal x) .== targetAt (literal x)
+                        loop
+                  Unsat -> io $ fail "no program in this template matches the samples"
+                  _     -> io $ fail "candidate search was inconclusive"
+          in loop
+-- END synthesizeAffine
 
 -- Datatype introduced only inside a query: registration must follow use.
 newtype Box a = Box a deriving (Eq, Ord, Show)
@@ -1103,6 +1163,30 @@ midpointChecks = do
   check "repaired midpoint equals the 64-bit specification" $ isTheorem (midPointSpec midPointFixed)
   check "printed midpoint counterexample at 2^30" midPointPrintedExample
 
+synthesisChecks :: IO ()
+synthesisChecks = do
+  check "expression search fits examples but need not prove a program" $ do
+    r <- exampleSearch [0]
+    print r
+    pure $ case (getModelValue "a" r, getModelValue "b" r) of
+      (Just a, Just b) -> a >= (-3 :: Integer) && a <= 3 && b == (1 :: Integer) &&
+                        evalC (Add (Mul (Num a) (Num 0)) (Num b)) == 1
+      _ -> False
+  check "bad affine candidate has a concrete independently checked input" $ do
+    witness <- candidateCounterexample (0,1)
+    pure $ case witness of
+      Just x -> evalC (Add (Mul (Num 0) (Num x)) (Num 1)) /= 3*x+1
+      Nothing -> False
+  check "counterexample-guided expression synthesis" $ do
+    candidate@(a,b) <- synthesizeAffine
+    -- Enumerate the entire grammar independently of the symbolic evaluator.
+    let feasible = [(u,v) | u <- [-3..3], v <- [-3..3],
+                            all (\x -> evalC (Add (Mul (Num u) (Num x)) (Num v)) == 3*x+1)
+                                ([-2..2] :: [Integer])]
+    verified <- candidateCounterexample candidate
+    pure $ feasible == [(3,1)] && candidate `elem` feasible && isNothing verified &&
+           all (\x -> evalC (Add (Mul (Num a) (Num x)) (Num b)) == 3*x+1) ([-100..100] :: [Integer])
+
 main :: IO ()
 main = do
   args <- getArgs
@@ -1119,6 +1203,8 @@ main = do
         void binarySearchProof >> pure True
       check "binary-search results against a list oracle (10 cases)" binarySearchConcrete
     ["--midpoint"] -> midpointChecks
+    ["--expanded"] -> expandedChecks check
+    ["--synthesis"] -> synthesisChecks
     ["--tp-failures"] -> tpFailureChecks
     ["--tautology-concrete"] -> check "tautology checker against truth tables (70 formulas)" tautologyConcrete
     ["--tautology"] -> do
@@ -1186,6 +1272,6 @@ main = do
       check "exercise 5: revAcc length" $ void (runTP revAccLength) >> pure True
       check "exercise 6: nonempty segments against an independent oracle" kadaneNonEmptyConcrete
       check "exercise 6: nonempty Kadane correctness" $ void (runTP kadaneNonEmptyCorrect) >> pure True
-    _ -> fail "Usage: tutorial-examples [--midpoint | --binary-search | --tp-failures | --tautology | --tautology-concrete | --generate DIR | --diagnostics FILE]"
+    _ -> fail "Usage: tutorial-examples [--expanded | --synthesis | --midpoint | --binary-search | --tp-failures | --tautology | --tautology-concrete | --generate DIR | --diagnostics FILE]"
 
 {- HLint ignore shiftEach "Avoid lambda" -}

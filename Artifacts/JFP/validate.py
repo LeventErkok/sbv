@@ -70,7 +70,7 @@ with log_path.open("w") as log:
         raise SystemExit(1)
     record("\nSHA-256 of validation inputs:")
     for base, prefix, names in [
-        (tutorial, "", ["examples/TutorialExamples.hs", "examples/adder-check.c",
+        (tutorial, "", ["examples/TutorialExamples.hs", "examples/ExpandedExamples.hs", "examples/adder-check.c",
                         "validate.py", "prepare.py", "companion.py", "sbv-tutorial.cabal",
                         "cabal.project", "cabal.project.freeze", "jfp_format.py",
                         "sbv-tutorial.tex", "references.bib", "Makefile", "LICENSE"]),
@@ -81,7 +81,10 @@ with log_path.open("w") as log:
                         "Documentation/SBV/Examples/ProofTools/Strengthen.hs",
                         "Documentation/SBV/Examples/WeakestPreconditions/Basics.hs",
                         "Documentation/SBV/Examples/TP/BinarySearch.hs",
-                        "Documentation/SBV/Examples/BitPrecise/BrokenSearch.hs"]),
+                        "Documentation/SBV/Examples/BitPrecise/BrokenSearch.hs",
+                        "Documentation/SBV/Examples/BitPrecise/Adders.hs",
+                        "Data/SBV/Set.hs", "Data/SBV/RegExp.hs", "Data/SBV/Rational.hs",
+                        "Data/SBV/TP/Utils.hs"]),
     ]:
         for name in names:
             record(f"{sha256((base / name).read_bytes()).hexdigest()}  {prefix}{name}")
@@ -94,6 +97,8 @@ with log_path.open("w") as log:
     if "*** Failed to prove revWeak.2." not in output:
         record("VALIDATION FAILED: expected failure at reversal step 2 was not observed")
         raise SystemExit(1)
+    run([executable, "--expanded"])
+    run([executable, "--synthesis"])
     failures = run([executable, "--tp-failures"])
     def failed_obligation(name, obligation, *, assumptions=False):
         block = failures.split("BEGIN " + name + "\n", 1)[1].split("END " + name, 1)[0]
@@ -153,7 +158,8 @@ with log_path.open("w") as log:
          "-o", build / "adder-check"])
     run([build / "adder-check"])
     record("\nVALIDATION PASSED: all tutorial checks (including random tests and exercise")
-    record("solutions and midpoint checks), the strengthened binary-search TP proof,")
+    record("solutions and midpoint checks), all expanded semantic-domain and query examples,")
+    record("counterexample-guided synthesis and its independent oracles, the strengthened binary-search TP proof,")
     record("binary-search concrete oracles, TP counterexample replay, verbose diagnostics and SMT-LIB transcript replay, the")
     record("tautology checker's truth-table checks, soundness and completeness proofs, and exhaustive")
     record("generated-C checking. Timings are single-run diagnostics, not benchmarks.")

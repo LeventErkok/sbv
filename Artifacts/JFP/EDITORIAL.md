@@ -484,3 +484,95 @@ exception format, but reports the actual exception if that format changes;
 a successful action where rejection was expected also gets a specific diagnostic.
 Disclosure-policy checking remains an open submission task; no disclosure was
 added to the manuscript.
+
+### 2026-11-09: filling the remaining outline
+
+All twenty previously empty subsections now contain explanations and executable
+examples. The original Symposium tutorial is unchanged. The material follows the
+existing four-part structure; the state-transition and Bird projects remain
+open-ended projects, not claimed implementations.
+
+| Subsection | Teaching purpose and checked example |
+|---|---|
+| Signed and unsigned words | Fixed widths and interpretation; byte shifts and wraparound |
+| Masks, shifts, rotations, and bit fields | Packing/extraction round trip, arithmetic oracle for every byte, rotation inverse |
+| Widening, narrowing, and checked arithmetic | Range contract for an integer-to-byte round trip |
+| Bit tricks and independent specifications | Power-of-two recognition against enumeration and population count |
+| Rationals and algebraic reals | Exact thirds, rational construction, and an algebraic square-root model |
+| Rounding modes and floating-point identities | Explicit rounding at 2^24 and finite nonassociativity |
+| Soft constraints and weighted preferences | Violated-preference costs compared with all feasible choices |
+| Circuit equivalence | Haskell builds an eight-bit ripple circuit, compared with lookahead and native addition |
+| Scoped assumptions | Push/pop and temporary assumptions with independently expected results |
+| Unsat cores | Named contradictory bounds; returned subset replayed in a fresh check |
+| Uninterpreted functions and abstract sorts | Opaque keys and congruence, without assuming injectivity |
+| Explicit assumptions and consistent contracts | Two-call progress, a concrete implementation witness, and contradiction detection |
+| Partial operations | Optional list head and division, with constructor/value contracts |
+| Regular expressions as specifications | Three-letter identifier validator proved equivalent to a regex |
+| Sets and membership invariants | Activation preserves the allowed-set invariant |
+| Quantifier order | One universal offset versus an input-dependent witness |
+| Expression search from examples | Fixed affine Expr template, bounded coefficients, concrete evalC check |
+| Counterexample-guided expression synthesis | Incremental candidate query plus a separate universal verifier |
+| Encodings and solver selection | Byte/integer modular bridge, and the same field theorem with Z3 and CVC5 |
+| Model validation and proof dependencies | A checked identity versus the same identity with sorry; trust-root/tree inspection |
+
+`ExpandedExamples.hs` holds the domain and query examples. The synthesis helpers
+remain with `Expr` in `TutorialExamples.hs`. The extractor now reads all companion
+Haskell modules and rejects duplicate snippet names. Cabal declares the additional
+module explicitly; validation includes its hash and both new executable groups.
+The independent checks include all 256 bytes, all three preference choices, all
+49 coefficient pairs, and ordinary Haskell evaluation of synthesized expressions.
+The verifier searches unbounded integer inputs; finite testing does not replace it.
+Unknown solver results never count as a successful synthesis result.
+
+The circuit theorem is explicitly for eight bits. The expression grammar fixes
+an affine tree shape, rather than promising unrestricted recursive-tree synthesis.
+For strings, a generic recursive character predicate encountered a termination
+measure limitation in this SBV snapshot; the tutorial instead uses a fixed
+three-letter identifier and proves the complete equivalence. No pinned library
+source was altered. Algebraic models are rechecked without conversion to Double.
+
+New external sources were checked against the official SMT-LIB theory pages for
+FixedSizeBitVectors, FloatingPoint, and UnicodeStrings. The CEGIS citation is
+Solar-Lezama et al., "Combinatorial Sketching for Finite Programs", ASPLOS 2006,
+pp. 404–415. The author-hosted PDF at
+https://people.csail.mit.edu/asolar/papers/asplos06-final.pdf describes the
+synthesize/verify loop; its printed author order is used. Seshia's bibliographic
+page confirms venue, year, and pages, but lists the final two authors in the
+opposite order, so the PDF takes precedence. No unverified DOI was added.
+
+Completion checks for this revision: the existing main PDF was rebuilt and is
+57 pages at this snapshot; selected new pages were visually inspected. There are
+no overfull boxes or unresolved references. Full `validate.py` passed, all 29
+recorded input hashes match, HLint reports no hints in either companion module,
+and `git diff --check` is clean. The refreshed Cabal source archive includes
+`ExpandedExamples.hs`. Validation for this revision ran in the working checkout;
+archive contents were inspected, but this run did not rebuild in a fresh unpacked
+archive. The validation log identifies the parent commit and uncommitted draft
+through its input hashes.
+
+### 2026-11-09: review of the expanded sections
+
+The unsat-core paragraph deliberately reports the observed checked run:
+`["nonnegative","negative"]`. Its explanation that `upper` adds nothing refers
+to that particular sufficient pair. Validation accepts any sufficient subset of
+the known constraints, including non-minimal cores and different name orderings.
+After changing solver versions or the example, inspect the reported core before
+retaining the observed-output sentence; validation alone does not freeze it.
+
+The floating-point paragraph now says explicitly that the companion refutes
+`finiteAssociativity` at the fixed instance `(2^24,1,-2^24)`, rather than implying
+that the solver searched freely for all three values. The example still refutes
+the universal law. `ExpandedExamples` now exports its documented examples and
+validation entry point explicitly, hiding the internal checking helpers. `Main`
+imports only `expandedChecks`, avoiding incidental names from the example module;
+the README explains how to bring the public examples into GHCi scope.
+
+Length guidance rechecked on 2026-11-09 against the current Episciences pages:
+https://jfp.episciences.org/for-authors and
+https://manager.episciences.org/jfp/page/about . Neither sets a numerical tutorial
+limit. The scope page describes regular papers as often 20–50 pages, explicitly
+allowing shorter or longer papers. That range is not a tutorial cap. The tutorial
+criteria instead emphasize gradual introduction, coherent presentation, and
+careful writing. The draft's 57 pages including references call for an editorial
+length review before submission; absence of a numerical cap does not establish
+that the present length will satisfy the editors.

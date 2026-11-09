@@ -2,7 +2,7 @@
 """Extract the tutorial's listings from checked Haskell sources.
 
 Two sources are used:
-  * examples/TutorialExamples.hs, delimited by '-- BEGIN name' / '-- END name';
+  * examples/*.hs, delimited by '-- BEGIN name' / '-- END name';
   * declarations extracted from SBV's own documentation modules, taken
     from the declaration's first line up to the next top-level line; two long
     declarations are reindented with a non-whitespace identity check.
@@ -43,9 +43,12 @@ def paper_listing(name, body):
         raise SystemExit(f"{name}: unclosed paper elision")
     return "".join(output)
 
-companion = (root / "examples" / "TutorialExamples.hs").read_text()
-for name, body in re.findall(r"^-- BEGIN (\w+)\n(.*?)^-- END \1$", companion, re.M | re.S):
-    snippets[name] = paper_listing(name, body)
+for source_file in sorted((root / "examples").glob("*.hs")):
+    companion = source_file.read_text()
+    for name, body in re.findall(r"^-- BEGIN (\w+)\n(.*?)^-- END \1$", companion, re.M | re.S):
+        if name in snippets:
+            raise SystemExit(f"{source_file.name}: duplicate snippet {name}")
+        snippets[name] = paper_listing(name, body)
 
 # (snippet name, library module, regex matching the declaration's first line)
 library = [
