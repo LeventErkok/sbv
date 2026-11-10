@@ -45,6 +45,6 @@
 [VALIDATE] Counterexample is validated.
 
 FINAL OUTPUT:
-Falsifiable. Counter-example:
+Falsifiable. Counterexample:
   x = 13 :: Integer
   y = 11 :: Integer

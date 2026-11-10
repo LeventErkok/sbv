@@ -140,7 +140,7 @@ EXCEPTION:
 ***
 ***   Function: mc91triv :: SBV Integer -> SBV Integer
 ***
-***   Falsifiable. Counter-example:
+***   Falsifiable. Counterexample:
 ***     arg     =   0 :: Integer
 ***     before  = 101 :: Integer
 ***     then[1] =  90 :: Integer

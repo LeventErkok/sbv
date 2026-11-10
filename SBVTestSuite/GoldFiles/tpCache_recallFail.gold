@@ -1,4 +1,4 @@
 Lemma: bad
 *** Failed to prove bad.
-Falsifiable. Counter-example:
+Falsifiable. Counterexample:
   x = 0 :: Integer

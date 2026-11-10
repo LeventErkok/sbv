@@ -187,7 +187,7 @@ cast x = newArray (0 :: Int, 0) x >>= castSTUArray >>= flip readArray 0
 
 -- | Rounding mode to be used for the IEEE floating-point operations.
 -- Note that Haskell's default is 'RoundNearestTiesToEven'. If you use
--- a different rounding mode, then the counter-examples you get may not
+-- a different rounding mode, then the counterexamples you get may not
 -- match what you observe in Haskell.
 data RoundingMode = RoundNearestTiesToEven  -- ^ Round to nearest representable floating point value.
                                             -- If precisely at half-way, pick the even number.

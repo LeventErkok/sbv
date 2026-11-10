@@ -1435,7 +1435,7 @@ enumFromThenToAlgReal x zIn delta = ite (delta .== 0)
 -- >>> lookup (4 :: SInteger) (literal [(5, 12), (4, 3), (2, 6 :: Integer)])
 -- 3 :: SInteger
 -- >>> prove  $ \(x :: SInteger) -> x .== lookup 9 (literal [(5, 12), (4, 3), (2, 6 :: Integer)])
--- Falsifiable. Counter-example:
+-- Falsifiable. Counterexample:
 --   sbv.lookup_notFound @Integer = 0 :: Integer
 --   s0                           = 1 :: Integer
 lookup :: (SymVal k, SymVal v) => SBV k -> SList (k, v) -> SBV v

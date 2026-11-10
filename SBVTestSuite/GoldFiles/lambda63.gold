@@ -32,6 +32,6 @@
 *** Exit code: ExitSuccess
 
 RESULT:
-Falsifiable. Counter-example:
+Falsifiable. Counterexample:
   R :: (Integer, Integer) -> Bool
   R (_, _) = False

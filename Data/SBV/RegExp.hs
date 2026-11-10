@@ -385,7 +385,7 @@ Q.E.D.
 >>> prove $ \(s :: SString) -> s `match`  (exactly "xyz" ^ 3) .=> length s .== 9
 Q.E.D.
 >>> prove $ \(s :: SString) -> match s (Loop 2 5 "xyz") .=> length s .>= 7
-Falsifiable. Counter-example:
+Falsifiable. Counterexample:
   s0 = "xyzxyz" :: String
 >>> prove $ \(s :: SString) -> s `match` "hello" .=> s `match` ("hello" + "world")
 Q.E.D.

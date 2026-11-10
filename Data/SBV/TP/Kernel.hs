@@ -362,10 +362,10 @@ smtProofStep cfg@SMTConfig{verbose, tpOptions = TPOptions{printStats}} tpState t
                   TPProofStep{} -> do mapM_ (uncurry sObserve) disps
                                       Satisfiable cfg <$> getModel
                   TPProofOneShot _ by ->
-                     -- When trying to get a counter-example not in query mode, we
-                     -- do a skolemized sat call, which gets better counter-examples.
+                     -- When trying to get a counterexample not in query mode, we
+                     -- do a skolemized sat call, which gets better counterexamples.
                      -- We only include the those facts that are user-given axioms. This
-                     -- way our counter-example will be more likely to be relevant
+                     -- way our counterexample will be more likely to be relevant
                      -- to the proposition we're currently proving. (Hopefully.)
                      -- Remember that we first have to negate, and then skolemize!
                      do SatResult res <- liftIO $ satWith cfg $ do

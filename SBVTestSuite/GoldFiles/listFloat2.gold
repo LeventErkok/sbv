@@ -164,5 +164,5 @@
 *** Exit code: ExitSuccess
 
 FINAL OUTPUT:
-Falsifiable. Counter-example:
+Falsifiable. Counterexample:
   x = NaN :: Float

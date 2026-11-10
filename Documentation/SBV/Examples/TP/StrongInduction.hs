@@ -183,7 +183,7 @@ won'tProve1 = runTP $ do
 --   Step: Measure is non-negative        Q.E.D.
 --   Step: 1
 -- *** Failed to prove badLength.1.
--- Falsifiable. Counter-example:
+-- Falsifiable. Counterexample:
 --   xs = [] :: [Integer]
 won'tProve2 :: IO ()
 won'tProve2 = runTP $ do
@@ -211,7 +211,7 @@ won'tProve2 = runTP $ do
 -- Inductive lemma (strong): badMeasure
 --   Step: Measure is non-negative
 -- *** Failed to prove badMeasure.Measure is non-negative.
--- Falsifiable. Counter-example:
+-- Falsifiable. Counterexample:
 --   x = -1 :: Integer
 won'tProve3 :: IO ()
 won'tProve3 = runTP $ do

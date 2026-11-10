@@ -40,7 +40,7 @@ import Data.SBV
 -- we will require one of the inputs to be a @NaN@. We have:
 --
 -- >>> prove $ assocPlus (0/0)
--- Falsifiable. Counter-example:
+-- Falsifiable. Counterexample:
 --   s0 = 0.0 :: Float
 --   s1 = 0.0 :: Float
 --
@@ -67,7 +67,7 @@ assocPlus x y z = x + (y + z) .== (x + y) + z
 -- We have:
 --
 -- >>> assocPlusRegular
--- Falsifiable. Counter-example:
+-- Falsifiable. Counterexample:
 --   x = -0.3383789 :: Float
 --   y = -27907.219 :: Float
 --   z = -515389.94 :: Float
@@ -101,7 +101,7 @@ assocPlusRegular = prove $ do [x, y, z] <- sFloats ["x", "y", "z"]
 -- We have:
 --
 -- >>> nonZeroAddition
--- Falsifiable. Counter-example:
+-- Falsifiable. Counterexample:
 --   a = -3.6509563e26 :: Float
 --   b =   1.6777216e7 :: Float
 --
@@ -130,7 +130,7 @@ nonZeroAddition = prove $ do [a, b] <- sFloats ["a", "b"]
 -- We have:
 --
 -- >>> multInverse
--- Falsifiable. Counter-example:
+-- Falsifiable. Counterexample:
 --   a = 5.2268255e-34 :: Float
 --
 -- Indeed, we have:

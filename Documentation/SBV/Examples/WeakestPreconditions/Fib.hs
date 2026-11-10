@@ -152,7 +152,7 @@ imperativeFib = Program { setup         = axiomatizeFib
 --
 -- Note that I found this proof to be quite fragile: If you do not get the algorithm right
 -- or the axioms aren't in place, z3 simply goes to an infinite loop, instead of providing
--- counter-examples. Of course, this is to be expected with the quantifiers present.
+-- counterexamples. Of course, this is to be expected with the quantifiers present.
 correctness :: IO (ProofResult (FibS Integer))
 correctness = wpProveWith defaultWPCfg{wpVerbose=True} imperativeFib
 

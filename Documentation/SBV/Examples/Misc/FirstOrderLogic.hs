@@ -125,7 +125,7 @@ We have:
 >>> let p = uninterpret "P" :: SU -> SBool
 >>> let q = uninterpret "Q" :: SU -> SBool
 >>> prove $ (qe (\(Forall x) -> p x) .|| qe (\(Forall x) -> q x)) .<=> qe (\(Forall x) -> p x .|| q x)
-Falsifiable. Counter-example:
+Falsifiable. Counterexample:
   P :: U -> Bool
   P U_1 = True
   P _   = False
@@ -246,11 +246,11 @@ skolemEx2 (Forall a) (Exists b) (Forall c) (Exists d) = a + b .>= c + d
 -- Satisfiable. Model:
 --   x = 1 :: Word8
 --
--- And that would be the incorrect conclusion that our formula is invalid with a counter-example! You
+-- And that would be the incorrect conclusion that our formula is invalid with a counterexample! You
 -- can see the same by doing:
 --
 -- >>> prove (skolemize skolemEx3)
--- Falsifiable. Counter-example:
+-- Falsifiable. Counterexample:
 --   x = 1 :: Word8
 --
 -- So, if you want to check validity and want to also perform skolemization; you should negate your

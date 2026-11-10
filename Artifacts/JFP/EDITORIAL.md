@@ -379,6 +379,10 @@ match their pre-copy hashes.
   Then remove the source-repository stanza, update source discovery and the
   freeze file, revise the source-snapshot wording, and rerun the checks. The
   GitHub URL does not need anonymization for JFP's single-anonymous review.
+- After re-pinning to SBV with the new `Counterexample` output spelling,
+  regenerate the validation log and remove the temporary spelling note in
+  "Following along" and the spelling-update qualification before the
+  `badLengthProof` diagnostic.
 - AI-disclosure work remains deferred at the author's request. The inherited
   Preparation paragraph was removed at the author's request. Open submission
   task: check the applicable disclosure policy and resolve any required final
@@ -821,3 +825,14 @@ warnings and HLint passes. The full validation suite subsequently passed,
 including McCarthy 91, and results/validation.txt was refreshed with matching
 input hashes. The PDF was rebuilt with the locally installed Tectonic binary;
 there are no overfull boxes or undefined references.
+
+### 2026-11-10: counterexample output spelling
+
+SBV now prints Counterexample consistently. Updated the manuscript's displayed
+transcripts and noted the spelling normalization under Following along. The
+companion remains pinned to its validated snapshot, which prints Counter-example;
+validate.py accepts both headers while retaining its independent model checks.
+Raw execution logs retain the pinned library's actual output.
+The snapshot pin is temporary: before submission, migrate to the next SBV
+release, regenerate the execution log, and remove the manuscript's temporary
+spelling-normalization note once the companion prints Counterexample itself.

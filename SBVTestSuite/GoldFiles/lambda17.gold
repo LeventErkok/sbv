@@ -112,7 +112,7 @@
 [RECV] ((s13 (as seq.empty (Seq Int))))
 *** Solver   : Z3
 *** Exit code: ExitSuccess
-[MEASURE] sbv.foldl @(SBV ([Integer],Integer) -> SBV [Integer])_2d6951daf1 @(SBV ([Integer],[Integer]) -> SBV [Integer]): length arg1._1 failed strict decrease: Falsifiable. Counter-example:
+[MEASURE] sbv.foldl @(SBV ([Integer],Integer) -> SBV [Integer])_2d6951daf1 @(SBV ([Integer],[Integer]) -> SBV [Integer]): length arg1._1 failed strict decrease: Falsifiable. Counterexample:
   arg    = ([],[4]) :: ([Integer], [Integer])
   before =        0 :: Integer
   then   =        1 :: Integer

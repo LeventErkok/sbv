@@ -146,7 +146,7 @@ complement ss
 -- Deletion after insertion is not necessarily identity:
 --
 -- >>> prove $ \x (s :: SSet Integer) -> x `delete` (x `insert` s) .== s
--- Falsifiable. Counter-example:
+-- Falsifiable. Counterexample:
 --   s0 =   2 :: Integer
 --   s1 = {2} :: {Integer}
 --
@@ -193,7 +193,7 @@ insert se ss
 -- Insertion after deletion is not necessarily identity:
 --
 -- >>> prove $ \x (s :: SSet Integer) -> x `insert` (x `delete` s) .== s
--- Falsifiable. Counter-example:
+-- Falsifiable. Counterexample:
 --   s0 =  2 :: Integer
 --   s1 = {} :: {Integer}
 --
@@ -262,7 +262,7 @@ member se ss
 -- | Test for non-membership.
 --
 -- >>> prove $ \x -> x `notMember` observe "set" (singleton (x :: SInteger))
--- Falsifiable. Counter-example:
+-- Falsifiable. Counterexample:
 --   s0  =   0 :: Integer
 --   set = {0} :: {Integer}
 --
@@ -301,7 +301,7 @@ isEmpty = null
 -- Falsifiable
 --
 -- >>> prove $ \x -> isFull (observe "set" (x `delete` (full :: SSet Integer)))
--- Falsifiable. Counter-example:
+-- Falsifiable. Counterexample:
 --   s0  =       0 :: Integer
 --   set = U - {0} :: {Integer}
 --
@@ -358,7 +358,7 @@ isSubsetOf sa sb
 -- Q.E.D.
 --
 -- >>> prove $ \x (s :: SSet Integer) -> s `isProperSubsetOf` (x `insert` s)
--- Falsifiable. Counter-example:
+-- Falsifiable. Counterexample:
 --   s0 = 2 :: Integer
 --   s1 = U :: {Integer}
 --
@@ -366,7 +366,7 @@ isSubsetOf sa sb
 -- Q.E.D.
 --
 -- >>> prove $ \x (s :: SSet Integer) -> (x `delete` s) `isProperSubsetOf` s
--- Falsifiable. Counter-example:
+-- Falsifiable. Counterexample:
 --   s0 =         2 :: Integer
 --   s1 = U - {2,3} :: {Integer}
 --

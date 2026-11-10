@@ -347,7 +347,7 @@ Subset relation does /not/ distribute over union on the left:
 \(A \subseteq (B \cup C) \nRightarrow A \subseteq B \land A \subseteq C \)
 
 >>> prove $ \(a :: SI) b c -> a `isSubsetOf` (b `union` c) .=> a `isSubsetOf` b .&& a `isSubsetOf` c
-Falsifiable. Counter-example:
+Falsifiable. Counterexample:
   s0 =       U :: {Integer}
   s1 =       U :: {Integer}
   s2 = U - {2} :: {Integer}
@@ -357,7 +357,7 @@ Similarly, subset relation does /not/ distribute over intersection on the right:
 \( (B \cap C) \subseteq A \nRightarrow B \subseteq A \land C \subseteq A \)
 
 >>> prove $ \(a :: SI) b c -> (b `intersection` c) `isSubsetOf` a .=> b `isSubsetOf` a .&& c `isSubsetOf` a
-Falsifiable. Counter-example:
+Falsifiable. Counterexample:
   s0 = U - {2} :: {Integer}
   s1 = U - {2} :: {Integer}
   s2 =     {2} :: {Integer}

@@ -1,2 +1,2 @@
-Falsifiable. Counter-example:
+Falsifiable. Counterexample:
   s0 = 128 :: Word8

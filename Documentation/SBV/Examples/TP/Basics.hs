@@ -114,7 +114,7 @@ existsDisjunction p q = runTP $ do
 -- >>> forallDisjunctionNot @Integer (uninterpret "p") (uninterpret "q") `catch` (\(_ :: SomeException) -> pure ())
 -- Lemma: forallDisjunctionNot
 -- *** Failed to prove forallDisjunctionNot.
--- Falsifiable. Counter-example:
+-- Falsifiable. Counterexample:
 --   p :: Integer -> Bool
 --   p 3 = True
 --   p _ = False
@@ -125,7 +125,7 @@ existsDisjunction p q = runTP $ do
 --
 -- Note how @p@ and @q@ differ in their treatment of the input 3, but agree everywhere else. So, for each
 -- input, at least one of @p@ or @q@ is @True@, making the disjunction @True@ for all inputs. But the predicates
--- @p@ and @q@ are not universally true themselves, constituting a counter-example.
+-- @p@ and @q@ are not universally true themselves, constituting a counterexample.
 forallDisjunctionNot :: forall a. SymVal a => (SBV a -> SBool) -> (SBV a -> SBool) -> IO ()
 forallDisjunctionNot p q = runTP $ do
     let qb = quantifiedBool
@@ -145,7 +145,7 @@ forallDisjunctionNot p q = runTP $ do
 -- >>> existsConjunctionNot @Integer (uninterpret "p") (uninterpret "q") `catch` (\(_ :: SomeException) -> pure ())
 -- Lemma: existsConjunctionNot
 -- *** Failed to prove existsConjunctionNot.
--- Falsifiable. Counter-example:
+-- Falsifiable. Counterexample:
 --   p :: Integer -> Bool
 --   p 3 = False
 --   p _ = True
@@ -155,7 +155,7 @@ forallDisjunctionNot p q = runTP $ do
 --   q _ = False
 --
 -- In this case, both @p@ and @q@ have a satisfying input (for @p@ everything but 3, for @q@, only 3), but
--- there is no single value that satisfies both, thus giving us our counter-example.
+-- there is no single value that satisfies both, thus giving us our counterexample.
 existsConjunctionNot :: forall a. SymVal a => (SBV a -> SBool) -> (SBV a -> SBool) -> IO ()
 existsConjunctionNot p q = runTP $ do
     let qb = quantifiedBool
@@ -276,7 +276,7 @@ badTermination = do
 -- ***
 -- ***   Function: badM :: SBV Integer -> SBV Integer
 -- ***
--- ***   Falsifiable. Counter-example:
+-- ***   Falsifiable. Counterexample:
 -- ***     arg    = 1 :: Integer
 -- ***     before = 0 :: Integer
 -- ***     then   = 0 :: Integer
@@ -357,7 +357,7 @@ axiomsAreDangerous = runTP $ do
 
 -- * Trying to prove non-theorems
 
--- | An example where we attempt to prove a non-theorem. Notice the counter-example
+-- | An example where we attempt to prove a non-theorem. Notice the counterexample
 -- generated for:
 --
 -- @length xs == ite (length xs .== 3) 5 (length xs)@
@@ -365,7 +365,7 @@ axiomsAreDangerous = runTP $ do
 -- >>> badRevLen `catch` (\(_ :: SomeException) -> pure ())
 -- Lemma: badRevLen
 -- *** Failed to prove badRevLen.
--- Falsifiable. Counter-example:
+-- Falsifiable. Counterexample:
 --   xs = [4,11,14] :: [Integer]
 badRevLen :: IO ()
 badRevLen = runTP $
@@ -373,15 +373,15 @@ badRevLen = runTP $
                 (\(Forall @"xs" (xs :: SList Integer)) -> length (reverse xs) .== ite (length xs .== 3) 5 (length xs))
                 []
 
--- | It is instructive to see what kind of counter-example we get if a lemma fails to prove.
+-- | It is instructive to see what kind of counterexample we get if a lemma fails to prove.
 -- Below, we do a variant of the 'Documentation.SBV.Examples.TP.Lists.lengthTail', but with a bad implementation over integers,
--- and see the counter-example. Our implementation returns an incorrect answer if the given list is longer
+-- and see the counterexample. Our implementation returns an incorrect answer if the given list is longer
 -- than 5 elements and have 42 in it:
 --
 -- >>> badLengthProof `catch` (\(_ :: SomeException) -> pure ())
 -- Lemma: badLengthProof
 -- *** Failed to prove badLengthProof.
--- Falsifiable. Counter-example:
+-- Falsifiable. Counterexample:
 --   xs   = [11,13,16,18,21,42] :: [Integer]
 --   imp  =                  42 :: Integer
 --   spec =                   6 :: Integer

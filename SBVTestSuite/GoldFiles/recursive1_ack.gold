@@ -114,7 +114,7 @@
 [RECV] ((s11 0))
 *** Solver   : Z3
 *** Exit code: ExitSuccess
-[MEASURE] ack @(SBV Integer -> SBV Integer -> SBV Integer): abs arg1 failed strict decrease: Falsifiable. Counter-example:
+[MEASURE] ack @(SBV Integer -> SBV Integer -> SBV Integer): abs arg1 failed strict decrease: Falsifiable. Counterexample:
   arg0    = 2 :: Integer
   arg1    = 1 :: Integer
   before  = 2 :: Integer
@@ -236,7 +236,7 @@
 [RECV] ((s11 0))
 *** Solver   : Z3
 *** Exit code: ExitSuccess
-[MEASURE] ack @(SBV Integer -> SBV Integer -> SBV Integer): smax 0 arg1 failed strict decrease: Falsifiable. Counter-example:
+[MEASURE] ack @(SBV Integer -> SBV Integer -> SBV Integer): smax 0 arg1 failed strict decrease: Falsifiable. Counterexample:
   arg0    = 2 :: Integer
   arg1    = 1 :: Integer
   before  = 2 :: Integer
@@ -359,7 +359,7 @@
 [RECV] ((s11 0))
 *** Solver   : Z3
 *** Exit code: ExitSuccess
-[MEASURE] ack @(SBV Integer -> SBV Integer -> SBV Integer): abs arg2 failed strict decrease: Falsifiable. Counter-example:
+[MEASURE] ack @(SBV Integer -> SBV Integer -> SBV Integer): abs arg2 failed strict decrease: Falsifiable. Counterexample:
   arg0    =  1 :: Integer
   arg1    = -1 :: Integer
   before  =  1 :: Integer
@@ -487,7 +487,7 @@
 [RECV] ((s11 0))
 *** Solver   : Z3
 *** Exit code: ExitSuccess
-[MEASURE] ack @(SBV Integer -> SBV Integer -> SBV Integer): smax 0 arg2 failed strict decrease: Falsifiable. Counter-example:
+[MEASURE] ack @(SBV Integer -> SBV Integer -> SBV Integer): smax 0 arg2 failed strict decrease: Falsifiable. Counterexample:
   arg0    =  1 :: Integer
   arg1    = -1 :: Integer
   before  =  0 :: Integer
@@ -642,7 +642,7 @@
 [RECV] ((s11 0))
 *** Solver   : Z3
 *** Exit code: ExitSuccess
-[MEASURE] ack @(SBV Integer -> SBV Integer -> SBV Integer): abs arg1 + smax 0 arg1 + abs arg2 + smax 0 arg2 failed strict decrease: Falsifiable. Counter-example:
+[MEASURE] ack @(SBV Integer -> SBV Integer -> SBV Integer): abs arg1 + smax 0 arg1 + abs arg2 + smax 0 arg2 failed strict decrease: Falsifiable. Counterexample:
   arg0    = 2 :: Integer
   arg1    = 2 :: Integer
   before  = 8 :: Integer
@@ -794,7 +794,7 @@
 [RECV] ((s11 0))
 *** Solver   : Z3
 *** Exit code: ExitSuccess
-[MEASURE] ack @(SBV Integer -> SBV Integer -> SBV Integer): (abs arg1, smax 0 arg1) failed strict decrease: Falsifiable. Counter-example:
+[MEASURE] ack @(SBV Integer -> SBV Integer -> SBV Integer): (abs arg1, smax 0 arg1) failed strict decrease: Falsifiable. Counterexample:
   arg0    =     2 :: Integer
   arg1    =     1 :: Integer
   before  = (2,2) :: (Integer, Integer)

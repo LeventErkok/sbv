@@ -533,7 +533,7 @@ validate reducer isSAT cfg p res =
                              | somethingFailed = do notify "Counterexample is validated."
                                                     pure res
                              | True            = do notify "Counterexample violates none of the outputs."
-                                                    badModel "Counter-example violates no constraints."
+                                                    badModel "Counterexample violates no constraints."
                            proveLoop (sv:svs) somethingFailed
                              | kindOf sv /= KBool
                              = giveUp $ "Output tied to " ++ show sv ++ " is non-boolean."

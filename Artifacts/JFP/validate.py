@@ -107,7 +107,7 @@ with log_path.open("w") as log:
         block = failures.split("BEGIN " + name + "\n", 1)[1].split("END " + name, 1)[0]
         kind = "assumptions for " if assumptions else ""
         if (f"*** Failed to prove {kind}{obligation}." not in block or
-                "Falsifiable. Counter-example:" not in block):
+                not re.search(r"Falsifiable\. Counter-?example:", block)):
             raise SystemExit(f"Expected a refuting model for {name}, not just an exception")
         return block
 

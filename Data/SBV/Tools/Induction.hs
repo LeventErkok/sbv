@@ -49,7 +49,7 @@ instance Show InductionStep where
    show (Consecution (Just s)) = "consecution for strengthening " ++ show s
    show PartialCorrectness     = "partial correctness"
 
--- | Result of an inductive proof, with a counter-example in case of failure.
+-- | Result of an inductive proof, with a counterexample in case of failure.
 --
 -- If a proof is found (indicated by a 'Proven' result), then the invariant holds
 -- and the goal is established once the termination condition holds. If it fails, then
@@ -76,7 +76,7 @@ data InductionResult a = Failed InductionStep (a, a)
 instance Show a => Show (InductionResult a) where
   show Proven       = "Q.E.D."
   show (Failed s e) = intercalate "\n" [ "Failed while establishing " ++ show s ++ "."
-                                       , "Counter-example to inductiveness:"
+                                       , "Counterexample to inductiveness:"
                                        , intercalate "\n" ["  " ++ l | l <- lines (show e)]
                                        ]
 

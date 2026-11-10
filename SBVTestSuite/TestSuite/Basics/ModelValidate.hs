@@ -181,7 +181,7 @@ tests = testGroup "Basics.ModelValidate" $ [
                   , ("set_diff_mixed",  do s <- free "s"; pure $ S.complement (s :: SSet Integer) `S.difference` S.singleton 1 .== S.complement (S.fromList [1, 2]))
                   ]
 
-          -- Proofs whose counter-examples should validate
+          -- Proofs whose counterexamples should validate
           okCex :: [(String, Predicate)]
           okCex = [ ("ui_const", pure $ (uninterpret "cp" :: SInteger) .> 3)
                   , ("ui_fun",   do x <- sInteger "x"; pure $ (uninterpret "fc" :: SInteger -> SInteger) x .> x)
@@ -229,7 +229,7 @@ tests = testGroup "Basics.ModelValidate" $ [
           validatesP p = do r <- proveWith vcfg p
                             case r of
                               ThmResult Satisfiable{} -> pure ()
-                              _                       -> assertFailure $ "Expected a validated counter-example, got:\n" ++ show r
+                              _                       -> assertFailure $ "Expected a validated counterexample, got:\n" ++ show r
 
           validatesAll :: (SInteger -> SBool) -> Assertion
           validatesAll p = do AllSatResult{allSatResults = rs} <- allSatWith vcfg{allSatMaxModelCount = Just 3} p

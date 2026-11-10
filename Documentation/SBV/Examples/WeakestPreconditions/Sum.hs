@@ -244,6 +244,6 @@ Following proof obligation failed:
     After  : SumS {n = 3, i = 3, s = 6}
     Measure: 6
 
-Clearly, as @i@ increases, so does our bogus measure @n+i@. (Note that in this case the counterexample might have @i@ and @n@ as negative values, as the SMT solver finds a counter-example to induction, not
+Clearly, as @i@ increases, so does our bogus measure @n+i@. (Note that in this case the counterexample might have @i@ and @n@ as negative values, as the SMT solver finds a counterexample to induction, not
 necessarily a reachable state. Obviously, all such failures need to be addressed for the full proof.)
 -}

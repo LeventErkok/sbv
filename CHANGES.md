@@ -3,6 +3,11 @@
 
 ### Version 14.10, Not yet released
 
+  * [BACKWARDS COMPATIBILITY] Printed diagnostics now use `Counterexample` instead of
+    `Counter-example`. This is mostly cosmetic, but if you have any scripts that match the old
+    wording, you might need to update them. Note that the programmatic API remains the same,
+    this is purely pretty-printing.
+
   * Add `Documentation/SBV/Examples/TP/AES.hs`, proving that decrypting an
     encrypted plaintext returns the original for every AES-128 plaintext and key
     in the existing AES implementation. The proof covers ordinary AES-128

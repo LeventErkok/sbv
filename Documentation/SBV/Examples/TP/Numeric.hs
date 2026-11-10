@@ -357,7 +357,7 @@ product0 =
 --   Step: Base                       Q.E.D.
 --   Step: 1
 -- *** Failed to prove badNonNegative.1.
--- Falsifiable. Counter-example:
+-- Falsifiable. Counterexample:
 --   n = -2 :: Integer
 badNonNegative :: IO ()
 badNonNegative = runTP $ do

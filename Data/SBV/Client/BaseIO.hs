@@ -104,10 +104,10 @@ allSat = Trans.allSat
 -- might have to wait for a long time. To avoid such cases, use the 'Data.SBV.Core.Symbolic.allSatMaxModelCount'
 -- parameter in the configuration.
 --
--- NB. Uninterpreted constant/function values and counter-examples for array values are ignored for
+-- NB. Uninterpreted constant/function values and counterexamples for array values are ignored for
 -- the purposes of 'allSat'. That is, only the satisfying assignments modulo uninterpreted functions and
 -- array inputs will be returned. This is due to the limitation of not having a robust means of getting a
--- function counter-example back from the SMT solver.
+-- function counterexample back from the SMT solver.
 --  Find all satisfying assignments using the given SMT-solver
 --
 -- NB. For a version which generalizes over the underlying monad, see 'Data.SBV.Trans.allSatWith'

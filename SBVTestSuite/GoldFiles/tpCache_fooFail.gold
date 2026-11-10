@@ -1,4 +1,4 @@
 Lemma: foo
 *** Failed to prove foo.
-Falsifiable. Counter-example:
+Falsifiable. Counterexample:
   x = 0 :: Integer

@@ -96,7 +96,7 @@ pgm2 S{x, y} S{x = x', y = y'} = x' .== x+y .&& y' .== y+x
 --
 -- >>> ex1
 -- Failed while establishing consecution.
--- Counter-example to inductiveness:
+-- Counterexample to inductiveness:
 --   (S {x = -1, y = 1},S {x = 0, y = 0})
 ex1 :: IO (InductionResult (S Integer))
 ex1 = problem pgm1 strengthenings
@@ -116,7 +116,7 @@ ex2 = problem pgm1 strengthenings
 --
 -- >>> ex3
 -- Failed while establishing consecution.
--- Counter-example to inductiveness:
+-- Counterexample to inductiveness:
 --   (S {x = -1, y = 1},S {x = 0, y = 0})
 ex3 :: IO (InductionResult (S Integer))
 ex3 = problem pgm2 strengthenings
@@ -127,7 +127,7 @@ ex3 = problem pgm2 strengthenings
 --
 -- >>> ex4
 -- Failed while establishing consecution for strengthening "x >= 0".
--- Counter-example to inductiveness:
+-- Counterexample to inductiveness:
 --   (S {x = 0, y = -1},S {x = -1, y = -1})
 ex4 :: IO (InductionResult (S Integer))
 ex4 = problem pgm2 strengthenings
@@ -138,7 +138,7 @@ ex4 = problem pgm2 strengthenings
 --
 -- >>> ex5
 -- Failed while establishing consecution for strengthening "x >= 0".
--- Counter-example to inductiveness:
+-- Counterexample to inductiveness:
 --   (S {x = 0, y = -1},S {x = -1, y = -1})
 --
 -- Note how this was sufficient in 'ex2' to establish the invariant for the first

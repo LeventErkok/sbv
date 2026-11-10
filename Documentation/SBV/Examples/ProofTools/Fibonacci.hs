@@ -53,7 +53,7 @@ instance Queriable IO (S SInteger) where
 --
 -- NB. In my experiments, I found that this proof is quite fragile due
 -- to the use of quantifiers: If you make a mistake in your algorithm
--- or the coding, z3 pretty much spins forever without finding a counter-example.
+-- or the coding, z3 pretty much spins forever without finding a counterexample.
 -- However, with the correct coding, the proof is almost instantaneous!
 fibCorrect :: IO (InductionResult (S Integer))
 fibCorrect = induct chatty setup initial trans strengthenings inv goal

@@ -141,8 +141,8 @@ instance Show ThmResult where
   show (ThmResult r) = showSMTResult "Q.E.D."
                                      "Unknown"
                                      "Falsifiable"
-                                     "Falsifiable. Counter-example:\n"
-                                     (\mbP -> "Delta falsifiable, precision: " ++ getPrecision r mbP ++ ". Counter-example:\n")
+                                     "Falsifiable. Counterexample:\n"
+                                     (\mbP -> "Delta falsifiable, precision: " ++ getPrecision r mbP ++ ". Counterexample:\n")
                                      "Falsifiable in an extension field:\n"
                                      r
 

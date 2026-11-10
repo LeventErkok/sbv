@@ -28,7 +28,7 @@ But with machine arithmetic, overflow lurks:
 
 ```haskell
 ghci> prove $ \x -> x + 1 .> (x :: SInt8)
-Falsifiable. Counter-example:
+Falsifiable. Counterexample:
   s0 = 127 :: Int8
 ```
 
@@ -36,7 +36,7 @@ IEEE-754 floats break reflexivity of equality:
 
 ```haskell
 ghci> prove $ \x -> (x :: SFloat) .== x
-Falsifiable. Counter-example:
+Falsifiable. Counterexample:
   s0 = NaN :: Float
 ```
 

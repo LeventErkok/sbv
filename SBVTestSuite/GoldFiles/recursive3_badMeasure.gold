@@ -85,7 +85,7 @@ EXCEPTION:
 ***
 ***   Function: badSum :: SBV Integer -> SBV Integer
 ***
-***   Falsifiable. Counter-example:
+***   Falsifiable. Counterexample:
 ***     arg    = 1 :: Integer
 ***     before = 1 :: Integer
 ***     then   = 1 :: Integer

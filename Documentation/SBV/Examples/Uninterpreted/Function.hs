@@ -6,7 +6,7 @@
 -- Maintainer: erkokl@gmail.com
 -- Stability : experimental
 --
--- Demonstrates function counter-examples
+-- Demonstrates function counterexamples
 -----------------------------------------------------------------------------
 
 {-# LANGUAGE CPP #-}

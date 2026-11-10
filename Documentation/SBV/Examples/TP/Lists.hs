@@ -1014,9 +1014,9 @@ foldrFoldl (<+>) (<*>) e = do
 --
 -- NB. This theorem does not hold if @f@ does not have a left-unit! Consider the input @[[], [x]]@. Left hand side reduces to
 -- @x@, while the right hand side reduces to: @f a x@. And unless @f@ is commutative or @a@ is not also a left-unit,
--- then one can find a counter-example. (Aside: if both left and right units exist for a binary operator, then they
+-- then one can find a counterexample. (Aside: if both left and right units exist for a binary operator, then they
 -- are necessarily the same element, since @l = f l r = r@. So, an equivalent statement could simply say @f@ has
--- both left and right units.) A concrete counter-example is:
+-- both left and right units.) A concrete counterexample is:
 --
 -- @
 --   data T = A | B | C

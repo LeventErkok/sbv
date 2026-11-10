@@ -899,7 +899,7 @@ deriving instance G.Data SrcLoc
 -- | Result of running a symbolic computation
 data Result = Result { progInfo       :: ProgInfo                                     -- ^ various info we collect about the program
                      , reskinds       :: Set.Set Kind                                 -- ^ kinds used in the program
-                     , resTraces      :: [(String, CV)]                               -- ^ quick-check counter-example information (if any)
+                     , resTraces      :: [(String, CV)]                               -- ^ quick-check counterexample information (if any)
                      , resObservables :: [(String, CV -> Bool, SV)]                   -- ^ observable expressions (part of the model)
                      , resUISegs      :: [(String, [String])]                         -- ^ uninterpreted code segments
                      , resParams      :: ResultInp                                    -- ^ top-inputs or lambda params

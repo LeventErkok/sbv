@@ -18,7 +18,7 @@
 -- Q.E.D.
 --
 -- >>> prove $ \x -> x `shiftL` 2 .== 2 * (x :: SWord8)
--- Falsifiable. Counter-example:
+-- Falsifiable. Counterexample:
 --   s0 = 64 :: Word8
 --
 -- And similarly, 'sat' finds a satisfying instance. The types involved are:
@@ -803,7 +803,7 @@ Optimal model:
 -}
 
 {- $modelExtraction
-The default 'Show' instances for prover calls provide all the counter-example information in a
+The default 'Show' instances for prover calls provide all the counterexample information in a
 human-readable form and should be sufficient for most casual uses of sbv. However, tools built
 on top of sbv will inevitably need to look into the constructed models more deeply, programmatically
 extracting their results and performing actions based on them. The API provided in this section
@@ -1262,7 +1262,7 @@ prove $ do a1 <- free "i1"
                           (a1 + a2)
            return $ observe "Expected" spec .== observe "Result" res
 :}
-Falsifiable. Counter-example:
+Falsifiable. Counterexample:
   i1       = 12 :: Word8
   i2       = 22 :: Word8
   Expected = 34 :: Word8
@@ -1376,11 +1376,11 @@ Q.E.D.
 >>> prove $ roundTrip @Word16
 Q.E.D.
 >>> prove $ roundTrip @Int32
-Falsifiable. Counter-example:
+Falsifiable. Counterexample:
   s0 = RoundNearestTiesToEven :: RoundingMode
   s1 =             -892327435 :: Int32
 
-Note how we get a failure on `Int32`. The counter-example value is not representable exactly as a single precision float:
+Note how we get a failure on `Int32`. The counterexample value is not representable exactly as a single precision float:
 
 >>> toRational (-892327435 :: Float)
 (-892327424) % 1
@@ -1406,7 +1406,7 @@ Q.E.D.
 >>> prove $ roundTrip @Word32
 Q.E.D.
 >>> prove $ roundTrip @Int64
-Falsifiable. Counter-example:
+Falsifiable. Counterexample:
   s0 =  RoundTowardPositive :: RoundingMode
   s1 = -2370765003978487132 :: Int64
 

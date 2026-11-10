@@ -99,7 +99,7 @@
 [RECV] ((s8 0))
 *** Solver   : Z3
 *** Exit code: ExitSuccess
-[MEASURE] Mutual group: decrease failed for f1i @(SBV Integer -> SBV Integer): Falsifiable. Counter-example:
+[MEASURE] Mutual group: decrease failed for f1i @(SBV Integer -> SBV Integer): Falsifiable. Counterexample:
   arg     = 1 :: Integer
   before  = 1 :: Integer
   then[1] = 0 :: Integer

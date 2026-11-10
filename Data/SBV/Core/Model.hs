@@ -1007,7 +1007,7 @@ sRealToSIntegerRM rm x =
 
 -- | label: Label the result of an expression. This is essentially a no-op, but useful as it generates a comment in the generated C/SMT-Lib code.
 -- Note that if the argument is a constant, then the label is dropped completely, per the usual constant folding strategy. Compare this to 'observe'
--- which is good for printing counter-examples.
+-- which is good for printing counterexamples.
 label :: SymVal a => String -> SBV a -> SBV a
 label m x
    | Just _ <- unliteral x = x
@@ -1018,7 +1018,7 @@ label m x
 
 
 -- | Observe the value of an expression, if the given condition holds.  Such values are useful in model construction, as they are printed part of a satisfying model, or a
--- counter-example. The same works for quick-check as well. Useful when we want to see intermediate values, or expected/obtained
+-- counterexample. The same works for quick-check as well. Useful when we want to see intermediate values, or expected/obtained
 -- pairs in a particular run. Note that an observed expression is always symbolic, i.e., it won't be constant folded. Compare this to 'label'
 -- which is used for putting a label in the generated SMTLib-C code.
 --

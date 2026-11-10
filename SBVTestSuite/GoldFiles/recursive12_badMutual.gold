@@ -83,7 +83,7 @@
 [RECV] ((s5 0))
 *** Solver   : Z3
 *** Exit code: ExitSuccess
-[MEASURE] Mutual group: decrease failed for bf @(SBV Integer -> SBV Integer): Falsifiable. Counter-example:
+[MEASURE] Mutual group: decrease failed for bf @(SBV Integer -> SBV Integer): Falsifiable. Counterexample:
   arg    = 1 :: Integer
   before = 1 :: Integer
   then   = 2 :: Integer
@@ -173,7 +173,7 @@
 [RECV] ((s5 0))
 *** Solver   : Z3
 *** Exit code: ExitSuccess
-[MEASURE] Mutual group: decrease failed for bf @(SBV Integer -> SBV Integer): Falsifiable. Counter-example:
+[MEASURE] Mutual group: decrease failed for bf @(SBV Integer -> SBV Integer): Falsifiable. Counterexample:
   arg    = 1 :: Integer
   before = 1 :: Integer
   then   = 2 :: Integer
@@ -269,7 +269,7 @@
 [RECV] ((s5 0))
 *** Solver   : Z3
 *** Exit code: ExitSuccess
-[MEASURE] Mutual group: decrease failed for bf @(SBV Integer -> SBV Integer): Falsifiable. Counter-example:
+[MEASURE] Mutual group: decrease failed for bf @(SBV Integer -> SBV Integer): Falsifiable. Counterexample:
   arg    = 1 :: Integer
   before = 2 :: Integer
   then   = 4 :: Integer
@@ -389,7 +389,7 @@
 [RECV] ((s5 0))
 *** Solver   : Z3
 *** Exit code: ExitSuccess
-[MEASURE] Mutual group: decrease failed for bf @(SBV Integer -> SBV Integer): Falsifiable. Counter-example:
+[MEASURE] Mutual group: decrease failed for bf @(SBV Integer -> SBV Integer): Falsifiable. Counterexample:
   arg    =     1 :: Integer
   before = (1,1) :: (Integer, Integer)
   then   = (2,2) :: (Integer, Integer)
@@ -509,7 +509,7 @@
 [RECV] ((s5 0))
 *** Solver   : Z3
 *** Exit code: ExitSuccess
-[MEASURE] Mutual group: decrease failed for bf @(SBV Integer -> SBV Integer): Falsifiable. Counter-example:
+[MEASURE] Mutual group: decrease failed for bf @(SBV Integer -> SBV Integer): Falsifiable. Counterexample:
   arg    =     1 :: Integer
   before = (1,1) :: (Integer, Integer)
   then   = (2,2) :: (Integer, Integer)

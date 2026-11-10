@@ -100,7 +100,7 @@
 [RECV] ((s8 #x00))
 *** Solver   : Z3
 *** Exit code: ExitSuccess
-[MEASURE] Mutual group: decrease failed for f1 @(SBV Word8 -> SBV Word8): Falsifiable. Counter-example:
+[MEASURE] Mutual group: decrease failed for f1 @(SBV Word8 -> SBV Word8): Falsifiable. Counterexample:
   arg     =   1 :: Word8
   before  =   1 :: Integer
   then[1] =   0 :: Integer

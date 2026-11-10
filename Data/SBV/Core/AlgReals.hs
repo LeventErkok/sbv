@@ -333,7 +333,7 @@ showRat exact r = p $ case f25 (denominator r) [] of
 -- in polynomial form, the other in decimal. Arguments can be the same
 -- kind, so long as they are both rationals and equivalent; if not there
 -- must be one that is precise. It's an error to pass anything
--- else to this function! (Used in reconstructing SMT counter-example values with reals).
+-- else to this function! (Used in reconstructing SMT counterexample values with reals).
 mergeAlgReals :: String -> AlgReal -> AlgReal -> AlgReal
 mergeAlgReals _ f@(AlgRational exact r) (AlgPolyRoot kp Nothing)
   | exact = f

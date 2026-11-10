@@ -106,7 +106,7 @@ it proves the property for every input or produces a concrete counterexample:
 ghci> prove $ \x -> abs (x :: SInteger) .>= 0
 Q.E.D.
 ghci> prove $ \x -> abs (x :: SInt8) .>= 0
-Falsifiable. Counter-example:
+Falsifiable. Counterexample:
   s0 = -128 :: Int8
 \end{lstlisting}
 The two properties differ only in a type. Over mathematical integers, absolute
@@ -239,7 +239,9 @@ the suggested projects supply starting hints instead.
 
 Listings are extracted from checked sources; transcripts and elisions are marked
 separately. Model values and their order can vary between solver versions, so
-validation checks their meaning rather than their printed form.
+validation checks their meaning rather than their printed form. Displayed
+transcripts use the current spelling \code{Counterexample}; the pinned snapshot
+prints \code{Counter-example}.
 
 %==============================================================================
 \outlinepart{I. Formulating questions}
@@ -262,7 +264,7 @@ different mathematical problem. The introduction showed that the choice between
 Floating point has its own surprises:
 \begin{lstlisting}
 ghci> prove $ \(x :: SFloat) -> x .== x
-Falsifiable. Counter-example:
+Falsifiable. Counterexample:
   s0 = NaN :: Float
 \end{lstlisting}
 Equality in IEEE-754 is not reflexive, and the solver knows it. Choosing a
@@ -373,7 +375,7 @@ shows why the independent specification matters:
 \snippet{wrongAdd}
 \begin{lstlisting}[style=output]
 ghci> prove $ do { x <- sWord8 "x"; y <- sWord8 "y"; pure (wrongAddSpec x y) }
-Falsifiable. Counter-example:
+Falsifiable. Counterexample:
   x = 223 :: Word8
   y = 124 :: Word8
 \end{lstlisting}
@@ -1981,8 +1983,8 @@ that they cover every input.
 The companion imports the module as \code{McCarthy}. Running
 \code{McCarthy.correctness} checks the proof and reports
 \code{Functions proven terminating: mcCarthy91}, followed by the
-\code{Proven} result. The focused companion command is
-\code{cabal run tutorial-examples -- --mccarthy91}; validation also checks that
+\code{Proven} result. Run it separately with
+\code{cabal run tutorial-examples -- --mccarthy91}. Validation also checks that
 the returned proof has no unchecked dependencies. The neighboring
 \code{Ackermann} module gives further examples of nested recursion and
 lexicographic decrease.
@@ -2007,12 +2009,12 @@ with the library length function:
 \snippet{badLengthProof}
 \code{observe} names expressions to include in the model; it does not add a
 premise to the theorem. Running \code{runTPWith z3Timeout5 badLengthProof}
-produces the following diagnostic in our validation run, followed by a
-\code{Failed} exception:
+produces a diagnostic followed by a \code{Failed} exception. Here is the
+validated diagnostic with its spelling updated to \code{Counterexample}:
 \begin{lstlisting}[style=output]
 Lemma: badLengthProof
 *** Failed to prove badLengthProof.
-Falsifiable. Counter-example:
+Falsifiable. Counterexample:
   xs   = [11,13,16,18,21,42] :: [Integer]
   imp  =                  42 :: Integer
   spec =                   6 :: Integer
@@ -2034,7 +2036,7 @@ The theorem is the identity $n+n=2n$, but the first step incorrectly inserts 1.
 For \code{runTPWith z3Timeout5 badCalculation}, the relevant output is:
 \begin{lstlisting}[style=output]
 *** Failed to prove badCalculation.1.
-Falsifiable. Counter-example:
+Falsifiable. Counterexample:
   n = 0 :: Integer
 \end{lstlisting}
 This refutes the first equality, $n+n=2n+1$: its two sides are 0 and 1 at the
@@ -2068,7 +2070,7 @@ Running \code{showHintFailure} produces:
 Lemma: badJustification
   Asms: 1
 *** Failed to prove assumptions for badJustification.1.
-Falsifiable. Counter-example:
+Falsifiable. Counterexample:
   n = -1 :: Integer
 \end{lstlisting}
 At this input the proposed justification is false, although the equality still

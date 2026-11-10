@@ -110,7 +110,7 @@
 [RECV] ((s12 0))
 *** Solver   : Z3
 *** Exit code: ExitSuccess
-[MEASURE] sbv.foldl @(SBV (Integer,Integer) -> SBV Integer)_1fd06f7602 @(SBV (Integer,[Integer]) -> SBV Integer): abs arg1._1 failed strict decrease: Falsifiable. Counter-example:
+[MEASURE] sbv.foldl @(SBV (Integer,Integer) -> SBV Integer)_1fd06f7602 @(SBV (Integer,[Integer]) -> SBV Integer): abs arg1._1 failed strict decrease: Falsifiable. Counterexample:
   arg    = (15922,[0]) :: (Integer, [Integer])
   before =       15922 :: Integer
   then   =       15922 :: Integer
