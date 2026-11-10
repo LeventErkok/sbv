@@ -75,8 +75,8 @@ gf28Pow n = pow
          | True  = sq (pow (i `shiftR` 1))
 
 -- | Computing inverses in GF(2^8). By the mathematical properties of GF(2^8)
--- and the particular irreducible polynomial used @x^8+x^5+x^3+x^1+1@, it
--- turns out that raising to the 254 power gives us the multiplicative inverse.
+-- and the particular irreducible polynomial used @x^8+x^4+x^3+x^1+1@, it
+-- turns out that raising to the 254th power gives us the multiplicative inverse.
 -- Of course, we can prove this using SBV:
 --
 -- >>> prove $ \x -> x ./= 0 .=> x `gf28Mult` gf28Inverse x .== 1
