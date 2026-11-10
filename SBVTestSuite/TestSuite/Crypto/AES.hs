@@ -23,8 +23,10 @@ import System.Process (readProcessWithExitCode)
 import Test.Tasty.HUnit (assertEqual)
 
 import Data.SBV.Internals
+import Data.SBV.TP (runTPWith, tpQuiet, rootOfTrust, RootOfTrust(..))
 import Data.SBV.Tools.CodeGen (compileToC, compileToCLib)
 import Documentation.SBV.Examples.Crypto.AES
+import qualified Documentation.SBV.Examples.TP.AES as TP
 
 import Utils.CCodeGen (generatedMakeOptions)
 import Utils.SBVTestFramework
@@ -35,6 +37,7 @@ tests = testGroup "Crypto.AES" [
    goldenVsStringShow "aes128Enc" $ thd <$> compileToC'    "aes128Enc" (aes128EncDec True)
  , goldenVsStringShow "aes128Dec" $ thd <$> compileToC'    "aes128Dec" (aes128EncDec False)
  , goldenVsStringShow "aes128Lib" $ thd <$> compileToCLib' "aes128Lib" aes128Comps
+ , testCase "AES128 round-trip proof" aes128Proof
  , testCase "generated standalone encryption" standaloneEncryption
  , testCase "generated AES128 library" $ libraryVector 128 aes128Key aes128CT
  , testCase "generated AES192 library" $ libraryVector 192 aes192Key aes192CT
@@ -50,6 +53,15 @@ tests = testGroup "Crypto.AES" [
        aes128Comps = [(f, setVals c) | (f, _, c) <- aesLibComponents 128]
        setVals c = cgSetDriverValues (repeat 0) >> c
        thd (_, _, r) = r
+
+-- | Check the original universal round-trip predicate, including its proof
+-- dependencies. A timeout, counterexample, or unchecked dependency fails the test.
+aes128Proof :: Assertion
+aes128Proof = do
+  proof <- runTPWith (tpQuiet True z3) TP.aes128Correct
+  case rootOfTrust proof of
+    RootOfTrust Nothing -> pure ()
+    dependencies        -> assertFailure $ "Unchecked AES proof dependencies: " ++ show dependencies
 
 -- | Exercise the exact code-generation action shown in the documentation.
 standaloneEncryption :: Assertion

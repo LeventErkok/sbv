@@ -766,3 +766,14 @@ Simplified the successful safety example to a direct safe call with sAssert
 visible in the listing, next to the constrain assumption. The named IO helper
 is now internal to the validation code; readers need not follow another function
 call to find the assertion. Its body remains extracted from the checked source.
+
+### 2026-11-10: AES as an example of what TP enables
+
+Added one paragraph after the tautology-checker discussion, without a new section
+or proof walkthrough. It contrasts the earlier impractical one-shot SMT attempt
+with the compositional AES-128 round-trip proof in Examples/TP/AES.hs. The claim
+is specific to the previously unproved SBV example, not an assertion that AES
+round-trip proofs were impossible in other systems. The new module proves the
+original Crypto/AES.hs predicate for every 128-bit plaintext and key, using Z3
+and CVC5; its full and recall-based doctests pass. This is a pointer to current
+SBV development, not an example executed by the tutorial's pinned companion.

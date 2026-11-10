@@ -670,10 +670,15 @@ runAESTests runQC = do
 -- ${verifIntro}
 -----------------------------------------------------------------------------
 {- $verifIntro
-  While SMT based technologies can prove correct many small properties fairly quickly, it would
-  be naive for them to automatically verify that our AES implementation is correct. (By correct,
-  we mean decrypting an encrypted text yields the original text.) However, we can state
-  this property precisely using SBV, and use quick-check to gain some confidence.
+  A single SMT query for the complete AES round trip is difficult: the solver
+  must reason about all the nonlinear rounds at once. The predicate below states
+  that decrypting an encrypted text yields the original text, and can also be
+  used with QuickCheck.
+
+  "Documentation.SBV.Examples.TP.AES" proves this predicate for AES-128 by
+  decomposing the argument into byte identities, table equivalences, and round
+  cancellation. It imports this implementation unchanged. Run its @aes128Correct@
+  proof with @runTP@; Z3 and CVC5 are used for the component obligations.
 -}
 
 -- | Correctness theorem for 128-bit AES. Ideally, we would run:
@@ -691,8 +696,10 @@ runAESTests runQC = do
 --   quickCheck aes128IsCorrect
 -- @
 --
--- and get some degree of confidence in our code. Similar predicates can be easily constructed for 192, and
--- 256 bit cases as well.
+-- and get some degree of confidence in our code. For a compositional proof of this
+-- very predicate, see @aes128Correct@ in "Documentation.SBV.Examples.TP.AES".
+-- That proof covers ordinary AES-128 decryption. Similar predicates can be
+-- constructed for the 192- and 256-bit cases; their proofs are not supplied here.
 aes128IsCorrect :: (SWord 32, SWord 32, SWord 32, SWord 32)  -- ^ plain-text words
                 -> (SWord 32, SWord 32, SWord 32, SWord 32)  -- ^ key-words
                 -> SBool                                     -- ^ True if round-trip gives us plain-text back

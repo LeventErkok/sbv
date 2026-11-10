@@ -3,7 +3,10 @@
 
 ### Version 14.10, Not yet released
 
-  * New development version
+  * Add `Documentation/SBV/Examples/TP/AES.hs`, proving that decrypting an
+    encrypted plaintext returns the original for every AES-128 plaintext and key
+    in the existing AES implementation. The proof covers ordinary AES-128
+    decryption; AES-192/256 and on-the-fly decryption are not covered.
 
 ### Version 14.9, 2026-10-28
 

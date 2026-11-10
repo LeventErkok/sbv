@@ -2337,6 +2337,14 @@ handles the traversal, and short final arguments expose the public guarantees.
 This makes a verified algorithm understandable without reproducing every helper
 proof in the tutorial.
 
+TP also makes previously impractical proofs accessible. SBV's existing AES
+example stated that decrypting an encrypted plaintext returns the original,
+but this property had remained unproved: a single end-to-end SMT query was
+too demanding. With TP, the same implementation now has a compositional proof
+for every AES-128 plaintext and key, using Z3 and CVC5. The example in
+\code{Documentation.\allowbreak SBV.\allowbreak Examples.\allowbreak TP.\allowbreak AES}
+illustrates what explicit proof structure enables beyond one-shot automation.
+
 %==============================================================================
 
 
