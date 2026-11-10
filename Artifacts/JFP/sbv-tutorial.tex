@@ -134,6 +134,9 @@ executable in Haskell while constructing solver queries from symbolic definition
 This reduces the need to translate definitions between tools and reconcile their
 syntactic and semantic differences by hand. It also lets counterexamples become
 inputs for ordinary evaluation, linking solver feedback back to the program.
+The underlying technique is \emph{symbolic execution}: evaluation with symbolic
+inputs builds expressions describing many concrete executions at once
+(Section~\ref{sec:symbolic-execution}).
 The choice of symbolic domain determines what the resulting proof establishes.
 
 The tutorial assumes familiarity with Haskell's algebraic datatypes, type
@@ -452,7 +455,8 @@ comparison and division depend on signedness. Thus the pattern \code{0x80}
 denotes 128 as an unsigned byte and $-128$ as a signed byte. Ordinary arithmetic
 on these symbolic types wraps; the checked operators used in the midpoint
 example add separate overflow obligations. The underlying bit-vector theory
-makes this modular behavior precise~\citep{smtbitvectors}.
+makes this modular behavior precise~\citep{smtbitvectors}. Division by zero
+has a separate, totalized meaning in SBV (Section~\ref{sec:partial-operations}).
 
 Widths are part of the Haskell type. Besides the standard widths, \code{SWord 12}
 and \code{SInt 12} describe unsigned and signed twelve-bit words. A property
@@ -575,7 +579,9 @@ value from a numerator and denominator; for example, three copies of
 \code{1 .\% 3} sum exactly to one. Use a nonzero denominator. A rational domain
 excludes the square root of two, whereas \code{SReal} includes it. These domains
 are therefore not interchangeable merely because both represent one third
-exactly. Symbolic rational encodings also introduce integer arithmetic on their
+exactly. Division by zero is assigned a value in both symbolic domains;
+Section~\ref{sec:partial-operations} explains the convention and how to state
+a nonzero-divisor contract. Symbolic rational encodings also introduce integer arithmetic on their
 components, so exactness alone says nothing about solver difficulty.
 
 Nor does \code{SReal} make arbitrary real analysis automatic. The polynomial
@@ -619,6 +625,8 @@ property concerns floating-point objects rather than numerical equality, inspect
 needs assumptions about inputs and the rounding of each operation; replacing
 all operands by \code{SReal} silently removes those obligations. The library's
 \code{Examples.Misc.Floating} module offers further counterexamples.
+Section~\ref{sec:partial-operations} contrasts IEEE division by zero with
+the conventions for integers, reals, and rationals.
 
 
 \section{Constraint solving and model enumeration}
@@ -773,6 +781,48 @@ An SBV interaction separates two kinds of work: Haskell evaluates the program
 to build a symbolic formula, and the solver reasons about that formula. Query
 programs can alternate between these activities. Knowing which side handles
 which part of a program explains how recursion behaves.
+
+\subsection{Symbolic execution and path conditions}
+\label{sec:symbolic-execution}
+
+Ordinary execution computes with particular inputs. \emph{Symbolic execution}
+instead represents inputs by symbols and computes expressions in those symbols.
+At a branch, the guard determines which inputs follow each alternative. The
+conjunction of conditions along a path is its \emph{path condition}; solving it
+can produce a concrete input that follows that path. King’s foundational
+account~\citep{king-symbolic-execution} develops this connection between symbolic
+execution and program testing. \citet{symbolic-execution-survey} survey subsequent
+techniques, including ways to explore and merge paths.
+
+In SBV, Haskell evaluation constructs these expressions through operations on
+symbolic values. Recall \code{satAdd x y = ite (x .> 255 - y) 255 (x + y)}.
+With unknown byte inputs, the comparison produces a symbolic guard $c$.
+Under assumptions $A$, the two alternatives have path conditions $A\land c$
+and $A\land\neg c$: the first returns 255, the second the byte sum.
+An ordinary Haskell \code{if} requires a concrete \code{Bool} to choose its
+branch. SBV's \code{ite} instead combines both outcomes into a conditional
+expression, representing their effects in one formula. It does not require a
+separate solver query for each path.
+
+For a desired property $Q$ of the inputs and result, a counterexample query has
+the form
+\[
+  A(x,y)\ \land\ \neg Q\bigl(x,y,\operatorname{ite}(c,255,x+y)\bigr).
+\]
+Here arithmetic retains its byte semantics. A satisfying assignment supplies
+inputs that violate $Q$ and determines which branch they take. Unsatisfiability
+establishes $Q$ for every modeled input satisfying $A$. Symbolic execution builds
+the expression; SMT solving answers the resulting logical question. The
+\code{satAddSpec} proof uses this process with an independently widened sum.
+
+SBV implements this approach as a Haskell library: the programmer supplies
+definitions over symbolic types and explicit symbolic choices. It does not
+automatically translate arbitrary Haskell source. Merging branches and sharing
+expression nodes (Section~\ref{sec:hood}) avoid duplicating some work, but do not
+remove the growth in formulas or the difficulty of solving them. Recursion adds
+a further choice: unfold a known amount of Haskell structure, or represent a
+recursive function in the logic and supply induction when needed. The next two
+subsections distinguish these cases.
 
 \subsection{Haskell lists of symbolic values}
 
@@ -1141,33 +1191,106 @@ need induction. Infinite or partial trees are outside the model
 
 
 
-\subsection{Optional results and partial operations}
+\subsection{Partial operations and exceptional inputs}
 \label{sec:partial-operations}
 
-The symbolic model needs a meaning even at inputs where an ordinary Haskell
-operation would fail. For example, \code{SL.head []} is unspecified rather than
-an exception to be caught by the solver. A theorem that relies on that value
-would not establish a property of Haskell's partial \code{head}. Expose the
-missing-result case in the interface instead:
+A symbolic operation is a total function in the logic, even at inputs where
+its ordinary Haskell counterpart would fail. Such an input does not necessarily
+raise an exception or generate a safety obligation. Instead, the operation has
+either a specified result or an unspecified value. These cases must be
+understood before transferring a symbolic theorem to an executable program:
+\begin{center}
+\begin{tabularx}{\linewidth}{@{}XX@{}}
+\toprule
+Operation and exceptional input & Symbolic behavior \\
+\midrule
+\code{sDiv} or \code{sQuot} by zero on integers or machine words
+  & Quotient zero; \code{sMod} and \code{sRem} return the dividend. \\
+\code{(/)} by zero on \code{SReal} or \code{SRational}
+  & Result zero, including zero divided by zero. \\
+Division on \code{SFloat} or \code{SDouble}
+  & IEEE behavior: e.g., $1/(+0)$ is positive infinity and $0/(+0)$ is NaN. \\
+\code{SM.fromJust SM.sNothing}, empty-list head, or a field selector for the wrong constructor
+  & An unspecified value of the result type. \\
+\bottomrule
+\end{tabularx}
+\end{center}
+The division conventions are choices made by SBV, not claims about Haskell's
+partial integer operations or mathematical division. For example,
+\code{prove integerZeroDivision} checks that zero divisors give quotient zero
+and remainder equal to the dividend. It does not establish that a program
+avoids zero divisors. The companion checks the table's numeric cases, including
+signed and unsigned bytes. Check the particular API: the explicitly Euclidean
+\code{sEDiv} and \code{sEMod} leave their zero-divisor results unconstrained.
+
+\paragraph{Unspecified does not mean an exception.}
+Here \code{SM} is \code{Data.SBV.Maybe}, whose symbolic \code{fromJust} is a
+field selector. Compare a query about its invalid input with a guarded law:
+\snippet{maybePayload}
+Both \code{unspecifiedPayload 0} and \code{unspecifiedPayload 1} return
+\code{Satisfiable}. In each separate query, the solver can choose an
+interpretation of the selector that meets the constraint. Neither result says
+that ordinary Haskell \code{fromJust Nothing} can safely return an integer.
+Nor is this a fresh random value on each use: within one interpretation the
+same selector on the same input has the same value. The companion checks that
+requiring this single term to equal both zero and one is unsatisfiable.
+The \code{guardedPayload} theorem uses \code{isJust} to establish when extracting
+and rebuilding the payload recovers the original value.
+
+\paragraph{Making the contract explicit.}
+If zero divisors are forbidden, state a precondition such as \code{y ./= 0}
+and establish it at each call site. Proving a theorem under that assumption
+does not prove that callers satisfy it. If failure is an expected result,
+expose it in the type instead:
 \snippet{optionalOperations}
-\code{headOptionSpec} states exactly when a head exists; when it does,
-\code{SM.fromJust} retrieves that head. The other function returns \code{Nothing}
-for a zero divisor and wraps integer division otherwise. The companion proves
-both its constructor condition and its value on nonzero divisors. Our contract
-therefore does not depend on any totalized division-by-zero behavior.
+The wrappers return \code{Nothing} for an empty list or zero divisor and
+\code{Just} on valid inputs. Their contracts therefore avoid depending on the
+exceptional-input values in the table. Alternatively, \code{SM.fromMaybe d m}
+provides an explicit default: it returns \code{d} for \code{Nothing} and the
+payload for \code{Just}. The companion checks both constructors. Choose between
+a precondition, an optional result, and a default according to the intended API.
+The binary-search contract in Section~\ref{sec:binary-search}, for example,
+establishes \code{isJust} as well as the bounds and value of its returned index.
 
-\code{ite} constructs a symbolic choice, so its branches must be buildable
-symbolic expressions. It cannot make an ordinary Haskell exception in a branch
-safe merely because a solver will later rule that branch out. The operations
-above use symbolic head and division, not host-language attempts to destruct an
-unknown list or evaluate a partial concrete expression.
+Finally, symbolic totality does not protect the Haskell code that constructs
+the query. \code{ite} builds a symbolic choice; it cannot generally make an
+ordinary Haskell exception in a branch safe merely because the solver will
+later rule that branch out. Our wrappers use symbolic selectors and arithmetic,
+not host-language attempts to destruct an unknown value. Treat host exceptions,
+specified symbolic defaults, and unspecified symbolic values as three different
+behaviors.
 
-There are two useful proof styles: prove a property under a domain precondition,
-or return an explicit result such as \code{SMaybe} and specify both constructors.
-Choose the one that matches the public API. The binary search in
-Section~\ref{sec:binary-search} uses the second style: absence of a matching
-index is represented by \code{Nothing}, while the contract for \code{Just i}
-also establishes bounds and the value at that index.
+\subsection{Checking safety with \texttt{sAssert} and \texttt{safe}}
+\label{sec:safety-checks}
+
+\code{sAssert} attaches a required condition to a symbolic computation;
+\code{safe} checks whether such assertions can fail and reports counterexamples.
+Assertions can express nonzero divisors, valid indices, or constructor
+preconditions. For example, we can require a payload before extracting it:
+\snippet{checkedPayload}
+The first argument omits optional call-stack information; the message identifies
+the assertion. The condition must hold for the returned value to meet our
+contract. Unlike \code{constrain}, which assumes a condition, \code{sAssert}
+creates an obligation to check:
+\begin{lstlisting}[style=output]
+ghci> safe checkedFromJust
+[fromJust requires Just: Violated. Model:
+  s0 = Nothing :: Maybe Integer]
+\end{lstlisting}
+With an explicit precondition, the same assertion succeeds:
+\snippet{safePayload}
+\begin{lstlisting}[style=output]
+[fromJust requires Just: No violations detected]
+\end{lstlisting}
+Here \code{constrain} supplies the precondition, \code{sAssert} checks the
+requirement, and \code{output} registers the result for checking. Safety is
+established under the precondition; callers must still satisfy it.
+
+Checked arithmetic operations in \code{Data.SBV.Tools.Overflow} insert assertions
+for overflow and underflow. Ordinary arithmetic and selectors do not acquire
+checks automatically: \code{safe} does not flag \code{SM.fromJust SM.sNothing}
+by itself. An empty list of safety results means no assertions were checked;
+it is not evidence that all exceptional inputs have been ruled out.
 
 
 \section{Arrays and symbolic memory}

@@ -674,3 +674,95 @@ The revised introduction was visually checked on pages 5–6. At this snapshot
 the complete PDF remains 59 pages, with no overfull boxes or undefined citations
 or references. Bibliography style warnings concern omitted optional publication
 fields; unsupported metadata was not invented to silence them.
+
+### 2026-11-10: partial operations and exceptional inputs
+
+Expanded the existing optional-results subsection, now titled "Partial operations
+and exceptional inputs". A compact table distinguishes SBV's specified results
+for ordinary integer/word, real, and rational zero division; IEEE floating-point
+behavior; and unspecified values from invalid selectors. Earlier machine-word,
+exact-arithmetic, and floating-point sections point forward to this explanation.
+The text explicitly separates logical totality from host-language exceptions and
+from proving that callers meet a precondition. Existing headOption/divOption
+wrappers remain the examples of making failure an explicit result.
+
+Source checks use the pinned SBV tree. Core/Model.hs documents and implements
+sDiv/sQuot by zero as zero, with sMod/sRem returning the dividend; its Fractional
+instance guards real zero division but leaves floating-point division to IEEE
+semantics. Rational.hs gives SRational the same zero-result convention. In
+contrast, sEDiv/sEMod are explicitly unconstrained at a zero divisor. Maybe.hs
+implements fromJust as getJust_1 and documents the unspecified Nothing case.
+List.hs documents empty-list head. The three newly referenced source files
+Core/Model.hs, Maybe.hs, and List.hs are now included in the validation hashes
+(Rational.hs and Client.hs were already included).
+
+The new companion checks cover integer, unsigned-byte, signed-byte, real, and
+rational zero division; Float/Double infinity and NaN examples; separate
+satisfiable interpretations of fromJust Nothing; consistency of repeated uses
+within one interpretation; empty-list head; and Euclidean zero division/modulus.
+They also prove the isJust-guarded payload reconstruction law and both cases of
+fromMaybe's explicit default. No arbitrary solver-selected value is frozen in
+an expected transcript. The first focused run passed after resolving a shadowed
+helper name; HLint is clean. The manuscript's exception-policy claims are about
+the named symbolic APIs, not raw SMT-LIB operators or ordinary Haskell division.
+
+The PDF was rebuilt and the subsection inspected on pages 24–26. At this snapshot
+the paper has 60 pages including references, with no overfull boxes or unresolved
+references. The historical page counts above describe earlier revisions.
+
+
+### 2026-11-10: symbolic execution and assertion checking
+
+Added "Symbolic execution and path conditions" at the start of the host-evaluation
+section, with an introduction forward reference. It reuses the validated satAdd
+example to connect symbolic inputs, branch guards, merged ite expressions, and
+counterexample queries. The distinction between formula construction and SMT
+solving leads into host recursion versus recursive logical definitions. It does
+not describe SBV as an analyzer for arbitrary Haskell source or claim that merging
+eliminates formula growth. Core/Model.hs supplies the ite/symbolicMerge evidence;
+the execution-model section already explains shared expression graphs.
+
+Citation provenance:
+- King (1976), "Symbolic Execution and Program Testing", Communications of the ACM
+  19(7), 385–394, DOI 10.1145/360248.360252. Checked the published paper at
+  https://lim.univ-reunion.fr/staff/fred/Enseignement/Verif-M2/Articles/Autres/Symbolic-execution-and-Program-Testing-King-1976.pdf.
+- Baldoni, Coppa, D'Elia, Demetrescu, and Finocchi (2018), "A Survey of Symbolic
+  Execution Techniques", ACM Computing Surveys 51(3), article 50, 39 pages,
+  DOI 10.1145/3182657. Read the authors' manuscript at
+  https://arxiv.org/abs/1610.00502; verified final publication metadata against
+  the institutional record https://iris.luiss.it/handle/11385/192577.
+
+The exceptional-input subsection now briefly explains safe and sAssert, including
+assertions inserted by Data.SBV.Tools.Overflow. Provers/Prover.hs implements safe
+by checking the registered assertions; Maybe.fromJust is a selector without an
+assertion. Both Prover.hs and Overflow.hs are now included in validation hashes.
+The companion checks that the raw Nothing selector produces no safety obligations,
+that safe checkedFromJust returns a satisfiable violation whose model is Nothing,
+and that an isJust constraint makes the registered assertion unsatisfiable.
+The constrained Symbolic computation explicitly marks its result with output so
+that the assertion is registered; merely returning an unevaluated symbolic term
+would not exercise the check. Unknown or missing results cannot pass this check.
+
+At this snapshot the rebuilt main PDF has 62 pages. The new symbolic-execution
+subsection and safety example were visually checked; there are no overfull boxes
+or undefined citations or references. HLint and the focused companion checks pass.
+
+### 2026-11-10: dedicated safety-checking subsection
+
+Promoted the short safety paragraph into "Checking safety with sAssert and safe"
+after exceptional inputs. The subsection explains assertion obligations versus
+assumptions, shows the already validated Nothing counterexample, and describes
+how the isJust precondition discharges it. It retains the distinction between
+checked arithmetic and operations that insert no assertions. No companion
+implementation changed. At this snapshot the subsection is 11.2 on page 27;
+the main PDF remains 62 pages, with no overfull boxes or unresolved references.
+
+The safety subsection now prints the constrained example and its successful
+result directly. The extracted safeFromJust helper reuses the existing check;
+validation calls the same helper displayed in the paper. A sentence explains why
+output registers the result for assertion checking. The PDF remains 62 pages.
+
+Simplified the successful safety example to a direct safe call with sAssert
+visible in the listing, next to the constrain assumption. The named IO helper
+is now internal to the validation code; readers need not follow another function
+call to find the assertion. Its body remains extracted from the checked source.

@@ -13,6 +13,7 @@ module ExpandedExamples
   , scopedQuery, coreExample
   , Key, SKey, keyCode, keyCongruence, advance, advanceContract, twoAdvances
   , headOption, divOption, headOptionSpec
+  , integerZeroDivision, unspecifiedPayload, guardedPayload, checkedFromJust
   , identifierPattern, validIdentifier, identifierSpec
   , activate, activationPreserves, oneOffset, offsetPerInput
   , byteAdditionBridge, auditProofs, expandedChecks
@@ -232,6 +233,80 @@ headOptionSpec :: SList Integer -> SBool
 headOptionSpec xs = SM.isJust (headOption xs) .== sNot (SL.null xs)
 -- END optionalOperations
 
+integerZeroDivision :: SInteger -> SBool
+integerZeroDivision x =
+  x `sDiv` 0 .== 0 .&& x `sQuot` 0 .== 0 .&&
+  x `sMod` 0 .== x .&& x `sRem` 0 .== x
+
+-- BEGIN maybePayload
+unspecifiedPayload :: Integer -> IO SatResult
+unspecifiedPayload n = sat $
+  (SM.fromJust SM.sNothing :: SInteger) .== literal n
+
+guardedPayload :: SMaybe Integer -> SBool
+guardedPayload m = SM.isJust m .=> SM.sJust (SM.fromJust m) .== m
+-- END maybePayload
+
+-- BEGIN checkedPayload
+checkedFromJust :: SMaybe Integer -> SInteger
+checkedFromJust m =
+  sAssert Nothing "fromJust requires Just" (SM.isJust m) (SM.fromJust m)
+-- END checkedPayload
+
+safeFromJust :: IO [SafeResult]
+safeFromJust =
+-- BEGIN safePayload
+  safe $ do
+    m <- free "m" :: Symbolic (SMaybe Integer)
+    constrain $ SM.isJust m
+    output $ sAssert Nothing "fromJust requires Just"
+               (SM.isJust m) (SM.fromJust m)
+-- END safePayload
+
+payloadSafetyChecked :: IO Bool
+payloadSafetyChecked = do
+  unchecked <- safe (SM.fromJust SM.sNothing :: SInteger)
+  bad <- safe checkedFromJust
+  good <- safeFromJust
+  print unchecked
+  print bad
+  print good
+  pure $ null unchecked && case (bad, good) of
+    ([SafeResult (_, _, r@Satisfiable{})], [SafeResult (_, _, Unsatisfiable{})]) ->
+      getModelValue "s0" (SatResult r) == Just (Nothing :: Maybe Integer)
+    _ -> False
+
+-- Separate satisfiability checks deliberately permit different interpretations.
+unspecifiedPayloadChecked :: IO Bool
+unspecifiedPayloadChecked = do
+  zeroResult <- unspecifiedPayload 0
+  oneResult  <- unspecifiedPayload 1
+  print zeroResult
+  print oneResult
+  consistent <- isTheorem $
+    let payload = SM.fromJust SM.sNothing :: SInteger
+    in sNot (payload .== 0 .&& payload .== 1)
+  pure $ isSat zeroResult && isSat oneResult && consistent
+  where isSat (SatResult Satisfiable{}) = True
+        isSat _                       = False
+
+-- Empty-sequence selectors also admit different interpretations.
+unspecifiedSelectorsChecked :: IO Bool
+unspecifiedSelectorsChecked = and <$> mapM permits ([0,1] :: [Integer])
+  where permits n = do
+          r <- sat $ SL.head (literal [] :: SList Integer) .== literal n
+          pure $ case r of SatResult Satisfiable{} -> True; _ -> False
+
+euclideanZeroChecked :: IO Bool
+euclideanZeroChecked = and <$> mapM permits ([0,1] :: [Integer])
+  where permits n = do
+          r <- sat $ do
+            x <- sInteger "x"
+            y <- sInteger "y"
+            constrain $ x .== 5 .&& y .== 0
+            pure $ x `sEDiv` y .== literal n .&& x `sEMod` y .== literal n
+          pure $ case r of SatResult Satisfiable{} -> True; _ -> False
+
 -- BEGIN regexValidator
 identifierPattern :: RE.RegExp
 identifierPattern = RE.Loop 3 3 (RE.Range 'a' 'z')
@@ -320,6 +395,32 @@ expandedChecks check = do
   check "contract implies progress after two calls" $ isTheorem twoAdvances
   check "contract has a concrete implementation" $ isTheorem (advanceContract (+1))
   check "contradictory contract detected" contractContradiction
+  check "integer division by zero uses quotient zero and remainder dividend" $
+    isTheorem integerZeroDivision
+  check "unsigned and signed byte division by zero follows the same convention" $ do
+    u <- isTheorem $ \(x :: SWord8) ->
+      x `sDiv` 0 .== 0 .&& x `sQuot` 0 .== 0 .&&
+      x `sMod` 0 .== x .&& x `sRem` 0 .== x
+    s <- isTheorem $ \(x :: SInt8) ->
+      x `sDiv` 0 .== 0 .&& x `sQuot` 0 .== 0 .&&
+      x `sMod` 0 .== x .&& x `sRem` 0 .== x
+    pure $ u && s
+  check "real and rational division by zero returns zero" $ do
+    r <- isTheorem $ \(x :: SReal) -> x / 0 .== 0
+    q <- isTheorem $ \(x :: SRational) -> x / 0 .== 0
+    pure $ r && q
+  check "IEEE zero-divisor examples yield infinities and NaN" $ isTheorem $
+    fpIsPositive (1/0 :: SFloat) .&& fpIsInfinite (1/0 :: SFloat) .&&
+    fpIsNegative ((-1)/0 :: SFloat) .&& fpIsInfinite ((-1)/0 :: SFloat) .&&
+    fpIsNaN (0/0 :: SFloat) .&&
+    fpIsInfinite (1/0 :: SDouble) .&& fpIsNaN (0/0 :: SDouble)
+  check "Nothing payload admits different models but is consistent within each" unspecifiedPayloadChecked
+  check "safe checks explicit payload assertions and reports Nothing" payloadSafetyChecked
+  check "empty-list head admits different results" unspecifiedSelectorsChecked
+  check "Euclidean zero division and modulus admit different results" euclideanZeroChecked
+  check "Just precondition justifies payload reconstruction" $ isTheorem guardedPayload
+  check "explicit Maybe defaults cover both constructors" $ isTheorem $ \(d :: SInteger) x ->
+    SM.fromMaybe d SM.sNothing .== d .&& SM.fromMaybe d (SM.sJust x) .== x
   check "optional list head constructor contract" $ isTheorem headOptionSpec
   check "optional division constructor and value" $ isTheorem $ \(x :: SInteger) y ->
     (SM.isNothing (divOption x y) .== (y .== 0)) .&&

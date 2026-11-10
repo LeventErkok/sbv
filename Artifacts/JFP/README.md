@@ -149,6 +149,16 @@ regex validation, set invariants, quantifier order, an encoding bridge, and proo
 dependencies. Byte examples have exhaustive 256-input concrete checks; the soft
 optimum is compared with all feasible choices. The circuit proof fixes eight bits.
 
+Exceptional-input checks distinguish SBV's specified zero-divisor results from
+IEEE infinities/NaN and unspecified selectors. Separate queries admit both zero
+and one for `fromJust Nothing`, while a single query cannot assign both to the
+same term. Validation also checks empty-list head, Euclidean zero division,
+the `isJust`-guarded payload law, explicit defaults, and optional-result contracts.
+The `safe` example checks that an unguarded symbolic selector adds no assertion,
+an explicit `sAssert` reports `Nothing` as a violating input, and an `isJust`
+constraint discharges that assertion. The symbolic-execution explanation reuses
+the checked saturating adder to illustrate path conditions and merged branches.
+
 The `--synthesis` group reuses `Expr` in a bounded affine template. Its candidate
 solver keeps samples incrementally, and a separate verifier searches for an
 arbitrary integer counterexample. Validation checks a rejected candidate against
@@ -279,7 +289,7 @@ states no fixed tutorial page limit; page count must still be checked after
 formatting changes rather than carried over from the conference version.
 Rechecked on 2026-11-09: the [scope page](https://manager.episciences.org/jfp/page/about)
 describes 20–50 pages as common for regular papers, with shorter and longer papers
-allowed; it gives no numerical tutorial limit. The current draft's 59 pages
+allowed; it gives no numerical tutorial limit. The current draft's 62 pages
 therefore warrant an editorial length review, rather than a cut to a stated cap.
 
 Keep the pinned SBV source snapshot until the matching Hackage release has been
