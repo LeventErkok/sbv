@@ -672,7 +672,7 @@ runAESTests runQC = do
 {- $verifIntro
   While SMT based technologies can prove correct many small properties fairly quickly, it would
   be naive for them to automatically verify that our AES implementation is correct. (By correct,
-  we mean decryption followed by encryption yielding the same result.) However, we can state
+  we mean decrypting an encrypted text yields the original text.) However, we can state
   this property precisely using SBV, and use quick-check to gain some confidence.
 -}
 
