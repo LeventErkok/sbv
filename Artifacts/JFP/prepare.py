@@ -4,7 +4,8 @@
 Two sources are used:
   * examples/*.hs, delimited by '-- BEGIN name' / '-- END name';
   * declarations extracted from SBV's own documentation modules, taken
-    from the declaration's first line up to the next top-level line; two long
+    from the declaration's first line up to the next top-level line (or an
+    explicit end marker for a local proof step); two long
     declarations are reindented with a non-whitespace identity check.
 PAPER-ELIDE-BEGIN/END comments replace checked code with a printed summary.
 Every \\snippet{name}, \\snippet*{name}, or \\libsnippet{name} must resolve to an extracted file.
@@ -53,6 +54,9 @@ for source_file in sorted((root / "examples").glob("*.hs")):
 # (snippet name, library module, regex matching the declaration's first line)
 library = [
     ("binarySearch", "Documentation/SBV/Examples/TP/BinarySearch.hs", r"^bsearch :: "),
+    ("mcCarthyDefinition", "Documentation/SBV/Examples/TP/McCarthy91.hs", r"^mcCarthy91 :: "),
+    ("mcCarthySpec", "Documentation/SBV/Examples/TP/McCarthy91.hs", r"^spec91 :: "),
+    ("mcCarthyStep", "Documentation/SBV/Examples/TP/McCarthy91.hs", r"^   case3 <- "),
     ("tautNormalize",    "Documentation/SBV/Examples/TP/TautologyChecker.hs", r"^normalize :: "),
     ("tautEval",         "Documentation/SBV/Examples/TP/TautologyChecker.hs", r"^eval :: "),
     ("tautCheck",        "Documentation/SBV/Examples/TP/TautologyChecker.hs", r"^isTautology' :: "),
@@ -61,6 +65,8 @@ library = [
     ("tautSoundness",    "Documentation/SBV/Examples/TP/TautologyChecker.hs", r"^soundness :: "),
     ("tautCompleteness", "Documentation/SBV/Examples/TP/TautologyChecker.hs", r"^completeness :: "),
 ]
+# The guided induction is a local binding inside the library's correctness proof.
+library_ends = {"mcCarthyStep": r"^   -- Putting it all together"}
 # Compact whitespace in two long library declarations for the printed page.
 # The extraction below verifies that no non-whitespace character has changed;
 # these declarations contain no string literals with significant whitespace.
@@ -107,6 +113,8 @@ for name, module, start in library:
     last = first + 1
     while last < len(lines) and (not lines[last].strip() or lines[last][0].isspace()
                                  or lines[last].startswith(lines[first].split()[0] + " ")):
+        if name in library_ends and re.match(library_ends[name], lines[last]):
+            break
         last += 1
     while not lines[last - 1].strip():
         last -= 1

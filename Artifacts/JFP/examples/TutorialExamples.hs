@@ -37,6 +37,7 @@ import qualified Documentation.SBV.Examples.TP.Lists as ListProofs
 -- END listProofImports
 import qualified Documentation.SBV.Examples.TP.Basics as TPBasics
 import qualified Documentation.SBV.Examples.TP.TautologyChecker as Taut
+import qualified Documentation.SBV.Examples.TP.McCarthy91 as McCarthy
 import qualified Documentation.SBV.Examples.TP.BinarySearch as Search
 
 -------------------------------------------------------------------------------
@@ -1207,6 +1208,13 @@ main = do
         void binarySearchProof >> pure True
       check "binary-search results against a list oracle (10 cases)" binarySearchConcrete
     ["--midpoint"] -> midpointChecks
+    ["--mccarthy91"] ->
+      check "McCarthy 91 correctness with checked termination and contract" $ do
+        proof <- McCarthy.correctness
+        print proof
+        pure $ case rootOfTrust proof of
+          RootOfTrust Nothing -> True
+          _                   -> False
     ["--expanded"] -> expandedChecks check
     ["--synthesis"] -> synthesisChecks
     ["--tp-failures"] -> tpFailureChecks
@@ -1276,6 +1284,6 @@ main = do
       check "exercise 5: revAcc length" $ void (runTP revAccLength) >> pure True
       check "exercise 6: nonempty segments against an independent oracle" kadaneNonEmptyConcrete
       check "exercise 6: nonempty Kadane correctness" $ void (runTP kadaneNonEmptyCorrect) >> pure True
-    _ -> fail "Usage: tutorial-examples [--expanded | --synthesis | --midpoint | --binary-search | --tp-failures | --tautology | --tautology-concrete | --generate DIR | --diagnostics FILE]"
+    _ -> fail "Usage: tutorial-examples [--expanded | --synthesis | --midpoint | --mccarthy91 | --binary-search | --tp-failures | --tautology | --tautology-concrete | --generate DIR | --diagnostics FILE]"
 
 {- HLint ignore shiftEach "Avoid lambda" -}

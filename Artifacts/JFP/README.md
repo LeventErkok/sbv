@@ -64,8 +64,9 @@ latexmk -pdf sbv-tutorial.tex
 
 `prepare.py` extracts listings into `build/snippets/` from two places: blocks
 between `-- BEGIN name` and `-- END name` in both companion modules, and a few
-declarations extracted from `Documentation/SBV/Examples/TP/TautologyChecker.hs`
-and `Documentation/SBV/Examples/TP/BinarySearch.hs` in Cabal's pinned source checkout. `companion.py` locates that checkout from the
+declarations extracted from `Documentation/SBV/Examples/TP/TautologyChecker.hs`,
+`Documentation/SBV/Examples/TP/BinarySearch.hs`, and
+`Documentation/SBV/Examples/TP/McCarthy91.hs` in Cabal's pinned source checkout. `companion.py` locates that checkout from the
 build plan; neither extraction nor validation needs a surrounding SBV repository.
 It fails if the manuscript refers to a listing that has no source, including
 the breakable `\snippet*` form, and rejects duplicate snippet names across modules. `PAPER-ELIDE-BEGIN summary` and
@@ -109,7 +110,12 @@ bookKeepingAbstract
 runTP kadaneCorrect
 runTP mirrorCorrect
 binarySearchProof
+McCarthy.correctness
 ```
+
+The focused command `cabal run -fstrict tutorial-examples -- --mccarthy91` checks
+the library's McCarthy 91 proof and rejects unchecked dependencies. Its definition,
+specification, and guided induction step are extracted directly from the pinned source.
 
 Each of the six worked exercises names its solution in the paper, and validation
 checks all six. The state-transition and Bird-derivation projects in Suggested

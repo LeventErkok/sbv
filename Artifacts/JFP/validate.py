@@ -76,6 +76,7 @@ with log_path.open("w") as log:
                         "sbv-tutorial.tex", "references.bib", "Makefile", "LICENSE"]),
         (repo, "SBV/", ["sbv.cabal", "Data/SBV/TP/TP.hs", "Documentation/SBV/Examples/TP/Lists.hs",
                         "Documentation/SBV/Examples/TP/TautologyChecker.hs",
+                        "Documentation/SBV/Examples/TP/McCarthy91.hs",
                         "Documentation/SBV/Examples/TP/Basics.hs",
                         "Documentation/SBV/Examples/ProofTools/BMC.hs",
                         "Documentation/SBV/Examples/ProofTools/Strengthen.hs",
@@ -145,6 +146,9 @@ with log_path.open("w") as log:
         raise SystemExit("Function model does not refute the quantified equivalence")
     record("PASS TP diagnostics: replayed concrete, intermediate-step, and function models")
     run([executable, "--binary-search"])
+    mccarthy = run([executable, "--mccarthy91"])
+    if "Functions proven terminating: mcCarthy91" not in mccarthy:
+        raise SystemExit("McCarthy 91 proof did not report its termination check")
     run([executable, "--tautology"])
     transcript = build / "sat-add.smt2"
     run([executable, "--diagnostics", transcript])
@@ -162,6 +166,7 @@ with log_path.open("w") as log:
     record("\nVALIDATION PASSED: all tutorial checks (including random tests and exercise")
     record("solutions and midpoint checks), all expanded semantic-domain and query examples,")
     record("counterexample-guided synthesis and its independent oracles, the strengthened binary-search TP proof,")
-    record("binary-search concrete oracles, TP counterexample replay, verbose diagnostics and SMT-LIB transcript replay, the")
+    record("binary-search concrete oracles, McCarthy 91 correctness and termination, TP counterexample replay,")
+    record("verbose diagnostics and SMT-LIB transcript replay, the")
     record("tautology checker's truth-table checks, soundness and completeness proofs, and exhaustive")
     record("generated-C checking. Timings are single-run diagnostics, not benchmarks.")

@@ -166,7 +166,8 @@ their boundaries and context:
   Sections~\ref{sec:induction}--\ref{sec:tautology} combine equational calculations
   with induction. Generalization supplies the hypotheses needed for accumulator
   programs, including list reversal and Kadane's algorithm. Decreasing measures
-  support proofs about expression trees and binary search. Failed TP obligations
+  support proofs about expression trees and binary search; McCarthy 91 shows how
+  termination can depend on a checked result contract. Failed TP obligations
   show how to distinguish a counterexample to a theorem from one to an intermediate
   step. Polymorphic and higher-order proofs extend the method to reusable
   abstractions, and a verified tautology checker brings these techniques into a
@@ -1935,6 +1936,59 @@ index conversions and updates \code{mid+1} and \code{mid-1}.
 
 %==============================================================================
 
+\section{McCarthy 91 and termination contracts}
+\label{sec:mccarthy91}
+Nested recursion can require knowing what an inner call returns before showing
+that the outer call decreases the measure. McCarthy's 91 function is a classic
+example. Here is its SBV definition, extracted from
+\code{Documentation.\allowbreak SBV.\allowbreak Examples.\allowbreak TP.\allowbreak McCarthy91}:
+\libsnippet{mcCarthyDefinition}
+For inputs above 100 it returns immediately; otherwise, the result of one
+recursive call becomes the input to another. The triple passed to
+\code{smtFunctionWithContract} contains a measure, a postcondition on the input
+\code{n} and result \code{r}, and a list of helper lemmas (empty here).
+The measure is $\max(0,101-n)$, and the postcondition says that inputs at most
+100 return 91. SBV checks the postcondition together with the measure decrease
+by well-founded induction; the contract is not an additional axiom. Its
+availability at smaller measures justifies the nested call.
+
+To see why the contract matters, consider $n\leq100$. The inner call at
+$n+11$ has a strictly smaller measure. If $n\leq89$, its input is at most
+100, so its checked postcondition gives the result 91. The outer call then
+has measure 10, strictly below $101-n$. If $90\leq n\leq100$, the inner
+call takes the nonrecursive branch and returns $n+1$, so the outer call's
+measure decreases by one. The numerical argument grows in both cases; the
+measure records progress toward the nonrecursive branch instead of requiring
+arguments themselves to shrink.
+
+The complete specification also covers inputs above 100:
+\libsnippet{mcCarthySpec}
+The library's \code{correctness} proof establishes
+\code{mcCarthy91 n .== spec91 n} for every integer. Two helper lemmas,
+\code{case1} and \code{case2}, cover $n\geq100$ and $90\leq n\leq100$.
+For $n<90$, the guided strong-induction step is:
+\libsnippet*{mcCarthyStep}
+Here \code{sInduct} uses $|101-n|$ as the proof measure. The recursive
+function's admissibility check uses the clipped measure in its definition;
+these measures agree on the inputs below 90 considered in this case.
+After unfolding, the proof instantiates the hypothesis at $n+11$.
+When that input is still below 90, the hypothesis gives the inner result 91;
+otherwise \code{case2} supplies it. The remaining expression is
+\code{mcCarthy91 91}, which unfolds to 91, as does \code{spec91 n} under
+$n<90$. A final \code{cases} calculation combines the three ranges and checks
+that they cover every input.
+
+The companion imports the module as \code{McCarthy}. Running
+\code{McCarthy.correctness} checks the proof and reports
+\code{Functions proven terminating: mcCarthy91}, followed by the
+\code{Proven} result. The focused companion command is
+\code{cabal run tutorial-examples -- --mccarthy91}; validation also checks that
+the returned proof has no unchecked dependencies. The neighboring
+\code{Ackermann} module gives further examples of nested recursion and
+lexicographic decrease.
+
+%==============================================================================
+
 \section{Failed TP proofs and counterexamples}
 \label{sec:tp-failures}
 
@@ -2337,14 +2391,6 @@ handles the traversal, and short final arguments expose the public guarantees.
 This makes a verified algorithm understandable without reproducing every helper
 proof in the tutorial.
 
-TP also makes previously impractical proofs accessible. SBV's existing AES
-example stated that decrypting an encrypted plaintext returns the original,
-but this property had remained unproved: a single end-to-end SMT query was
-too demanding. With TP, the same implementation now has a compositional proof
-for every AES-128 plaintext and key, using Z3 and CVC5. The example in
-\code{Documentation.\allowbreak SBV.\allowbreak Examples.\allowbreak TP.\allowbreak AES}
-illustrates what explicit proof structure enables beyond one-shot automation.
-
 %==============================================================================
 
 
@@ -2452,6 +2498,10 @@ solver result does not establish termination. Explicitly bypassing a check with
 \code{smtFunctionNoTermination} leaves a dependency reported as \code{Modulo}
 the function's termination. The companion checks that $b(n)=b(n)+1$ is rejected.
 
+Nested recursion can also require a postcondition to justify termination.
+Section~\ref{sec:mccarthy91} shows how \code{smtFunctionWithContract} checks
+such a postcondition together with the decreasing measure.
+
 \subsection{Finite lists and datatypes}
 \label{sec:finite-lists}
 
@@ -2464,7 +2514,33 @@ structural induction and decreasing-size arguments available; total reasoning
 and its relationship to partial languages are studied by
 \citet{fastloose}. Arrays instead denote total mappings over possibly infinite
 index domains (Section~\ref{sec:arrays}); they do not introduce infinite recursive
-constructor structure.
+constructor structure. This does not rule out proving properties of streams:
+Section~\ref{sec:productivity} distinguishes productivity from termination and
+discusses representations for reasoning about stream observations.
+
+\subsection{Productivity and stream properties}
+\label{sec:productivity}
+
+A stream producer need not terminate: instead, each finite observation should
+be obtainable after finite work. This is \emph{productivity}, a different
+obligation from reaching a final result. SBV provides
+\code{smtProductiveFunction} to request a constructor-guardedness check rather
+than a decreasing measure, and TP reports such checks as
+\code{Functions proven productive}. The examples
+\code{Documentation.\allowbreak SBV.\allowbreak Examples.\allowbreak TP.\allowbreak NatStream}
+and \code{MutualCorecursion} illustrate this interface.
+
+The representation still matters. A guardedness check does not turn SMT
+sequences into infinite lists, nor supply a coinductive datatype model; the
+finite-domain restriction above continues to apply. For stream properties,
+one can instead represent a stream by an index function and prove pointwise
+claims, or define a terminating generator of finite prefixes and reason about
+those prefixes by induction. For example, the stream of integers starting at
+$n$ has index function $s_n(k)=n+k$ for $k\geq0$; its successor law
+$s_n(k+1)=s_n(k)+1$ is an ordinary universally quantified arithmetic property.
+Such proofs concern the chosen representation and observations. They do not
+by themselves establish productivity of a separate Haskell stream producer or
+extend finite-list theorems to infinite constructor structures.
 
 %==============================================================================
 \section{Proof results, diagnostics, and trust}
@@ -2800,6 +2876,13 @@ For further practice, three SBV example modules extend these ideas.
 \code{InsertionSort} combines ordering and permutation properties; and
 \code{VM} verifies compilation to a stack machine. All three are under
 \code{Documentation.\allowbreak SBV.\allowbreak Examples.\allowbreak TP}.
+
+The neighboring \code{AES} example illustrates what TP enables beyond one-shot
+automation. SBV's existing implementation had a round-trip property---decrypting
+an encrypted plaintext returns the original---that had remained unproved because
+a single end-to-end SMT query was too demanding. With TP, the same implementation
+now has a compositional proof for every AES-128 plaintext and key, using Z3 and
+CVC5. Explicit proof structure makes this previously impractical check possible.
 
 \begin{acks}
 We thank Joel Burget, Iavor Diatchki, Brian Huffman, John Matthews, Brian Schroeder,

@@ -769,11 +769,55 @@ call to find the assertion. Its body remains extracted from the checked source.
 
 ### 2026-11-10: AES as an example of what TP enables
 
-Added one paragraph after the tautology-checker discussion, without a new section
-or proof walkthrough. It contrasts the earlier impractical one-shot SMT attempt
+Added one paragraph at the end of the conclusion, alongside the further-reading
+examples, without a new section or proof walkthrough. This keeps the example's
+point about what TP enables outside the teaching sequence. It contrasts the
+earlier impractical one-shot SMT attempt
 with the compositional AES-128 round-trip proof in Examples/TP/AES.hs. The claim
 is specific to the previously unproved SBV example, not an assertion that AES
 round-trip proofs were impossible in other systems. The new module proves the
 original Crypto/AES.hs predicate for every 128-bit plaintext and key, using Z3
 and CVC5; its full and recall-based doctests pass. This is a pointer to current
 SBV development, not an example executed by the tutorial's pinned companion.
+
+### 2026-11-10: nested recursion, productivity, and stream observations
+
+Extended the termination subsection with McCarthy 91: its nested recursive
+definition, the nonnegative measure max(0, 101-n), and the postcondition checked
+alongside termination by smtFunctionWithContract. Added an Ackermann pointer.
+The definitions and API claims were checked against Examples/TP/McCarthy91.hs,
+Examples/TP/Ackermann.hs, and Core/Model.hs.
+
+Added a productivity subsection immediately after finite lists and datatypes,
+with the requested forward reference from the latter. It distinguishes
+constructor-guardedness checking from termination and from the existence of an
+infinite value in the solver's domain. NatStream and MutualCorecursion are
+identified as examples of the API, not evidence that finite SMT sequences
+provide a coinductive stream model. Index functions and terminating finite-prefix
+generators offer representations for stream observations; proving their laws
+does not establish productivity of a separate lazy implementation. This follows
+the representation constraint recorded in
+Artifacts/DesignExplorations/infinite-lists-and-coinduction.md. No new companion
+checks or proof transcripts were added.
+
+### 2026-11-10: standalone McCarthy 91 section
+
+Moved McCarthy 91 into its own section after induction on decreasing measures.
+The section explains why a result contract is needed for nested recursion and
+shows the measure decrease for inputs at most 89 and for inputs from 90 through
+100. It points to the existing correctness proof and Ackermann example. The
+execution-model termination subsection now refers back to this section, and
+the introduction roadmap includes it. No new executable example was added.
+
+The section now prints the actual definition, specification, and guided
+strong-induction case from the pinned McCarthy91 module. prepare.py extracts
+the local case up to its explicit source boundary, retaining the existing
+non-whitespace identity check. The companion's --mccarthy91 command runs the
+library's complete correctness proof and rejects unchecked dependencies;
+validate.py includes this command, checks the reported termination, and hashes
+the library source. The focused check passes with a Proven result and
+"Functions proven terminating: mcCarthy91". The companion builds with strict
+warnings and HLint passes. The full validation suite subsequently passed,
+including McCarthy 91, and results/validation.txt was refreshed with matching
+input hashes. The PDF was rebuilt with the locally installed Tectonic binary;
+there are no overfull boxes or undefined references.
