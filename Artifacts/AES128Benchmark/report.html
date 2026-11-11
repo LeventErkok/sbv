@@ -1,0 +1,102 @@
+<!doctype html>
+<html lang="en"><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>AES128 reused-key benchmark</title>
+<style>
+:root{font-family:system-ui,sans-serif;color:#192b3c;background:#f3f6f9}
+body{max-width:1080px;margin:40px auto;padding:0 24px;line-height:1.6}
+h1{font-size:2.4rem;line-height:1.15}h2{font-size:1.25rem}
+section,.lead{background:white;padding:24px;border-radius:12px;margin:24px 0}
+.lead{border-left:5px solid #157c80}table{border-collapse:collapse;width:100%;font-size:.9rem}
+td,th{padding:10px;text-align:right;border-bottom:1px solid #ddd;white-space:nowrap}
+th:first-child,td.left{text-align:left}.scroll{overflow:auto}code{overflow-wrap:anywhere}
+.barrow{display:flex;align-items:center;gap:12px;margin:8px 0;font-size:.85rem}
+.barrow span{width:180px;flex-shrink:0}.track{flex:1;background:#edf2f6}.bar{background:#157c80;height:24px}
+.barrow .barvalue{width:110px}
+a{color:#126d9a}pre{overflow:auto;background:#edf2f6;padding:16px}
+</style><main>
+<p>SBV → C · AES-128 · encryption only</p><h1>Reused-key encryption performance</h1>
+<div class="lead"><strong>Among portable C implementations on this machine, SBV-generated AES-128 encryption ran at 558 MiB/s (27.3 ns/block) with 16 KiB buffers: 1.09× the throughput of BearSSL and 2.47× that of tiny-AES-c.</strong>
+<p>OpenSSL is not in that class: it uses the CPU&#x27;s AES instructions. It was 4.8× faster than SBV with one call per block and 42× faster when given whole buffers, where independent blocks can be processed together.</p>
+<p>Measured once, on Model Name: MacBook Pro; Model Identifier: Mac17,8; Chip: Apple M5 Pro; Total Number of Cores: 18 (6 Super and 12 Performance); Memory: 48 GB (arm64, Apple Clang). Results on other CPUs or compilers
+may differ, in particular x86-64 and its AES-NI instructions. Expanded keys are reused throughout each timed run.</p></div>
+<section><h2>16-byte buffer · 1 blocks per iteration</h2><div class="barrow"><span>SBV</span><div class="track"><div class="bar" style="width:21.62%"></div></div><span class="barvalue">604.5 MiB/s</span></div><div class="barrow"><span>SBV_native_words</span><div class="track"><div class="bar" style="width:22.91%"></div></div><span class="barvalue">640.8 MiB/s</span></div><div class="barrow"><span>BearSSL_big</span><div class="track"><div class="bar" style="width:18.65%"></div></div><span class="barvalue">521.6 MiB/s</span></div><div class="barrow"><span>tiny_AES_c</span><div class="track"><div class="bar" style="width:8.21%"></div></div><span class="barvalue">229.5 MiB/s</span></div><div class="barrow"><span>OpenSSL_EVP_block</span><div class="track"><div class="bar" style="width:96.73%"></div></div><span class="barvalue">2705.1 MiB/s</span></div><div class="barrow"><span>OpenSSL_EVP_bulk</span><div class="track"><div class="bar" style="width:100.00%"></div></div><span class="barvalue">2796.5 MiB/s</span></div><div class="scroll"><table><thead><tr><th>Implementation</th><th>ns/block ↓</th><th>MiB/s ↑</th><th>Speed / SBV ↑</th><th>Min–max ns/block</th><th>CV</th></tr></thead><tbody><tr><th>SBV</th><td>25.24</td><td>604.5</td><td>1.00×</td><td>24.64–25.27</td><td>0.9%</td></tr><tr><th>SBV_native_words</th><td>23.81</td><td>640.8</td><td>1.06×</td><td>23.11–24.28</td><td>1.4%</td></tr><tr><th>BearSSL_big</th><td>29.25</td><td>521.6</td><td>0.86×</td><td>28.58–30.43</td><td>1.8%</td></tr><tr><th>tiny_AES_c</th><td>66.48</td><td>229.5</td><td>0.38×</td><td>65.34–67.10</td><td>0.9%</td></tr><tr><th>OpenSSL_EVP_block</th><td>5.64</td><td>2705.1</td><td>4.47×</td><td>5.40–6.64</td><td>7.4%</td></tr><tr><th>OpenSSL_EVP_bulk</th><td>5.46</td><td>2796.5</td><td>4.63×</td><td>4.94–6.97</td><td>11.9%</td></tr></tbody></table></div></section><section><h2>1,024-byte buffer · 64 blocks per iteration</h2><div class="barrow"><span>SBV</span><div class="track"><div class="bar" style="width:2.55%"></div></div><span class="barvalue">554.9 MiB/s</span></div><div class="barrow"><span>SBV_native_words</span><div class="track"><div class="bar" style="width:2.80%"></div></div><span class="barvalue">610.4 MiB/s</span></div><div class="barrow"><span>BearSSL_big</span><div class="track"><div class="bar" style="width:2.37%"></div></div><span class="barvalue">516.1 MiB/s</span></div><div class="barrow"><span>tiny_AES_c</span><div class="track"><div class="bar" style="width:1.04%"></div></div><span class="barvalue">226.0 MiB/s</span></div><div class="barrow"><span>OpenSSL_EVP_block</span><div class="track"><div class="bar" style="width:12.85%"></div></div><span class="barvalue">2802.2 MiB/s</span></div><div class="barrow"><span>OpenSSL_EVP_bulk</span><div class="track"><div class="bar" style="width:100.00%"></div></div><span class="barvalue">21804.2 MiB/s</span></div><div class="scroll"><table><thead><tr><th>Implementation</th><th>ns/block ↓</th><th>MiB/s ↑</th><th>Speed / SBV ↑</th><th>Min–max ns/block</th><th>CV</th></tr></thead><tbody><tr><th>SBV</th><td>27.50</td><td>554.9</td><td>1.00×</td><td>27.45–27.85</td><td>0.5%</td></tr><tr><th>SBV_native_words</th><td>25.00</td><td>610.4</td><td>1.10×</td><td>24.39–25.29</td><td>1.2%</td></tr><tr><th>BearSSL_big</th><td>29.56</td><td>516.1</td><td>0.93×</td><td>29.15–30.62</td><td>1.5%</td></tr><tr><th>tiny_AES_c</th><td>67.53</td><td>226.0</td><td>0.41×</td><td>67.19–67.93</td><td>0.3%</td></tr><tr><th>OpenSSL_EVP_block</th><td>5.45</td><td>2802.2</td><td>5.05×</td><td>5.14–6.03</td><td>5.9%</td></tr><tr><th>OpenSSL_EVP_bulk</th><td>0.70</td><td>21804.2</td><td>39.29×</td><td>0.68–0.71</td><td>1.4%</td></tr></tbody></table></div></section><section><h2>16,384-byte buffer · 1,024 blocks per iteration</h2><div class="barrow"><span>SBV</span><div class="track"><div class="bar" style="width:2.36%"></div></div><span class="barvalue">558.2 MiB/s</span></div><div class="barrow"><span>SBV_native_words</span><div class="track"><div class="bar" style="width:2.57%"></div></div><span class="barvalue">608.1 MiB/s</span></div><div class="barrow"><span>BearSSL_big</span><div class="track"><div class="bar" style="width:2.17%"></div></div><span class="barvalue">514.4 MiB/s</span></div><div class="barrow"><span>tiny_AES_c</span><div class="track"><div class="bar" style="width:0.96%"></div></div><span class="barvalue">226.2 MiB/s</span></div><div class="barrow"><span>OpenSSL_EVP_block</span><div class="track"><div class="bar" style="width:11.28%"></div></div><span class="barvalue">2669.8 MiB/s</span></div><div class="barrow"><span>OpenSSL_EVP_bulk</span><div class="track"><div class="bar" style="width:100.00%"></div></div><span class="barvalue">23672.8 MiB/s</span></div><div class="scroll"><table><thead><tr><th>Implementation</th><th>ns/block ↓</th><th>MiB/s ↑</th><th>Speed / SBV ↑</th><th>Min–max ns/block</th><th>CV</th></tr></thead><tbody><tr><th>SBV</th><td>27.34</td><td>558.2</td><td>1.00×</td><td>26.50–27.72</td><td>1.4%</td></tr><tr><th>SBV_native_words</th><td>25.09</td><td>608.1</td><td>1.09×</td><td>24.36–25.84</td><td>1.5%</td></tr><tr><th>BearSSL_big</th><td>29.67</td><td>514.4</td><td>0.92×</td><td>29.45–30.40</td><td>1.1%</td></tr><tr><th>tiny_AES_c</th><td>67.46</td><td>226.2</td><td>0.41×</td><td>66.03–67.73</td><td>0.8%</td></tr><tr><th>OpenSSL_EVP_block</th><td>5.72</td><td>2669.8</td><td>4.78×</td><td>4.92–6.54</td><td>10.9%</td></tr><tr><th>OpenSSL_EVP_bulk</th><td>0.64</td><td>23672.8</td><td>42.41×</td><td>0.64–0.66</td><td>0.7%</td></tr></tbody></table></div></section>
+<section><h2>Code size: what the speed costs</h2>
+<p>Sizes below are compiled machine code and read-only data (tables) for the object files the benchmark links,
+built with the same flags as the timed code.</p>
+<div class="scroll"><table><thead><tr><th>Object</th><th>Code (bytes)</th><th>Tables (bytes)</th>
+<th>Total (bytes)</th><th>Source lines</th><th>Covers</th></tr></thead><tbody><tr><th>SBV encryption</th><td>2,500</td><td>4,352</td><td>6,852</td><td>1,353</td><td class="left">block encryption only</td></tr><tr><th>SBV key schedule</th><td>7,916</td><td>1,280</td><td>9,196</td><td>3,138</td><td class="left">key expansion only (not timed)</td></tr><tr><th>BearSSL aes_big</th><td>700</td><td>1,024</td><td>1,724</td><td>157</td><td class="left">block encryption only</td></tr><tr><th>BearSSL key schedule</th><td>656</td><td>328</td><td>984</td><td>112</td><td class="left">key expansion and tables (not timed)</td></tr><tr><th>tiny-AES-c</th><td>2,888</td><td>539</td><td>3,427</td><td>572</td><td class="left">encryption, decryption, and key expansion; not separable</td></tr></tbody></table></div>
+<p>SBV's block-encryption function is 4.0× the size of BearSSL's, and its key schedule is far larger
+still (generated straight-line code, not timed here). The generated encryptor has no round loop and carries
+four separate 1 KiB lookup tables, so each round is lookups and XORs; BearSSL's <code>aes_big</code> keeps one
+table, derives the other three by rotating its entries, and loops over rounds. tiny-AES-c computes each byte
+with an S-box and <code>xtime</code> arithmetic. That is consistent with SBV trading space (code and cache footprint)
+for fewer instructions per block, but this benchmark did not vary table size or unrolling independently, so it
+shows a correlation in these three implementations, not an isolated cause. tiny-AES-c's object also contains decryption and
+key expansion, which cannot be separated, so its total overstates an encrypt-only build.</p></section>
+<section><h2>What was measured</h2>
+<p>Each iteration encrypts an immutable buffer of independent 16-byte blocks into a separate output buffer.
+The same expanded key is reused. Key expansion, allocation, input generation, and validation occur before timing.
+No output block feeds the next input. All implementations receive identical input bytes.</p>
+<p>SBV uses its generated block-encryption function with a 44-word expanded encryption key.
+For <code>SBV</code> the timed adapter loads and stores big-endian words; <code>SBV_native_words</code> calls the same
+function on pre-converted 32-bit words, which isolates the generated code from that adapter. BearSSL uses its internal single-block
+<code>br_aes_big_encrypt</code> primitive directly; tiny-AES-c uses <code>AES_ECB_encrypt</code>.
+Their in-place APIs receive a 16-byte copy from the input. All paths include the work needed for
+the same byte-buffer interface. There is no padding or chaining between blocks.</p>
+<p>OpenSSL uses AES-128-ECB through the default provider and
+<a href="https://docs.openssl.org/3.5/man3/EVP_EncryptInit/">EVP_EncryptUpdate</a>, with padding disabled.
+The cipher, context, key setup, and a first encryption call are completed before timing.
+<code>OpenSSL_EVP_block</code> calls EVP once per block; <code>OpenSSL_EVP_bulk</code> calls it once
+per entire buffer, allowing internal parallel processing and amortizing EVP overhead.
+Both include EVP return-value and output-length checks. Hardware dispatch is left enabled.</p>
+<p>Library: OpenSSL 3.6.3 9 Jun 2026; provider:
+default; detected capabilities:
+<code>CPUINFO: OPENSSL_armcap=0x87d</code>.
+OpenSSL is a prebuilt installed library; it does not share the portable C compiler flags.
+Its own build flags are recorded in the raw JSON.</p>
+<p>The reported ARM capabilities include the hardware AES bit (1 &lt;&lt; 2), defined in <a href="https://github.com/openssl/openssl/blob/openssl-3.6.3/crypto/arm_arch.h">OpenSSL arm_arch.h</a>. This indicates hardware AES is enabled under its <a href="https://github.com/openssl/openssl/blob/openssl-3.6.3/providers/implementations/ciphers/cipher_aes_hw.c">AES dispatch logic</a>. This is inferred from capabilities and source dispatch, not an instruction trace.</p>
+<p>Google Benchmark uses 0.2 seconds of warmup, a minimum 0.5 seconds per measurement,
+and nine randomly interleaved repetitions per case. Tables show the median process CPU time
+normalized per block. Throughput is calculated from that median; CV is the sample standard
+deviation divided by the mean. Raw JSON also contains wall times. Compiler barriers make output
+writes observable once per batch. The three portable C implementations use Apple Clang with <code>-O3 -DNDEBUG</code>,
+no link-time optimization, and no explicit architecture flags. Google Benchmark build: release.</p>
+</section><section><h2>Validation and interpretation</h2>
+<p>Before timing, all four implementations pass the FIPS-197 Appendix C.1 AES128 known-answer vector
+and agree on 1,024 deterministic pseudorandom key/plaintext pairs. A separate validation run is saved
+in <a href="results/validation.txt">validation.txt</a>. OpenSSL bulk calls and continued context reuse are also checked at all buffer sizes.</p>
+<p>These are warm-buffer, single-thread measurements, including function-call and adapter overhead.
+Larger buffers amortize benchmark-loop overhead; the portable implementations and OpenSSL block path still make one encryption call per block. OpenSSL bulk makes one call per buffer.
+The process was not pinned to a CPU, and system load, scheduling, and frequency changes can affect results.
+Starting load averages reported by Google Benchmark: [3.39648, 3.03711, 2.99365].
+Min–max and CV describe nine repetitions, not confidence intervals.</p>
+<p>Google Benchmark could not read the CPU clock rate on this host; the frequency in its raw
+console metadata is unreliable. This affects metadata only, not the timer-based ns/block or MiB/s.
+The CPU model above comes from macOS System Profiler.</p>
+<p>The benchmark waits until the 1-minute load average is below 4.5
+(a quarter of the 18 logical CPUs; the timed code is single-threaded) before timing;
+it waited 0 s and started at load 3.40.
+That load is ordinary desktop background activity, not a quiet machine. This is a laptop-class machine with other processes, thermal management, and no
+CPU pinning. Differences of about 10% between portable implementations are measurable here but should not be
+generalized without repeating them elsewhere.</p>
+<p>This comparison does not measure cold caches, key expansion, decryption, or authenticated encryption.
+The three portable implementations use data-dependent table lookups; the comparison makes no constant-time security claim.
+OpenSSL uses its normal architecture-specific dispatch, so its results include optimizations unavailable to the portable C implementations.</p></section>
+<section><h2>Reproduce and inspect</h2>
+<pre>cd Artifacts/AES128Benchmark
+bash run.sh</pre>
+<p>Requires CMake, a C/C++ compiler, Python 3, and installed OpenSSL 3 development headers/libraries.
+The three portable implementations and Google Benchmark are vendored; OpenSSL is an external dependency.
+rebuilding this benchmark does not require Haskell or a network connection.
+See <a href="README.md">README.md</a> for regenerating the SBV C.</p>
+<ul><li><a href="results/benchmark.json">Raw measurements (JSON)</a> ·
+<a href="results/benchmark.txt">Console output</a> · <a href="results/summary.csv">Summary CSV</a></li>
+<li><a href="benchmark.cpp">Benchmark harness</a> · <a href="CMakeLists.txt">Build configuration</a> ·
+<a href="generated/aes128BlockEncrypt.c">Generated SBV encryptor</a></li>
+<li><a href="results/portable-only/benchmark.json">Original portable-only run</a></li>
+<li><a href="results/provenance.json">Machine, toolchain, source revisions and SHA-256 hashes</a></li></ul>
+<p>Run recorded at 2026-11-11T11:51:35-08:00.
+SBV checkout: <code>64315b78dfe1089789d5a22bcc6cf31bb8260b1a</code>
+(clean tracked tree).
+Compiler: Apple clang version 21.0.0 (clang-2100.3.34.2).</p><ul><li><a href="https://github.com/google/benchmark">benchmark</a>: <code>bfd437633b91f2baabd21d944e6e31987e291fd9</code></li><li><a href="https://www.bearssl.org/git/BearSSL">bearssl</a>: <code>7bea48e5e850ab4cafbe68d3765cdaba13a86d6f</code></li><li><a href="https://github.com/kokke/tiny-AES-c">tiny-AES-c</a>: <code>23856752fbd139da0b8ca6e471a13d5bcc99a08d</code></li></ul>
+</section></main></html>

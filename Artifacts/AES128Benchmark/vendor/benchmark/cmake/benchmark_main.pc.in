@@ -1,0 +1,9 @@
+prefix=@CMAKE_INSTALL_PREFIX@
+exec_prefix=${prefix}
+libdir=@BENCHMARK_PKG_CONFIG_LIBDIR@
+
+Name: @PROJECT_NAME@
+Description: Google microbenchmark framework (with main() function)
+Version: @NORMALIZED_VERSION@
+Requires: benchmark
+Libs: -L${libdir} -lbenchmark_main

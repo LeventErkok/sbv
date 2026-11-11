@@ -1,0 +1,3 @@
+[ 21%] Built target aes_impl
+[ 92%] Built target benchmark
+[100%] Built target aes128_benchmark

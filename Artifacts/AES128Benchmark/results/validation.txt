@@ -1,0 +1,1 @@
+Validation passed: FIPS-197 AES128 vector and 1024 deterministic differential cases across all four implementations; OpenSSL bulk, reused-context, and SBV native-word checks at all three buffer sizes.

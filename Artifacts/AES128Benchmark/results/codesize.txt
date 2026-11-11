@@ -1,0 +1,5 @@
+SBV encryption         code   2500  data   4352  total   6852  (1353 source lines)
+SBV key schedule       code   7916  data   1280  total   9196  (3138 source lines)
+BearSSL aes_big        code    700  data   1024  total   1724  (157 source lines)
+BearSSL key schedule   code    656  data    328  total    984  (112 source lines)
+tiny-AES-c             code   2888  data    539  total   3427  (572 source lines)

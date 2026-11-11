@@ -1,0 +1,10 @@
+{
+  "max_load_threshold": 4.5,
+  "load_average_at_start": [
+    3.396484375,
+    3.037109375,
+    2.99365234375
+  ],
+  "logical_cpus": 18,
+  "seconds_waited": 0
+}

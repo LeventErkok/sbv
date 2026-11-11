@@ -1,0 +1,42 @@
+[
+  {
+    "implementation": "SBV encryption",
+    "scope": "block encryption only",
+    "code_bytes": 2500,
+    "constant_bytes": 4352,
+    "total_bytes": 6852,
+    "source_lines": 1353
+  },
+  {
+    "implementation": "SBV key schedule",
+    "scope": "key expansion only (not timed)",
+    "code_bytes": 7916,
+    "constant_bytes": 1280,
+    "total_bytes": 9196,
+    "source_lines": 3138
+  },
+  {
+    "implementation": "BearSSL aes_big",
+    "scope": "block encryption only",
+    "code_bytes": 700,
+    "constant_bytes": 1024,
+    "total_bytes": 1724,
+    "source_lines": 157
+  },
+  {
+    "implementation": "BearSSL key schedule",
+    "scope": "key expansion and tables (not timed)",
+    "code_bytes": 656,
+    "constant_bytes": 328,
+    "total_bytes": 984,
+    "source_lines": 112
+  },
+  {
+    "implementation": "tiny-AES-c",
+    "scope": "encryption, decryption, and key expansion; not separable",
+    "code_bytes": 2888,
+    "constant_bytes": 539,
+    "total_bytes": 3427,
+    "source_lines": 572
+  }
+]
