@@ -2427,6 +2427,72 @@ for example, have no operational meaning, and the code generator rejects program
 that use them rather than approximating them. Uninterpreted functions become calls
 to C functions that the user provides, which then join the trusted code.
 
+\subsection{How fast is the generated code?}
+\label{sec:codegen-speed}
+
+Generated code is only attractive if it is not far behind hand-written code. As
+one data point, we generated C for SBV's AES-128 block encryption
+(\code{Documentation.\allowbreak SBV.\allowbreak Examples.\allowbreak Crypto.\allowbreak AES}) and compared it
+with BearSSL's portable implementation~\citep{bearssl}, tiny-AES-c~\citep{tinyaes},
+and OpenSSL~\citep{openssl}. The three portable C implementations were compiled
+with the same compiler and \code{-O3}, without link-time optimization. Every
+implementation first matched the FIPS-197 test vector and agreed on 1,024 random
+key and plaintext pairs. We then timed independent 16-byte blocks under one
+reused, expanded key, on an Apple M5 Pro with Apple Clang, using a development
+checkout of SBV. Table~\ref{tab:aes-speed} shows medians of nine repetitions.
+% A non-floating table: it stays directly under the paragraph that introduces it.
+\par\medskip\noindent
+\begin{minipage}{\linewidth}
+\centering
+\makeatletter\def\@captype{table}\makeatother
+\caption{AES-128 encryption of 16\,KiB buffers on one machine.}
+\label{tab:aes-speed}
+\begin{tabular}{lrrrr}
+\toprule
+Implementation & ns/block & MiB/s & Speed vs.\ SBV & Size (bytes) \\
+\midrule
+SBV-generated C              & 27.3 & 558      & 1.00$\times$ & 6{,}852 \\
+BearSSL \code{aes\_big}      & 29.7 & 514      & 0.92$\times$ & 1{,}724 \\
+tiny-AES-c                   & 67.5 & 226      & 0.41$\times$ & 3{,}427\textsuperscript{*} \\
+OpenSSL, one call per block  & 5.7  & 2{,}670  & 4.8$\times$  & hardware \\
+OpenSSL, one call per buffer & 0.64 & 23{,}700 & 42$\times$   & hardware \\
+\bottomrule
+\end{tabular}
+
+\smallskip
+{\footnotesize Speed vs.\ SBV is throughput relative to the SBV-generated C, so values
+above 1 are faster than SBV. Size is compiled encryption code plus lookup tables.
+\textsuperscript{*}Includes decryption and key expansion, which cannot be separated.}
+\end{minipage}\par\medskip
+
+The generated code is about 9\% faster than BearSSL's and 2.5 times faster than
+tiny-AES-c's. These timings include converting bytes to the 32-bit words that
+SBV's function expects; calling it on words directly is another 9\% faster.
+
+The price is code size. SBV's encryptor occupies about four times the space of
+BearSSL's: roughly 2.5\,KB of code plus four 1\,KB lookup tables, against 0.7\,KB of
+code and one table. The generated function has no loop over rounds, and each round
+is four table lookups combined with XORs. BearSSL keeps a single table and derives
+the other three by rotating its entries, trading instructions for space. The
+generated key schedule is larger still, about 9\,KB against 1\,KB, though it is
+not timed here. The data are consistent with SBV trading space for speed, but we
+did not vary table size or unrolling independently, so this is an explanation
+that fits three implementations, not an isolated cause.
+
+OpenSSL is a different kind of competitor. On this machine it uses the
+processor's AES instructions, and it was 4.8 times faster than the generated code
+with one call per block and more than 40 times faster given whole buffers, where
+independent blocks can be processed together. Portable C should not be expected
+to compete with dedicated hardware; the generated code's advantage is that it
+comes from a specification and runs wherever a C compiler does. As with the adder
+above, the generated C is checked against known answers and other
+implementations, not proved. The three portable implementations also use
+data-dependent table lookups, so none of them is constant-time. These figures
+come from one machine under ordinary desktop background load; the repository's
+\code{Artifacts/AES128Benchmark} contains the harness, raw measurements, and a
+report that states the load and provenance. Neither it nor the development SBV
+checkout it used is part of this tutorial's pinned companion.
+
 %==============================================================================
 \section{The execution model and its proof obligations}
 \label{sec:hood}

@@ -836,3 +836,28 @@ Raw execution logs retain the pinned library's actual output.
 The snapshot pin is temporary: before submission, migrate to the next SBV
 release, regenerate the execution log, and remove the manuscript's temporary
 spelling-normalization note once the companion prints Counterexample itself.
+
+### 2026-11-11: generated-code speed (AES benchmark)
+
+Added "How fast is the generated code?" (section 22.3) at the end of the C-generation
+section: one table and three short paragraphs. It reports the AES-128 reused-key benchmark in
+`Artifacts/AES128Benchmark`: SBV-generated C against BearSSL `aes_big`, tiny-AES-c, and OpenSSL
+(single-block and bulk). The explanation offered is code size: the generated encryptor is about four
+times BearSSL's (2.5 KB code plus four 1 KB tables against 0.7 KB plus one table), with no round loop,
+while BearSSL rotates a single table. The text says explicitly that table size and unrolling were not varied
+independently, so this is consistent with the data but not an isolated cause. OpenSSL is presented as
+hardware AES (ARM crypto extensions, `OPENSSL_armcap=0x87d`), a different class from portable C, and the
+text does not generalize beyond one Apple M5 Pro with Apple Clang.
+
+Honesty points carried from the benchmark review: the figures were measured at a 1-minute load average of
+3.4 on 18 logical CPUs (the harness waits for a quarter of the CPUs, since the timed code is single-threaded);
+the report states this. The first benchmark run had started at load 48, which is why the harness now gates on load.
+The raw JSON no longer contains the host name. The SBV C was regenerated from a clean tracked tree at commit
+64315b78d and was byte-identical to the saved files. The vendored trees were reduced from 707 to 102 files, each
+verified against its recorded hash. The tutorial states that the benchmark and the development SBV checkout it
+used are not part of the pinned companion; its figures are not reproduced by `validate.py`. The generated C is
+checked against the FIPS-197 vector and three other implementations, not proved, and the section says so.
+
+Added bibliography entries `bearssl`, `tinyaes`, `openssl`. tiny-AES-c has no known publication year, so the entry
+uses "n.d." rather than an invented date. Open item: if the benchmark figures are kept for submission, re-run them
+after re-pinning SBV so that the code generator matches the pinned release.
