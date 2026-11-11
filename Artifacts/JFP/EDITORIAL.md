@@ -861,3 +861,22 @@ checked against the FIPS-197 vector and three other implementations, not proved,
 Added bibliography entries `bearssl`, `tinyaes`, `openssl`. tiny-AES-c has no known publication year, so the entry
 uses "n.d." rather than an invented date. Open item: if the benchmark figures are kept for submission, re-run them
 after re-pinning SBV so that the code generator matches the pinned release.
+
+### 2026-11-11: benchmark review corrections
+
+Corrected the AES explanation: each ordinary round computes four words with
+four lookups per word, and the final round uses a separate 256-byte S-box.
+The size totals were already correct. The table now identifies benchmark-thread
+CPU time; the report and README no longer call it process CPU time. The
+tiny-AES-c size qualification describes what was not separated in this measurement.
+Replaced the opening claim about when generated code is attractive with a
+question about its performance.
+
+The report now derives the compiler and hardware description from recorded
+metadata, conditions its ARM AES statement on the capability mask, and makes
+no hardware AES claim for an unrecognized capability format. Clock warnings
+are included only when present in the saved console output. Removed assumptions
+about laptop hardware and the default load threshold from generated prose.
+Rendering checks cover the saved run, disabled ARM AES, and a synthetic Linux/GCC
+run; all retain identical numeric summaries. The benchmark's report_refresh
+provenance entry records these reporting-only edits; timings were not rerun.

@@ -32,7 +32,7 @@
     "generated/aes128Lib_driver.c": "8c2f990160ecbc4f6854399e5c41d277ad10582f7cc33103cf884cdfb96b9d65",
     "generated/aes128OTFDecrypt.c": "dddcb3a4c6369c1f092f6e70be0f87266d79631d832419d3df2d3c7dc338d858",
     "provenance.py": "08bc9837f928f77346656382dee9135b2ff4989e835facb409423aae9805867d",
-    "report.py": "03f981935b1b75fb62ac1ab79d7a41ddaec520ab91c3dedc25d8f71291d33142",
+    "report.py": "ba398041cd62803578cbaffe6d1eb80dbcba1c0ee5d8643f176fb2f36fd5cc4e",
     "run.sh": "85ecf2d39274dd77e318392928de147370db5a7502c74245b0ac9fa0a0aa7264",
     "vendor/bearssl/LICENSE.txt": "771bf18c8633ea69ec9b07d2e604c4b99b7bef41b0f5ce6385d24df4448f61ca",
     "vendor/bearssl/inc/bearssl.h": "8543ceb43850a5121782ebb0cff767a610ea7d215b1ad57ff9866deca214e92f",
@@ -861,5 +861,14 @@
     "sbv_commit": "64315b78dfe1089789d5a22bcc6cf31bb8260b1a",
     "regenerated_files_identical_to_saved": true,
     "files_compared": 8
+  },
+  "report_refresh": {
+    "date": "2026-11-11",
+    "reason": "Correct timing terminology, AES table description, and platform-dependent report text; no measurements rerun.",
+    "previous_report_sha256": "03f981935b1b75fb62ac1ab79d7a41ddaec520ab91c3dedc25d8f71291d33142",
+    "report_sha256": "ba398041cd62803578cbaffe6d1eb80dbcba1c0ee5d8643f176fb2f36fd5cc4e",
+    "benchmark_json_sha256": "0d5bdfe79aac116c9dde4b81db7e5fc15fd9df58081653cb99cd6620966a2ab9",
+    "codesize_script_sha256": "7c8571f726e441a5530be1ac93125ab8c0d11c2bcb4f841536e97f45258d98f3",
+    "codesize_json_sha256": "89c7c984796345f11303bba1878eac165078e888d49fd68c422c950531965849"
   }
 }

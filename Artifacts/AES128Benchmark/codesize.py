@@ -23,7 +23,7 @@ entries = [
     ("BearSSL key schedule", "vendor/bearssl/src/symcipher/aes_common.c.o",
      "vendor/bearssl/src/symcipher/aes_common.c", "key expansion and tables (not timed)"),
     ("tiny-AES-c", "vendor/tiny-AES-c/aes.c.o", "vendor/tiny-AES-c/aes.c",
-     "encryption, decryption, and key expansion; not separable"),
+     "encryption, decryption, and key expansion; not separated in this measurement"),
 ]
 
 def sizes(obj):

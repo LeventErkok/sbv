@@ -33,7 +33,7 @@
   },
   {
     "implementation": "tiny-AES-c",
-    "scope": "encryption, decryption, and key expansion; not separable",
+    "scope": "encryption, decryption, and key expansion; not separated in this measurement",
     "code_bytes": 2888,
     "constant_bytes": 539,
     "total_bytes": 3427,

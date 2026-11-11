@@ -16,7 +16,7 @@ for row in data["benchmarks"]:
     if row.get("run_type") == "iteration":
         impl, size = row["run_name"].split("/")[:2]
         size = int(size)
-        # Default timing is process CPU time; retain wall time in the raw JSON.
+        # Default timing is thread CPU time; retain wall time in the raw JSON.
         factor = {"ns": 1, "us": 1000, "ms": 1e6, "s": 1e9}[row["time_unit"]]
         groups.setdefault((impl, size), []).append(row["cpu_time"] * factor / (size / 16))
 
@@ -71,9 +71,6 @@ hw_bulk = faster("OpenSSL_EVP_bulk", "SBV")
 headline = (f'Among portable C implementations on this machine, SBV-generated AES-128 encryption '
             f'ran at {sbv["mib_per_second"]:.0f} MiB/s ({sbv["median_ns_per_block"]:.1f} ns/block) '
             f'with 16 KiB buffers: {bear:.2f}× the throughput of BearSSL and {tiny:.2f}× that of tiny-AES-c.')
-hardware = (f'OpenSSL is not in that class: it uses the CPU\'s AES instructions. It was '
-            f'{hw_block:.1f}× faster than SBV with one call per block and {hw_bulk:.0f}× faster '
-            f'when given whole buffers, where independent blocks can be processed together.')
 sizes = json.loads((root / "results/codesize.json").read_text())
 size_rows = "".join(
     f'<tr><th>{escape(r["implementation"])}</th><td>{r["code_bytes"]:,}</td>'
@@ -87,15 +84,27 @@ versions = "".join(f'<li><a href="{escape(v["url"])}">{escape(k)}</a>: '
 warnings = data.get("context", {}).get("library_build_type", "unknown")
 cpu_info = data["context"]["openssl_cpu_info"]
 armcap = re.search(r"OPENSSL_armcap=0x([0-9a-fA-F]+)", cpu_info)
-acceleration_note = "Hardware acceleration is left to OpenSSL's normal runtime dispatch."
+hardware_summary = "OpenSSL uses runtime dispatch; hardware AES use is not established by this report."
+acceleration_note = "The recorded capabilities are not decoded for this platform; no hardware AES claim is made."
 if armcap:
     enabled = bool(int(armcap.group(1), 16) & 4)
-    acceleration_note = ("The reported ARM capabilities " + ("include" if enabled else "exclude")
+    hardware_summary = ("OpenSSL's recorded ARM capabilities " + ("enable" if enabled else "disable")
+                        + " hardware AES dispatch.")
+    acceleration_note = ("The recorded ARM capability mask " + ("includes" if enabled else "excludes")
         + ' the hardware AES bit (1 &lt;&lt; 2), defined in '
         + '<a href="https://github.com/openssl/openssl/blob/openssl-3.6.3/crypto/arm_arch.h">OpenSSL arm_arch.h</a>. '
-        + 'This indicates hardware AES is ' + ('enabled' if enabled else 'disabled')
-        + ' under its <a href="https://github.com/openssl/openssl/blob/openssl-3.6.3/providers/implementations/ciphers/cipher_aes_hw.c">AES dispatch logic</a>. '
-        + 'This is inferred from capabilities and source dispatch, not an instruction trace.')
+        + 'This identifies dispatch eligibility, not an instruction trace.')
+hardware = (hardware_summary + f' Its throughput was {hw_block:.1f}× SBV with one call per block '
+            f'and {hw_bulk:.1f}× SBV with one call per buffer.')
+console_path = root / "results/benchmark.txt"
+console = console_path.read_text() if console_path.exists() else ""
+clock_note = ""
+if ("Unable to determine clock rate" in console
+        or "Estimated CPU frequency may be incorrect" in console):
+    clock_note = ('<p>The saved benchmark console output warns that the CPU frequency metadata '
+                  'may be unreliable. The reported ns/block and MiB/s use CPU timers, '
+                  'not that frequency estimate.</p>')
+compiler = metadata["compiler"].splitlines()[0]
 document = f'''<!doctype html>
 <html lang="en"><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
 <title>AES128 reused-key benchmark</title>
@@ -115,8 +124,8 @@ a{{color:#126d9a}}pre{{overflow:auto;background:#edf2f6;padding:16px}}
 <p>SBV → C · AES-128 · encryption only</p><h1>Reused-key encryption performance</h1>
 <div class="lead"><strong>{escape(headline)}</strong>
 <p>{escape(hardware)}</p>
-<p>Measured once, on {escape(metadata["machine"])} (arm64, Apple Clang). Results on other CPUs or compilers
-may differ, in particular x86-64 and its AES-NI instructions. Expanded keys are reused throughout each timed run.</p></div>
+<p>Measured once, on {escape(metadata["machine"])} using {escape(compiler)}. Results on other CPUs or compilers
+may differ. Expanded keys are reused throughout each timed run.</p></div>
 {''.join(tables)}
 <section><h2>Code size: what the speed costs</h2>
 <p>Sizes below are compiled machine code and read-only data (tables) for the object files the benchmark links,
@@ -125,12 +134,13 @@ built with the same flags as the timed code.</p>
 <th>Total (bytes)</th><th>Source lines</th><th>Covers</th></tr></thead><tbody>{size_rows}</tbody></table></div>
 <p>SBV's block-encryption function is {size_ratio:.1f}× the size of BearSSL's, and its key schedule is far larger
 still (generated straight-line code, not timed here). The generated encryptor has no round loop and carries
-four separate 1 KiB lookup tables, so each round is lookups and XORs; BearSSL's <code>aes_big</code> keeps one
+four separate 1 KiB lookup tables plus a 256-byte S-box. Each ordinary round computes four words,
+each using four table lookups combined with XORs; the final round uses the S-box. BearSSL's <code>aes_big</code> keeps one
 table, derives the other three by rotating its entries, and loops over rounds. tiny-AES-c computes each byte
 with an S-box and <code>xtime</code> arithmetic. That is consistent with SBV trading space (code and cache footprint)
 for fewer instructions per block, but this benchmark did not vary table size or unrolling independently, so it
 shows a correlation in these three implementations, not an isolated cause. tiny-AES-c's object also contains decryption and
-key expansion, which cannot be separated, so its total overstates an encrypt-only build.</p></section>
+key expansion, which were not separated in this measurement, so its total overstates an encrypt-only build.</p></section>
 <section><h2>What was measured</h2>
 <p>Each iteration encrypts an immutable buffer of independent 16-byte blocks into a separate output buffer.
 The same expanded key is reused. Key expansion, allocation, input generation, and validation occur before timing.
@@ -146,7 +156,7 @@ the same byte-buffer interface. There is no padding or chaining between blocks.<
 The cipher, context, key setup, and a first encryption call are completed before timing.
 <code>OpenSSL_EVP_block</code> calls EVP once per block; <code>OpenSSL_EVP_bulk</code> calls it once
 per entire buffer, allowing internal parallel processing and amortizing EVP overhead.
-Both include EVP return-value and output-length checks. Hardware dispatch is left enabled.</p>
+Both include EVP return-value and output-length checks. The harness uses OpenSSL's runtime dispatch.</p>
 <p>Library: {escape(data["context"]["openssl_version"])}; provider:
 {escape(data["context"]["openssl_provider"])}; detected capabilities:
 <code>{escape(data["context"]["openssl_cpu_info"])}</code>.
@@ -154,11 +164,11 @@ OpenSSL is a prebuilt installed library; it does not share the portable C compil
 Its own build flags are recorded in the raw JSON.</p>
 <p>{acceleration_note}</p>
 <p>Google Benchmark uses 0.2 seconds of warmup, a minimum 0.5 seconds per measurement,
-and nine randomly interleaved repetitions per case. Tables show the median process CPU time
+and nine randomly interleaved repetitions per case. Tables show the median thread CPU time
 normalized per block. Throughput is calculated from that median; CV is the sample standard
 deviation divided by the mean. Raw JSON also contains wall times. Compiler barriers make output
-writes observable once per batch. The three portable C implementations use Apple Clang with <code>-O3 -DNDEBUG</code>,
-no link-time optimization, and no explicit architecture flags. Google Benchmark build: {escape(warnings)}.</p>
+writes observable once per batch. The three portable C implementations use {escape(compiler)}.
+Recorded build flags: <code>{escape(metadata["build_flags"])}</code>. Google Benchmark build: {escape(warnings)}.</p>
 </section><section><h2>Validation and interpretation</h2>
 <p>Before timing, all four implementations pass the FIPS-197 Appendix C.1 AES128 known-answer vector
 and agree on 1,024 deterministic pseudorandom key/plaintext pairs. A separate validation run is saved
@@ -168,18 +178,16 @@ Larger buffers amortize benchmark-loop overhead; the portable implementations an
 The process was not pinned to a CPU, and system load, scheduling, and frequency changes can affect results.
 Starting load averages reported by Google Benchmark: {escape(str(data["context"].get("load_avg", "unavailable")))}.
 Min–max and CV describe nine repetitions, not confidence intervals.</p>
-<p>Google Benchmark could not read the CPU clock rate on this host; the frequency in its raw
-console metadata is unreliable. This affects metadata only, not the timer-based ns/block or MiB/s.
-The CPU model above comes from macOS System Profiler.</p>
+{clock_note}
 <p>The benchmark waits until the 1-minute load average is below {run_config["max_load_threshold"]:g}
-(a quarter of the {run_config["logical_cpus"]} logical CPUs; the timed code is single-threaded) before timing;
-it waited {run_config["seconds_waited"]} s and started at load {run_config["load_average_at_start"][0]:.2f}.
-That load is ordinary desktop background activity, not a quiet machine. This is a laptop-class machine with other processes, thermal management, and no
-CPU pinning. Differences of about 10% between portable implementations are measurable here but should not be
-generalized without repeating them elsewhere.</p>
+on a host with {run_config["logical_cpus"]} logical CPUs before timing; it waited
+{run_config["seconds_waited"]} s and started at load {run_config["load_average_at_start"][0]:.2f}.
+The threshold is configurable, and passing it does not establish that the machine was idle.
+Background activity, thermal management, and scheduling can affect results.
+Small differences between implementations should not be generalized without repeating them elsewhere.</p>
 <p>This comparison does not measure cold caches, key expansion, decryption, or authenticated encryption.
 The three portable implementations use data-dependent table lookups; the comparison makes no constant-time security claim.
-OpenSSL uses its normal architecture-specific dispatch, so its results include optimizations unavailable to the portable C implementations.</p></section>
+OpenSSL uses runtime dispatch and may select architecture-specific implementations; interpret its timings alongside the recorded capabilities above.</p></section>
 <section><h2>Reproduce and inspect</h2>
 <pre>cd Artifacts/AES128Benchmark
 bash run.sh</pre>

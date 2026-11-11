@@ -67,7 +67,7 @@ also checked against SBV at all three buffer sizes.
 BearSSL's internal single-block function is linked directly from unmodified
 upstream C; it is not a stable public API.
 
-Report times use median process CPU time per block. Raw JSON includes CPU and
+Report times use median thread CPU time per block. Raw JSON includes CPU and
 wall time for every repetition. Larger buffers amortize harness overhead and
 still invoke one encryption function per block except for OpenSSL bulk. Results reflect warm buffers on
 this machine, without CPU affinity or frequency control. The three portable table-based
@@ -77,7 +77,7 @@ implementations do not establish constant-time security.
 
 `codesize.py` reads the compiled object files (same flags as the timed code) and records code
 and read-only data bytes in `results/codesize.json`. SBV's generated block encryptor is larger than
-BearSSL's: it has no round loop and four 1 KiB lookup tables, where BearSSL keeps one table and
+BearSSL's: it has no round loop and four 1 KiB lookup tables plus a 256-byte S-box, where BearSSL keeps one table and
 rotates. tiny-AES-c's object includes decryption and key expansion, so its size is an upper bound
 for encryption alone. The benchmark does not vary table size or unrolling independently, so the
 size/speed relationship is an observation about these three implementations, not an isolated cause.
@@ -119,7 +119,9 @@ licenses are retained:
 
 `run.sh` updates current machine/compiler metadata and hashes while preserving
 the original source revision records. `report.py` renders the saved JSON without
-rerunning the benchmark. `build/` is disposable and ignored by Git.
+rerunning the benchmark. The `report_refresh` entry records the reporting-only
+corrections made after the saved run; the timings were not rerun. `build/` is
+disposable and ignored by Git.
 
 The original portable-only measurements are preserved in `results/portable-only/`.
 The current report uses a fresh run of all five paths together.

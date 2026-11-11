@@ -2430,8 +2430,8 @@ to C functions that the user provides, which then join the trusted code.
 \subsection{How fast is the generated code?}
 \label{sec:codegen-speed}
 
-Generated code is only attractive if it is not far behind hand-written code. As
-one data point, we generated C for SBV's AES-128 block encryption
+A practical question is how generated code compares with hand-written
+implementations. As one data point, we generated C for SBV's AES-128 block encryption
 (\code{Documentation.\allowbreak SBV.\allowbreak Examples.\allowbreak Crypto.\allowbreak AES}) and compared it
 with BearSSL's portable implementation~\citep{bearssl}, tiny-AES-c~\citep{tinyaes},
 and OpenSSL~\citep{openssl}. The three portable C implementations were compiled
@@ -2439,7 +2439,8 @@ with the same compiler and \code{-O3}, without link-time optimization. Every
 implementation first matched the FIPS-197 test vector and agreed on 1,024 random
 key and plaintext pairs. We then timed independent 16-byte blocks under one
 reused, expanded key, on an Apple M5 Pro with Apple Clang, using a development
-checkout of SBV. Table~\ref{tab:aes-speed} shows medians of nine repetitions.
+checkout of SBV. Table~\ref{tab:aes-speed} shows medians of nine repetitions,
+measured as CPU time per block on the benchmark thread.
 % A non-floating table: it stays directly under the paragraph that introduces it.
 \par\medskip\noindent
 \begin{minipage}{\linewidth}
@@ -2462,7 +2463,7 @@ OpenSSL, one call per buffer & 0.64 & 23{,}700 & 42$\times$   & hardware \\
 \smallskip
 {\footnotesize Speed vs.\ SBV is throughput relative to the SBV-generated C, so values
 above 1 are faster than SBV. Size is compiled encryption code plus lookup tables.
-\textsuperscript{*}Includes decryption and key expansion, which cannot be separated.}
+\textsuperscript{*}Includes decryption and key expansion, not separated in this measurement.}
 \end{minipage}\par\medskip
 
 The generated code is about 9\% faster than BearSSL's and 2.5 times faster than
@@ -2470,9 +2471,10 @@ tiny-AES-c's. These timings include converting bytes to the 32-bit words that
 SBV's function expects; calling it on words directly is another 9\% faster.
 
 The price is code size. SBV's encryptor occupies about four times the space of
-BearSSL's: roughly 2.5\,KB of code plus four 1\,KB lookup tables, against 0.7\,KB of
-code and one table. The generated function has no loop over rounds, and each round
-is four table lookups combined with XORs. BearSSL keeps a single table and derives
+BearSSL's: roughly 2.5\,KB of code plus four 1\,KiB lookup tables and a 256-byte
+S-box, against 0.7\,KB of code and one 1\,KiB table. The generated function has no
+loop over rounds. Each ordinary round computes four words, each using four table
+lookups combined with XORs; the final round uses the S-box. BearSSL keeps a single table and derives
 the other three by rotating its entries, trading instructions for space. The
 generated key schedule is larger still, about 9\,KB against 1\,KB, though it is
 not timed here. The data are consistent with SBV trading space for speed, but we
